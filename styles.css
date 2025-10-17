@@ -1103,6 +1103,32 @@ body {
     background: rgba(0, 0, 0, 0.3);
 }
 
+.panel-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.refresh-btn {
+    background: rgba(0, 212, 255, 0.2);
+    border: 1px solid rgba(0, 212, 255, 0.3);
+    border-radius: 50%;
+    width: 30px;
+    height: 30px;
+    color: #00d4ff;
+    font-size: 16px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+}
+
+.refresh-btn:hover {
+    background: rgba(0, 212, 255, 0.3);
+    transform: rotate(180deg);
+}
+
 .panel-header h3 {
     color: #ffffff;
     font-size: 18px;
@@ -1225,51 +1251,142 @@ body {
 }
 
 .holding-item {
+    padding: 16px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    margin-bottom: 12px;
+}
+
+.holding-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 12px;
-    background: rgba(255, 255, 255, 0.05);
-    border-radius: 8px;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.holding-info {
-    flex: 1;
+    margin-bottom: 12px;
 }
 
 .holding-coin {
+    font-size: 16px;
     font-weight: 600;
     color: #ffffff;
-    margin-bottom: 2px;
+}
+
+.remove-holding {
+    background: rgba(255, 68, 68, 0.2);
+    border: 1px solid rgba(255, 68, 68, 0.3);
+    border-radius: 50%;
+    width: 24px;
+    height: 24px;
+    color: #ff4444;
+    font-size: 16px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+}
+
+.remove-holding:hover {
+    background: rgba(255, 68, 68, 0.3);
+    transform: scale(1.1);
+}
+
+.holding-details {
+    margin-bottom: 12px;
 }
 
 .holding-amount {
+    font-size: 14px;
+    color: #888;
+    margin-bottom: 8px;
+}
+
+.price-comparison {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.price-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.price-label {
     font-size: 12px;
     color: #888;
 }
 
-.holding-value {
-    text-align: right;
+.price-value {
+    font-size: 12px;
+    color: #ffffff;
+    font-weight: 500;
 }
 
-.holding-price {
+.price-value.current {
+    color: #00d4ff;
     font-weight: 600;
-    color: #ffffff;
+}
+
+.holding-summary {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-top: 12px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.holding-value {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+}
+
+.value-label {
+    font-size: 12px;
+    color: #888;
     margin-bottom: 2px;
 }
 
-.holding-pnl {
-    font-size: 12px;
+.value-amount {
+    font-size: 16px;
+    font-weight: 600;
+    color: #ffffff;
 }
 
-.holding-pnl.positive {
+.holding-pnl {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+}
+
+.pnl-label {
+    font-size: 12px;
+    color: #888;
+    margin-bottom: 2px;
+}
+
+.pnl-amount {
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.holding-pnl.positive .pnl-amount {
     color: #00ff88;
 }
 
-.holding-pnl.negative {
+.holding-pnl.negative .pnl-amount {
     color: #ff4444;
 }
+
+.no-holdings {
+    text-align: center;
+    color: #888;
+    font-style: italic;
+    padding: 20px;
+}
+
 
 /* Chart Panel Styles */
 .chart-controls {

@@ -1100,6 +1100,11 @@ CRITICAL: Base ALL recommendations on the provided live market data. Be specific
             document.getElementById('portfolioPanel').classList.add('hidden');
         });
         
+        document.getElementById('refreshPortfolio')?.addEventListener('click', async () => {
+            console.log('Refreshing portfolio prices...');
+            await this.updatePortfolioDisplay();
+        });
+        
         document.getElementById('closeCharts')?.addEventListener('click', () => {
             document.getElementById('chartsPanel').classList.add('hidden');
         });
@@ -1972,11 +1977,23 @@ SamCrypto AI remembers your preferences and conversation history to provide pers
         let totalValue = 0;
         let totalCost = 0;
         
+        console.log('Calculating portfolio value for holdings:', this.portfolio.holdings);
+        
         for (const holding of this.portfolio.holdings) {
             try {
+                console.log(`Fetching market data for ${holding.coinId}...`);
                 const marketData = await this.fetchMarketData(holding.coinId);
+                console.log(`Market data for ${holding.coinId}:`, marketData);
+                
                 const currentValue = holding.amount * marketData.price_usd;
                 const cost = holding.amount * holding.buyPrice;
+                
+                console.log(`Holding: ${holding.amount} ${holding.coinId}`);
+                console.log(`Buy Price: $${holding.buyPrice}`);
+                console.log(`Current Price: $${marketData.price_usd}`);
+                console.log(`Current Value: $${currentValue.toFixed(2)}`);
+                console.log(`Cost: $${cost.toFixed(2)}`);
+                console.log(`P&L: $${(currentValue - cost).toFixed(2)}`);
                 
                 totalValue += currentValue;
                 totalCost += cost;
@@ -1993,29 +2010,74 @@ SamCrypto AI remembers your preferences and conversation history to provide pers
         this.portfolio.totalValue = totalValue;
         this.portfolio.totalPnL = totalValue - totalCost;
         this.portfolio.totalPnLPercent = totalCost > 0 ? ((totalValue - totalCost) / totalCost) * 100 : 0;
+        
+        console.log('Portfolio calculation complete:');
+        console.log(`Total Value: $${totalValue.toFixed(2)}`);
+        console.log(`Total Cost: $${totalCost.toFixed(2)}`);
+        console.log(`Total P&L: $${(totalValue - totalCost).toFixed(2)}`);
     }
 
     renderHoldings() {
         const holdingsList = document.getElementById('holdingsList');
         holdingsList.innerHTML = '';
         
+        if (this.portfolio.holdings.length === 0) {
+            holdingsList.innerHTML = '<div class="no-holdings">No holdings yet. Add some coins to track your portfolio!</div>';
+            return;
+        }
+        
         this.portfolio.holdings.forEach((holding, index) => {
             const holdingDiv = document.createElement('div');
             holdingDiv.className = 'holding-item';
+            
+            const coinName = holding.coinId.charAt(0).toUpperCase() + holding.coinId.slice(1);
+            const buyPrice = holding.buyPrice || 0;
+            const currentPrice = holding.currentPrice || 0;
+            const currentValue = holding.currentValue || 0;
+            const pnl = holding.pnl || 0;
+            const pnlPercent = holding.pnlPercent || 0;
+            
             holdingDiv.innerHTML = `
-                <div class="holding-info">
-                    <div class="holding-coin">${holding.coinId.toUpperCase()}</div>
-                    <div class="holding-amount">${holding.amount} coins</div>
+                <div class="holding-header">
+                    <div class="holding-coin">${coinName}</div>
+                    <button class="remove-holding" onclick="samCryptoAI.removeHolding(${index})" title="Remove holding">×</button>
                 </div>
-                <div class="holding-value">
-                    <div class="holding-price">$${holding.currentValue.toLocaleString()}</div>
-                    <div class="holding-pnl ${holding.pnl >= 0 ? 'positive' : 'negative'}">
-                        ${holding.pnl >= 0 ? '+' : ''}$${holding.pnl.toLocaleString()} (${holding.pnlPercent.toFixed(2)}%)
+                <div class="holding-details">
+                    <div class="holding-amount">Amount: ${holding.amount} ${coinName}</div>
+                    <div class="price-comparison">
+                        <div class="price-row">
+                            <span class="price-label">Buy Price:</span>
+                            <span class="price-value">$${buyPrice.toFixed(2)}</span>
+                        </div>
+                        <div class="price-row">
+                            <span class="price-label">Current Price:</span>
+                            <span class="price-value current">$${currentPrice.toFixed(2)}</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="holding-summary">
+                    <div class="holding-value">
+                        <span class="value-label">Current Value:</span>
+                        <span class="value-amount">$${currentValue.toFixed(2)}</span>
+                    </div>
+                    <div class="holding-pnl ${pnl >= 0 ? 'positive' : 'negative'}">
+                        <span class="pnl-label">P&L:</span>
+                        <span class="pnl-amount">
+                            ${pnl >= 0 ? '+' : ''}$${pnl.toFixed(2)} (${pnlPercent.toFixed(2)}%)
+                        </span>
                     </div>
                 </div>
             `;
             holdingsList.appendChild(holdingDiv);
         });
+    }
+
+    removeHolding(index) {
+        if (index >= 0 && index < this.portfolio.holdings.length) {
+            this.portfolio.holdings.splice(index, 1);
+            this.savePortfolio();
+            this.updatePortfolioDisplay();
+        }
     }
 
     // Charts Management
@@ -2294,7 +2356,12 @@ SamCrypto AI remembers your preferences and conversation history to provide pers
 
     // Utility Methods
     populateCoinSelects() {
-        const coins = ['bitcoin', 'ethereum', 'solana', 'cardano', 'polkadot', 'chainlink', 'litecoin', 'binancecoin'];
+        const coins = [
+            'bitcoin', 'ethereum', 'solana', 'cardano', 'polkadot', 'chainlink', 
+            'litecoin', 'binancecoin', 'ripple', 'dogecoin', 'avalanche-2', 
+            'polygon', 'uniswap', 'chainlink', 'stellar', 'cosmos', 'algorand',
+            'vechain', 'filecoin', 'tron', 'monero', 'ethereum-classic'
+        ];
         const selects = ['coinSelect', 'alertCoinSelect'];
         
         selects.forEach(selectId => {
