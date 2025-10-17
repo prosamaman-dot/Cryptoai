@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SamCrypto AI - Chat Interface</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="chat-container">
+        <!-- Header -->
+        <header class="chat-header">
+            <div class="ticker-container">
+                <div class="ticker" id="crypto-ticker">
+                    <!-- Ticker items will be inserted here dynamically -->
+                </div>
+            </div>
+            <div class="header-actions">
+                <div class="dropdown-container">
+                    <button id="dropdownToggle" class="dropdown-toggle" title="Menu">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="1"></circle>
+                            <circle cx="19" cy="12" r="1"></circle>
+                            <circle cx="5" cy="12" r="1"></circle>
+                        </svg>
+                    </button>
+                    <div id="dropdownMenu" class="dropdown-menu">
+                        <button id="memoryStatus" class="dropdown-item" title="Memory Status">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M9 12l2 2 4-4"></path>
+                                <path d="M21 12c-1 0-3-1-3-3s2-3 3-3 3 1 3 3-2 3-3 3"></path>
+                                <path d="M3 12c1 0 3-1 3-3s-2-3-3-3-3 1-3 3 2 3 3 3"></path>
+                                <path d="M12 3c0 1-1 3-3 3s-3-2-3-3 1-3 3-3 3 2 3 3"></path>
+                                <path d="M12 21c0-1 1-3 3-3s3 2 3 3-1 3-3 3-3-2-3-3"></path>
+                            </svg>
+                            <span>Memory Status</span>
+                        </button>
+                        <button id="refreshMarket" class="dropdown-item" title="Refresh market data">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polyline points="23 4 23 10 17 10"></polyline>
+                                <polyline points="1 20 1 14 7 14"></polyline>
+                                <path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"></path>
+                            </svg>
+                            <span>Refresh Market</span>
+                        </button>
+                        <button id="clearChat" class="dropdown-item" title="Clear conversation">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6M10 11v6M14 11v6"/>
+                            </svg>
+                            <span>Clear Chat</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Chat Messages -->
+        <div class="chat-messages" id="chatMessages">
+            <div class="message ai-message welcome-message" id="welcomeMessage">
+                <div class="message-avatar">
+                    <span class="crypto-icon">₿</span>
+                </div>
+                <div class="message-content">
+                    <div class="message-text">
+                        <h2 class="welcome-title">What can I help with?</h2>
+                        <div class="action-buttons">
+                            <button class="action-btn" data-action="analyze-bitcoin">
+                                <div class="btn-icon bitcoin-icon">
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <circle cx="12" cy="12" r="10"/>
+                                        <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/>
+                                        <path d="M12 17h.01"/>
+                                    </svg>
+                                </div>
+                                <span>Bitcoin</span>
+                            </button>
+                            <button class="action-btn" data-action="get-advice">
+                                <div class="btn-icon advice-icon">
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M9 12l2 2 4-4"/>
+                                        <path d="M21 12c-1 0-3-1-3-3s2-3 3-3 3 1 3 3-2 3-3 3"/>
+                                        <path d="M3 12c1 0 3-1 3-3s-2-3-3-3-3 1-3 3 2 3 3 3"/>
+                                    </svg>
+                                </div>
+                                <span>Advice</span>
+                            </button>
+                            <button class="action-btn" data-action="market-analysis">
+                                <div class="btn-icon chart-icon">
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <polyline points="22,12 18,12 15,21 9,3 6,12 2,12"/>
+                                    </svg>
+                                </div>
+                                <span>Analysis</span>
+                            </button>
+                            <button class="action-btn" data-action="portfolio-help">
+                                <div class="btn-icon portfolio-icon">
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
+                                        <line x1="8" y1="21" x2="16" y2="21"/>
+                                        <line x1="12" y1="17" x2="12" y2="21"/>
+                                    </svg>
+                                </div>
+                                <span>Portfolio</span>
+                            </button>
+                            <button class="action-btn" data-action="latest-news">
+                                <div class="btn-icon news-icon">
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M4 11a9 9 0 0 1 9 9"></path>
+                                        <path d="M4 4a16 16 0 0 1 16 16"></path>
+                                        <circle cx="5" cy="19" r="1"></circle>
+                                    </svg>
+                                </div>
+                                <span>News</span>
+                            </button>
+                            <button class="action-btn" data-action="more-options">
+                                <div class="btn-icon more-icon">
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <circle cx="12" cy="12" r="1"/>
+                                        <circle cx="19" cy="12" r="1"/>
+                                        <circle cx="5" cy="12" r="1"/>
+                                    </svg>
+                                </div>
+                                <span>More</span>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="message-time">Just now</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Typing Indicator -->
+        <div id="typingIndicator" class="typing-indicator hidden">
+            <div class="message ai-message">
+                <div class="message-avatar">
+                    <span class="crypto-icon">₿</span>
+                </div>
+                <div class="message-content">
+                    <div class="typing-dots">
+                        <span></span>
+                        <span></span>
+                        <span></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Input Area -->
+        <div class="chat-input-container">
+            <div class="input-wrapper">
+                <textarea 
+                    id="messageInput" 
+                    placeholder="Ask me about any cryptocurrency... (e.g., 'What's Bitcoin doing?', 'Analyze ETH and rap about it')"
+                    rows="1"
+                    maxlength="1000"
+                ></textarea>
+                <button id="sendButton" class="send-button" disabled>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="22" y1="2" x2="11" y2="13"></line>
+                        <polygon points="22,2 15,22 11,13 2,9 22,2"></polygon>
+                    </svg>
+                </button>
+            </div>
+            <div class="input-footer">
+                <span class="char-count">0/1000</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- API Configuration Modal -->
+    <div id="apiModal" class="modal">
+        <div class="modal-content">
+            <h2>Configure Gemini API</h2>
+            <p>Enter your Gemini API key to start chatting with SamCrypto AI:</p>
+            <input type="password" id="apiKeyInput" placeholder="Enter your Gemini API key...">
+            <div class="modal-actions">
+                <button id="saveApiKey" class="save-btn">Save & Start Chatting</button>
+                <button id="skipApiKey" class="skip-btn">Skip (Demo Mode)</button>
+            </div>
+            <p class="api-info">
+                <strong>How to get API key:</strong><br>
+                1. Go to <a href="https://makersuite.google.com/app/apikey" target="_blank">Google AI Studio</a><br>
+                2. Create a new API key<br>
+                3. Copy and paste it here
+            </p>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
