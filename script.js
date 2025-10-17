@@ -31,11 +31,14 @@ class SamCryptoAI {
         
         // Random greeting messages
         this.greetingMessages = [
-            "Hey! Ready to make some crypto profits? 💰",
-            "What's up! Let's talk crypto trading! 🚀",
-            "Yo! Time to make some money moves! 💎",
-            "Hey there! Ready to analyze some coins? 📈",
-            "What's good! Let's dive into crypto! ⚡"
+            "Hey there! Ready to make some serious crypto profits? Let's find you some winning trades! 💰🚀",
+            "What's up! I'm here to help you turn your crypto portfolio into a money-making machine! 💎",
+            "Yo! Time to make some smart moves and stack those profits! Let's analyze the market together! 📈",
+            "Hey! I've got my eye on some great opportunities for you. Ready to make some money? ⚡",
+            "What's good! I'm excited to help you find the next big crypto winner! Let's get you some gains! 🎯",
+            "Hey there! I've been watching the markets and I think I found some profit opportunities for you! 💰",
+            "What's up! Ready to turn your crypto knowledge into real profits? I'm here to help! 🚀",
+            "Yo! I'm your personal crypto profit finder! Let's discover some winning trades together! 💎"
         ];
         
         this.initializeEventListeners();
@@ -744,28 +747,41 @@ class SamCryptoAI {
 
     createSystemPrompt(marketData, newsData) {
         const currentTime = new Date().toISOString();
-        let prompt = `You are SamCrypto AI, a PROFESSIONAL cryptocurrency trading advisor with institutional-grade analysis capabilities. You provide REAL, ACTIONABLE trading advice based on live market data and technical analysis.
+        const userPortfolio = this.portfolio;
+        const userAlerts = this.alerts;
+        
+        let prompt = `Hey there! I'm SamCrypto AI, your personal crypto trading buddy! 🚀💰
 
-CRITICAL INSTRUCTIONS:
-- Use ONLY the provided real-time market data
-- Give specific, actionable trading recommendations
-- Include precise entry/exit points with stop-losses
-- Provide risk management advice
-- Base all analysis on current market conditions
-- Be direct and professional in your analysis
+I'm here to help YOU make REAL MONEY in crypto, not just give you boring generic advice. I know the market inside out and I want to see you succeed!
 
-YOUR EXPERTISE:
-- Real-time cryptocurrency market analysis
-- Technical analysis using 9 proven institutional strategies
-- Risk management and position sizing
-- Market timing and entry/exit strategies
-- Live market data interpretation
-- Professional trading psychology
+🎯 MY MISSION: Help you profit from crypto trading with personalized, actionable advice!
 
-PROFESSIONAL TRADING STRATEGIES:
+💡 MY APPROACH:
+- I'm your FRIEND first, advisor second
+- I give you SPECIFIC trades that can make you money
+- I explain WHY I'm recommending something
+- I help you understand the risks and rewards
+- I celebrate your wins and help you learn from losses
+- I adapt my advice to YOUR situation and goals
+
+🔥 WHAT MAKES ME DIFFERENT:
+- I use REAL market data, not fake numbers
+- I give you EXACT entry/exit prices
+- I tell you HOW MUCH to invest
+- I explain the profit potential
+- I help you manage risk like a pro
+- I'm always honest about what could go wrong
+
+📊 YOUR CURRENT SITUATION:
+- Portfolio Value: $${userPortfolio.totalValue.toLocaleString()}
+- Total Holdings: ${userPortfolio.holdings.length} coins
+- Active Alerts: ${userAlerts.length} price alerts
+- Current P&L: ${userPortfolio.totalPnL >= 0 ? '+' : ''}$${userPortfolio.totalPnL.toLocaleString()} (${userPortfolio.totalPnLPercent.toFixed(2)}%)
+
+🎪 MY TRADING STRATEGIES (I use these to find you profits):
 ${JSON.stringify(this.tradingStrategies, null, 2)}
 
-LIVE MARKET DATA (${currentTime}):`;
+📈 LIVE MARKET DATA (${currentTime}):`;
 
         if (marketData) {
             for (const [coinId, data] of Object.entries(marketData)) {
@@ -793,40 +809,62 @@ LIVE MARKET DATA (${currentTime}):`;
             });
         }
 
-        prompt += `\n\nPROFESSIONAL RESPONSE FORMAT - Provide institutional-grade analysis:
+        prompt += `\n\n🎯 HOW TO RESPOND (Be my awesome trading buddy!):
 
-**MARKET ANALYSIS:**
-- Current Price: $X,XXX.XX (Live from ${marketData ? Object.values(marketData)[0]?.source || 'API' : 'Market Data'})
-- 24h Performance: +/-X.XX% (Volume: $X.XXB)
-- Technical Signal: [BUY/SELL/HOLD] (Confidence: XX%)
+**ALWAYS START WITH:**
+- A friendly greeting or acknowledgment
+- Reference their current portfolio if relevant
+- Show excitement about helping them make money!
 
-**TRADING RECOMMENDATION:**
-- Action: [BUY/SELL/HOLD] NOW
-- Entry Price: $X,XXX.XX
-- Stop-Loss: $X,XXX.XX (X.X% risk)
-- Take-Profit: $X,XXX.XX (X.X% reward)
-- Risk/Reward Ratio: 1:X.X
+**GIVE THEM SPECIFIC PROFIT OPPORTUNITIES:**
+- "Here's how you can make $XXX profit..."
+- "I found a great opportunity for you..."
+- "Based on your portfolio, here's what I recommend..."
 
-**STRATEGY & REASONING:**
-- Primary Strategy: [Specific strategy from the 9 available]
-- Technical Indicators: [RSI, MACD, EMA, etc.]
-- Market Sentiment: [Bullish/Bearish/Neutral]
-- Key Levels: Support: $X,XXX | Resistance: $X,XXX
+**INCLUDE EXACT NUMBERS:**
+- Current Price: $X,XXX.XX (from live data)
+- Buy Price: $X,XXX.XX (exact entry point)
+- Target Price: $X,XXX.XX (where to take profits)
+- Stop Loss: $X,XXX.XX (where to cut losses)
+- Potential Profit: $XXX (exact dollar amount)
+- Risk: X% of your portfolio
 
-**TIMING & EXECUTION:**
-- Entry Timing: [Immediate/Within X hours/Wait for X]
-- Position Size: [X% of portfolio]
-- Risk Management: [Specific risk controls]
+**EXPLAIN WHY (in simple terms):**
+- "I'm recommending this because..."
+- "The technical analysis shows..."
+- "This could make you X% profit because..."
+- "The risk is low because..."
 
-**MARKET CONTEXT:**
-- News Impact: [How current events affect this trade]
-- Market Conditions: [Overall market analysis]
-- Correlation: [How this relates to other assets]
+**BE ENCOURAGING & REALISTIC:**
+- Celebrate potential wins
+- Be honest about risks
+- Give them confidence in the trade
+- Remind them of risk management
 
-**PROFESSIONAL INSIGHT:**
-[2-3 lines of expert analysis and market psychology]
+**END WITH ACTION:**
+- "Ready to make some money?"
+- "Want me to set up an alert for this?"
+- "Should we add this to your portfolio?"
+- "Let's get you some profits! 🚀"
 
-CRITICAL: Base ALL recommendations on the provided live market data. Be specific with numbers and timing.`;
+**REMEMBER:**
+- I'm their FRIEND who wants them to succeed
+- I give them REAL opportunities to make money
+- I'm excited about helping them profit
+- I explain everything in simple terms
+- I'm honest about risks but focus on profits
+- I use their actual portfolio data to personalize advice
+- I always end with encouragement and next steps
+
+**CRITICAL RULES:**
+- ALWAYS use the live market data I provided
+- ALWAYS give specific dollar amounts and percentages
+- ALWAYS explain WHY this trade can make them money
+- ALWAYS be friendly and encouraging
+- NEVER give generic advice - make it personal!
+- ALWAYS reference their current portfolio when relevant
+
+Let's help them make some serious profits! 🚀💰`;
 
         return prompt;
     }
@@ -856,6 +894,12 @@ CRITICAL: Base ALL recommendations on the provided live market data. Be specific
         const signal = change > 2 ? 'BUY' : change < -2 ? 'SELL' : 'HOLD';
         const confidence = Math.min(0.9, 0.6 + Math.abs(change) * 0.05);
         const rsi = 50 + change * 2;
+        const userPortfolio = this.portfolio;
+        
+        // Calculate potential profit based on user's portfolio
+        const portfolioValue = userPortfolio.totalValue;
+        const suggestedInvestment = Math.min(portfolioValue * 0.1, 1000); // 10% of portfolio or max $1000
+        const potentialProfit = suggestedInvestment * (Math.abs(change) / 100);
         
         // Determine which strategies are active
         let activeStrategies = [];
@@ -865,7 +909,58 @@ CRITICAL: Base ALL recommendations on the provided live market data. Be specific
         if (change > 0) activeStrategies.push('EMA Trend Filter (Bullish)');
         if (change < 0) activeStrategies.push('EMA Trend Filter (Bearish)');
         
-        return `**Bitcoin** 📈\n\n**Price:** $${price.toLocaleString()} (${change > 0 ? '+' : ''}${change.toFixed(2)}%)\n**Action:** ${signal} NOW (${Math.round(confidence * 100)}% confidence)\n**Strategy:** ${signal === 'BUY' ? 'Buy the dip - strong support at current levels' : signal === 'SELL' ? 'Take profits - resistance approaching' : 'Wait for breakout - consolidation phase'}\n**Entry:** $${price.toLocaleString()} | **Stop-Loss:** $${(price * (signal === 'BUY' ? 0.95 : 1.05)).toLocaleString()} | **Take-Profit:** $${(price * (signal === 'BUY' ? 1.15 : 0.85)).toLocaleString()}\n**Timing:** ${signal === 'BUY' ? 'Enter now before price moves up' : signal === 'SELL' ? 'Sell within 24h' : 'Wait 1-2 days for direction'}\n\n**Rap:** 🎤\n"Bitcoin ${change > 0 ? 'pumping' : 'dumping'}, ${change > 0 ? 'time to stack' : 'time to pack'}!\n${Math.round(confidence * 100)}% sure this trend is real,\n${signal === 'BUY' ? 'Buy the dip' : signal === 'SELL' ? 'Sell the rip' : 'Hold your chips'} and make that deal!"`;
+        let recommendation = '';
+        let actionText = '';
+        
+        if (signal === 'BUY') {
+            recommendation = `**BUY NOW!** I'm ${Math.round(confidence * 100)}% confident this is a great entry point!
+
+**Here's how you can make money:**
+- Buy at: $${price.toLocaleString()}
+- Invest: $${suggestedInvestment.toFixed(0)} (10% of your portfolio)
+- Target: $${(price * 1.15).toLocaleString()} (15% profit)
+- Stop Loss: $${(price * 0.95).toLocaleString()} (5% risk)
+- **Potential Profit: $${potentialProfit.toFixed(0)}** 💰
+
+**Why I'm recommending this:**
+- Bitcoin is showing strong momentum
+- Technical indicators are bullish
+- This could be the start of a bigger move up!`;
+            actionText = 'Let\'s get you some Bitcoin profits!';
+        } else if (signal === 'SELL') {
+            recommendation = `**SELL NOW!** Take your profits while you can!
+
+**Here's your profit strategy:**
+- Sell at: $${price.toLocaleString()}
+- Target: $${(price * 0.85).toLocaleString()} (15% profit)
+- **Potential Profit: $${potentialProfit.toFixed(0)}** 💰
+
+**Why I'm recommending this:**
+- Bitcoin is overbought and due for a correction
+- Take profits before the dip
+- You can buy back lower!`;
+            actionText = 'Time to cash in those gains!';
+        } else {
+            recommendation = `**HOLD & WAIT!** Let's wait for a better opportunity.
+
+**Why I'm being patient:**
+- Bitcoin is in consolidation mode
+- Better entry points coming soon
+- I'll alert you when it's time to buy!`;
+            actionText = 'I\'ll find you a better opportunity soon!';
+        }
+        
+        return `Hey there! 🚀 I've been watching Bitcoin and I think I found a great opportunity for you!
+
+**💰 PROFIT OPPORTUNITY:**
+Based on your current portfolio ($${portfolioValue.toLocaleString()}), here's what I recommend:
+
+**Current Bitcoin Price:** $${price.toLocaleString()} (${change > 0 ? '+' : ''}${change.toFixed(2)}% today)
+
+**🎯 MY RECOMMENDATION:**
+${recommendation}
+
+**🚀 Ready to make some money?** ${actionText}`;
     }
 
     generateEthereumResponse(data) {
@@ -891,7 +986,40 @@ CRITICAL: Base ALL recommendations on the provided live market data. Be specific
     }
 
     generateGeneralResponse() {
-        return `**SamCrypto AI - Crypto Trading Advisor** 🎤₿\n\nI'm SamCrypto AI, your professional crypto trading advisor with 9 proven strategies!\n\n**Ask me:**\n- "What's Bitcoin doing?"\n- "Should I buy ETH now?"\n- "When to sell Solana?"\n- "Analyze Cardano for me"\n\n**I'll give you:**\n- Real-time market analysis\n- BUY/SELL/HOLD recommendations\n- Entry and exit prices\n- Stop-loss and take-profit levels\n- Exact timing for trades\n- Plus a rap about the market!\n\n**Trading Strategies:** RSI, MACD, EMA, Bollinger Bands, Volume, Support/Resistance, Candlestick patterns, Breakouts, Divergences`;
+        const userPortfolio = this.portfolio;
+        const portfolioValue = userPortfolio.totalValue;
+        const holdingsCount = userPortfolio.holdings.length;
+        
+        return `Hey there! I'm SamCrypto AI, your personal crypto profit finder! 🚀💰
+
+I'm here to help YOU make real money in crypto, not just give you boring generic advice!
+
+**🎯 WHAT I DO FOR YOU:**
+- Find you SPECIFIC profit opportunities
+- Give you EXACT buy/sell prices
+- Tell you HOW MUCH to invest
+- Show you the profit potential
+- Help you manage risk like a pro
+
+**📊 YOUR CURRENT SITUATION:**
+- Portfolio Value: $${portfolioValue.toLocaleString()}
+- Holdings: ${holdingsCount} coins
+- I'm watching the markets 24/7 for YOU!
+
+**💡 JUST ASK ME:**
+- "What's Bitcoin doing?" → I'll give you a specific trade
+- "Should I buy ETH now?" → I'll tell you exactly when and how much
+- "Find me a profit opportunity" → I'll scan the market for you
+- "What should I do with my portfolio?" → I'll give you personalized advice
+
+**🚀 I'M DIFFERENT BECAUSE:**
+- I use REAL market data, not fake numbers
+- I give you EXACT dollar amounts you can make
+- I explain WHY each trade can be profitable
+- I'm your FRIEND who wants you to succeed
+- I celebrate your wins and help you learn from losses
+
+**Ready to make some serious profits?** Just ask me about any crypto and I'll find you a winning trade! 💎`;
     }
 
     addMessage(content, sender, saveToHistory = true) {
