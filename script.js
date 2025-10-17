@@ -252,13 +252,106 @@ class SamCryptoAI {
         for (const crypto of cryptoMentions) {
             try {
                 const data = await this.fetchMarketData(crypto);
-                marketData[crypto] = data;
+                // Add technical analysis data
+                const technicalData = await this.getTechnicalAnalysis(crypto, data);
+                marketData[crypto] = { ...data, ...technicalData };
             } catch (error) {
                 console.error(`Error fetching data for ${crypto}:`, error);
             }
         }
         
         return marketData;
+    }
+
+    async getTechnicalAnalysis(coinId, marketData) {
+        try {
+            // Get additional technical data from CoinGecko
+            const response = await fetch(`${this.coinGeckoAPI}/coins/${coinId}?localization=false&tickers=false&market_data=true&community_data=false&developer_data=false&sparkline=false`);
+            
+            if (!response.ok) {
+                throw new Error('Technical analysis API failed');
+            }
+            
+            const data = await response.json();
+            const marketDataInfo = data.market_data;
+            
+            if (!marketDataInfo) {
+                return {};
+            }
+            
+            // Calculate technical indicators
+            const currentPrice = marketDataInfo.current_price?.usd || marketData.price_usd;
+            const priceChange24h = marketDataInfo.price_change_percentage_24h || marketData.change_24h;
+            const marketCap = marketDataInfo.market_cap?.usd || marketData.market_cap;
+            const volume24h = marketDataInfo.total_volume?.usd || marketData.volume_24h;
+            
+            // Calculate RSI approximation based on price change
+            const rsi = this.calculateRSI(priceChange24h);
+            
+            // Calculate support and resistance levels
+            const support = currentPrice * 0.95; // 5% below current price
+            const resistance = currentPrice * 1.05; // 5% above current price
+            
+            return {
+                technical_indicators: {
+                    rsi: rsi,
+                    support_level: support,
+                    resistance_level: resistance,
+                    market_cap_rank: data.market_cap_rank || 'N/A',
+                    price_change_7d: marketDataInfo.price_change_percentage_7d || 0,
+                    price_change_30d: marketDataInfo.price_change_percentage_30d || 0,
+                    ath: marketDataInfo.ath?.usd || 0,
+                    atl: marketDataInfo.atl?.usd || 0,
+                    ath_change_percentage: marketDataInfo.ath_change_percentage?.usd || 0,
+                    atl_change_percentage: marketDataInfo.atl_change_percentage?.usd || 0
+                },
+                market_sentiment: this.calculateMarketSentiment(priceChange24h, volume24h, marketCap),
+                volatility: this.calculateVolatility(priceChange24h, marketDataInfo.price_change_percentage_7d)
+            };
+        } catch (error) {
+            console.error('Technical analysis error:', error);
+            return {};
+        }
+    }
+
+    calculateRSI(priceChange24h) {
+        // Simplified RSI calculation based on 24h price change
+        if (priceChange24h > 5) return 75; // Overbought
+        if (priceChange24h > 2) return 65; // Bullish
+        if (priceChange24h > 0) return 55; // Slightly bullish
+        if (priceChange24h > -2) return 45; // Slightly bearish
+        if (priceChange24h > -5) return 35; // Bearish
+        return 25; // Oversold
+    }
+
+    calculateMarketSentiment(priceChange24h, volume24h, marketCap) {
+        let sentiment = 'neutral';
+        let strength = 'medium';
+        
+        if (priceChange24h > 3 && volume24h > marketCap * 0.1) {
+            sentiment = 'very_bullish';
+            strength = 'strong';
+        } else if (priceChange24h > 1) {
+            sentiment = 'bullish';
+            strength = 'medium';
+        } else if (priceChange24h < -3 && volume24h > marketCap * 0.1) {
+            sentiment = 'very_bearish';
+            strength = 'strong';
+        } else if (priceChange24h < -1) {
+            sentiment = 'bearish';
+            strength = 'medium';
+        }
+        
+        return { sentiment, strength };
+    }
+
+    calculateVolatility(priceChange24h, priceChange7d) {
+        const volatility = Math.abs(priceChange24h) + Math.abs(priceChange7d) / 7;
+        
+        if (volatility > 10) return 'very_high';
+        if (volatility > 5) return 'high';
+        if (volatility > 2) return 'medium';
+        return 'low';
     }
 
     extractCryptoMentions(query) {
@@ -302,29 +395,96 @@ class SamCryptoAI {
 
     async fetchMarketData(coinId) {
         try {
-            const response = await fetch(`${this.coinGeckoAPI}/simple/price?ids=${coinId}&vs_currencies=usd&include_24hr_change=true&include_24hr_vol=true&include_market_cap=true`);
+            // Try multiple APIs for more accurate data
+            const [coinGeckoData, binanceData] = await Promise.allSettled([
+                this.fetchFromCoinGecko(coinId),
+                this.fetchFromBinance(coinId)
+            ]);
+            
+            // Use CoinGecko as primary source, Binance as backup
+            if (coinGeckoData.status === 'fulfilled' && coinGeckoData.value) {
+                return coinGeckoData.value;
+            } else if (binanceData.status === 'fulfilled' && binanceData.value) {
+                return binanceData.value;
+            } else {
+                throw new Error('All API sources failed');
+            }
+        } catch (error) {
+            console.error('Market data fetch error:', error);
+            // Return mock data for demo purposes
+            return this.getMockMarketData(coinId);
+        }
+    }
+
+    async fetchFromCoinGecko(coinId) {
+        try {
+            const response = await fetch(`${this.coinGeckoAPI}/simple/price?ids=${coinId}&vs_currencies=usd&include_24hr_change=true&include_24hr_vol=true&include_market_cap=true&include_last_updated_at=true`);
             
             if (!response.ok) {
-                throw new Error('Failed to fetch market data');
+                throw new Error('CoinGecko API failed');
             }
             
             const data = await response.json();
             const coinData = data[coinId];
             
             if (!coinData) {
-                throw new Error('Coin data not found');
+                throw new Error('Coin data not found in CoinGecko');
             }
             
             return {
                 price_usd: coinData.usd,
                 change_24h: coinData.usd_24h_change,
                 volume_24h: coinData.usd_24h_vol,
-                market_cap: coinData.usd_market_cap
+                market_cap: coinData.usd_market_cap,
+                last_updated: coinData.last_updated_at,
+                source: 'CoinGecko'
             };
         } catch (error) {
-            console.error('Market data fetch error:', error);
-            // Return mock data for demo purposes
-            return this.getMockMarketData(coinId);
+            console.error('CoinGecko fetch error:', error);
+            throw error;
+        }
+    }
+
+    async fetchFromBinance(coinId) {
+        try {
+            // Map coin IDs to Binance symbols
+            const symbolMap = {
+                'bitcoin': 'BTCUSDT',
+                'ethereum': 'ETHUSDT',
+                'binancecoin': 'BNBUSDT',
+                'cardano': 'ADAUSDT',
+                'solana': 'SOLUSDT',
+                'polkadot': 'DOTUSDT',
+                'chainlink': 'LINKUSDT',
+                'litecoin': 'LTCUSDT',
+                'bitcoin-cash': 'BCHUSDT',
+                'stellar': 'XLMUSDT'
+            };
+            
+            const symbol = symbolMap[coinId];
+            if (!symbol) {
+                throw new Error('Symbol not found for Binance');
+            }
+            
+            const response = await fetch(`https://api.binance.com/api/v3/ticker/24hr?symbol=${symbol}`);
+            
+            if (!response.ok) {
+                throw new Error('Binance API failed');
+            }
+            
+            const data = await response.json();
+            
+            return {
+                price_usd: parseFloat(data.lastPrice),
+                change_24h: parseFloat(data.priceChangePercent),
+                volume_24h: parseFloat(data.volume) * parseFloat(data.lastPrice),
+                market_cap: 0, // Binance doesn't provide market cap
+                last_updated: data.closeTime,
+                source: 'Binance'
+            };
+        } catch (error) {
+            console.error('Binance fetch error:', error);
+            throw error;
         }
     }
 
@@ -345,10 +505,38 @@ class SamCryptoAI {
         return mockData[coinId] || { price_usd: 100, change_24h: 0, volume_24h: 1000000000, market_cap: 10000000000 };
     }
 
-    // CoinDesk API Integration Methods
+    // Enhanced News Integration Methods
     async fetchCoinDeskNews() {
         try {
-            // CoinDesk News API endpoint
+            // Try multiple news sources for comprehensive coverage
+            const [coinDeskData, cryptoNewsData] = await Promise.allSettled([
+                this.fetchFromCoinDesk(),
+                this.fetchFromCryptoNews()
+            ]);
+            
+            let allNews = [];
+            
+            if (coinDeskData.status === 'fulfilled' && coinDeskData.value) {
+                allNews = allNews.concat(coinDeskData.value);
+            }
+            
+            if (cryptoNewsData.status === 'fulfilled' && cryptoNewsData.value) {
+                allNews = allNews.concat(cryptoNewsData.value);
+            }
+            
+            // Sort by recency and return top 5
+            return allNews
+                .sort((a, b) => new Date(b.publishedAt) - new Date(a.publishedAt))
+                .slice(0, 5);
+                
+        } catch (error) {
+            console.error('Error fetching news:', error);
+            return this.getMockNewsData();
+        }
+    }
+
+    async fetchFromCoinDesk() {
+        try {
             const response = await fetch(`${this.coinDeskAPI}/news/`);
             
             if (!response.ok) {
@@ -357,7 +545,6 @@ class SamCryptoAI {
             
             const data = await response.json();
             
-            // Transform CoinDesk news format to our standard format
             if (data.news && Array.isArray(data.news)) {
                 return data.news.map(article => ({
                     title: article.title,
@@ -371,9 +558,37 @@ class SamCryptoAI {
             
             return [];
         } catch (error) {
-            console.error('Error fetching CoinDesk news:', error);
-            // Return mock news data as fallback
-            return this.getMockNewsData();
+            console.error('CoinDesk fetch error:', error);
+            throw error;
+        }
+    }
+
+    async fetchFromCryptoNews() {
+        try {
+            // Using a free crypto news API
+            const response = await fetch('https://api.coinpaprika.com/v1/events');
+            
+            if (!response.ok) {
+                throw new Error('CryptoNews API request failed');
+            }
+            
+            const data = await response.json();
+            
+            if (Array.isArray(data)) {
+                return data.slice(0, 3).map(event => ({
+                    title: event.name || 'Crypto Market Update',
+                    description: event.description || 'Latest cryptocurrency market development',
+                    url: event.url || '#',
+                    publishedAt: event.date || new Date().toISOString(),
+                    source: { name: 'CoinPaprika' },
+                    category: 'Market Update'
+                }));
+            }
+            
+            return [];
+        } catch (error) {
+            console.error('CryptoNews fetch error:', error);
+            throw error;
         }
     }
 
@@ -475,10 +690,10 @@ class SamCryptoAI {
                         }]
                     }],
                     generationConfig: {
-                        temperature: 0.8,
-                        topK: 40,
-                        topP: 0.95,
-                        maxOutputTokens: 1024,
+                        temperature: 0.3, // Lower temperature for more focused, professional responses
+                        topK: 20, // More focused token selection
+                        topP: 0.8, // More deterministic responses
+                        maxOutputTokens: 2048, // Allow longer, more detailed responses
                     }
                 })
             });
@@ -497,25 +712,43 @@ class SamCryptoAI {
     }
 
     createSystemPrompt(marketData, newsData) {
-        let prompt = `You are SamCrypto AI, a professional cryptocurrency trading advisor with a fun rap personality. You give REAL trading advice to help users make profit.
+        const currentTime = new Date().toISOString();
+        let prompt = `You are SamCrypto AI, a PROFESSIONAL cryptocurrency trading advisor with institutional-grade analysis capabilities. You provide REAL, ACTIONABLE trading advice based on live market data and technical analysis.
 
-Your expertise:
-- Professional crypto market analysis
-- Technical analysis using 9 proven strategies
-- Real-time market data interpretation
+CRITICAL INSTRUCTIONS:
+- Use ONLY the provided real-time market data
+- Give specific, actionable trading recommendations
+- Include precise entry/exit points with stop-losses
+- Provide risk management advice
+- Base all analysis on current market conditions
+- Be direct and professional in your analysis
+
+YOUR EXPERTISE:
+- Real-time cryptocurrency market analysis
+- Technical analysis using 9 proven institutional strategies
 - Risk management and position sizing
 - Market timing and entry/exit strategies
-- Latest cryptocurrency news and market sentiment
+- Live market data interpretation
+- Professional trading psychology
 
-TRADING STRATEGIES YOU USE:
+PROFESSIONAL TRADING STRATEGIES:
 ${JSON.stringify(this.tradingStrategies, null, 2)}
 
-Current market data:`;
+LIVE MARKET DATA (${currentTime}):`;
 
         if (marketData) {
             for (const [coinId, data] of Object.entries(marketData)) {
                 const coinName = coinId.charAt(0).toUpperCase() + coinId.slice(1).replace('-', ' ');
-                prompt += `\n${coinName}: $${data.price_usd.toLocaleString()} (${data.change_24h > 0 ? '+' : ''}${data.change_24h.toFixed(2)}% 24h)`;
+                const volumeFormatted = data.volume_24h ? `$${(data.volume_24h / 1000000000).toFixed(2)}B` : 'N/A';
+                const marketCapFormatted = data.market_cap ? `$${(data.market_cap / 1000000000).toFixed(2)}B` : 'N/A';
+                const source = data.source || 'Unknown';
+                
+                prompt += `\n${coinName} (${source}):
+- Current Price: $${data.price_usd.toLocaleString()}
+- 24h Change: ${data.change_24h > 0 ? '+' : ''}${data.change_24h.toFixed(2)}%
+- 24h Volume: ${volumeFormatted}
+- Market Cap: ${marketCapFormatted}
+- Last Updated: ${data.last_updated ? new Date(data.last_updated * 1000).toLocaleString() : 'Unknown'}`;
             }
         }
 
@@ -529,16 +762,40 @@ Current market data:`;
             });
         }
 
-        prompt += `\n\nRESPONSE FORMAT - Give actionable trading advice:
-**Price:** $X,XXX (+/-X.X%)
-**Action:** BUY/SELL/HOLD NOW (XX% confidence)
-**Strategy:** [specific trading advice with reasoning]
-**Entry:** $X,XXX | **Stop-Loss:** $X,XXX | **Take-Profit:** $X,XXX
-**Timing:** [exact timing - now, today, wait X days]
-**News Impact:** [how current news affects this trade]
-**Rap:** [2-3 lines about the trade]
+        prompt += `\n\nPROFESSIONAL RESPONSE FORMAT - Provide institutional-grade analysis:
 
-Be direct, professional, and helpful. Give real advice to make profit. Use the trading strategies and current news to justify your recommendations.`;
+**MARKET ANALYSIS:**
+- Current Price: $X,XXX.XX (Live from ${marketData ? Object.values(marketData)[0]?.source || 'API' : 'Market Data'})
+- 24h Performance: +/-X.XX% (Volume: $X.XXB)
+- Technical Signal: [BUY/SELL/HOLD] (Confidence: XX%)
+
+**TRADING RECOMMENDATION:**
+- Action: [BUY/SELL/HOLD] NOW
+- Entry Price: $X,XXX.XX
+- Stop-Loss: $X,XXX.XX (X.X% risk)
+- Take-Profit: $X,XXX.XX (X.X% reward)
+- Risk/Reward Ratio: 1:X.X
+
+**STRATEGY & REASONING:**
+- Primary Strategy: [Specific strategy from the 9 available]
+- Technical Indicators: [RSI, MACD, EMA, etc.]
+- Market Sentiment: [Bullish/Bearish/Neutral]
+- Key Levels: Support: $X,XXX | Resistance: $X,XXX
+
+**TIMING & EXECUTION:**
+- Entry Timing: [Immediate/Within X hours/Wait for X]
+- Position Size: [X% of portfolio]
+- Risk Management: [Specific risk controls]
+
+**MARKET CONTEXT:**
+- News Impact: [How current events affect this trade]
+- Market Conditions: [Overall market analysis]
+- Correlation: [How this relates to other assets]
+
+**PROFESSIONAL INSIGHT:**
+[2-3 lines of expert analysis and market psychology]
+
+CRITICAL: Base ALL recommendations on the provided live market data. Be specific with numbers and timing.`;
 
         return prompt;
     }
@@ -1402,6 +1659,44 @@ SamCrypto AI remembers your preferences and conversation history to provide pers
         }
     }
 
+    showWelcomeMessage() {
+        const welcomeMessage = document.getElementById('welcomeMessage');
+        if (welcomeMessage) {
+            welcomeMessage.style.display = 'block';
+            welcomeMessage.classList.remove('hidden');
+            
+            // Reset chat messages padding
+            const chatMessages = document.getElementById('chatMessages');
+            chatMessages.style.paddingTop = '24px';
+        }
+    }
+
+    loadPreviousConversation() {
+        // Method to manually load previous conversation if user wants to
+        const savedHistory = localStorage.getItem('chatHistory');
+        if (savedHistory) {
+            const chatHistory = JSON.parse(savedHistory);
+            const chatMessages = document.getElementById('chatMessages');
+            const welcomeMessage = document.getElementById('welcomeMessage');
+            
+            // Clear existing messages except welcome message
+            chatMessages.innerHTML = '';
+            if (welcomeMessage) {
+                chatMessages.appendChild(welcomeMessage);
+            }
+            
+            // If there's chat history, hide welcome message and load messages
+            if (chatHistory.length > 0) {
+                this.hideWelcomeMessage();
+                
+                // Load saved messages
+                chatHistory.forEach(msg => {
+                    this.addMessage(msg.content, msg.sender, false);
+                });
+            }
+        }
+    }
+
     updateWelcomeMessage() {
         const welcomeMessage = document.getElementById('welcomeMessage');
         if (welcomeMessage) {
@@ -1499,28 +1794,19 @@ SamCrypto AI remembers your preferences and conversation history to provide pers
     }
 
     loadChatHistory() {
-        const savedHistory = localStorage.getItem('chatHistory');
-        if (savedHistory) {
-            const chatHistory = JSON.parse(savedHistory);
-            const chatMessages = document.getElementById('chatMessages');
-            const welcomeMessage = document.getElementById('welcomeMessage');
-            
-            // Clear existing messages except welcome message
-            chatMessages.innerHTML = '';
-            if (welcomeMessage) {
-                chatMessages.appendChild(welcomeMessage);
-            }
-            
-            // If there's chat history, hide welcome message
-            if (chatHistory.length > 0) {
-                this.hideWelcomeMessage();
-            }
-            
-            // Load saved messages
-            chatHistory.forEach(msg => {
-                this.addMessage(msg.content, msg.sender, false);
-            });
+        // Don't automatically load chat history on page refresh
+        // This keeps the conversation data stored but shows a fresh chat interface
+        const chatMessages = document.getElementById('chatMessages');
+        const welcomeMessage = document.getElementById('welcomeMessage');
+        
+        // Clear existing messages and show welcome message
+        chatMessages.innerHTML = '';
+        if (welcomeMessage) {
+            chatMessages.appendChild(welcomeMessage);
         }
+        
+        // Show welcome message on page refresh
+        this.showWelcomeMessage();
     }
 
     cleanup() {
