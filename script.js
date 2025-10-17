@@ -14,6 +14,11 @@ class SamCryptoAI {
         this.sessionMemory = [];
         this.userPreferences = this.loadUserPreferences();
         
+        // Scroll management
+        this.isUserScrolling = false;
+        this.userScrollTimeout = null;
+        this.isNearBottom = true;
+        
         // Random greeting messages
         this.greetingMessages = [
             "Hey! Ready to make some crypto profits? 💰",
@@ -131,6 +136,9 @@ class SamCryptoAI {
 
         // Initialize market data updates
         this.initializeMarketData();
+        
+        // Initialize scroll management
+        this.initializeScrollManagement();
     }
 
     checkApiKey() {
@@ -625,7 +633,10 @@ Be direct, professional, and helpful. Give real advice to make profit. Use the t
             this.typewriterEffect(content, messageText, messagesContainer);
         } else {
             messageText.innerHTML = this.formatMessage(content);
-            this.smoothScrollToBottom(messagesContainer);
+            // Only auto-scroll for user messages if near bottom and not actively scrolling
+            if (this.isNearBottom && !this.isUserScrolling) {
+                this.smoothScrollToBottom(messagesContainer);
+            }
         }
         
         // Save to chat history if requested
@@ -666,8 +677,10 @@ Be direct, professional, and helpful. Give real advice to make profit. Use the t
                 // Update the content (excluding the cursor)
                 messageElement.innerHTML = currentText + '<span class="typing-cursor">|</span>';
                 
-                // Smooth scroll to bottom
-                this.smoothScrollToBottom(container);
+                // Only auto-scroll if user is near bottom and not actively scrolling
+                if (this.isNearBottom && !this.isUserScrolling) {
+                    this.smoothScrollToBottom(container);
+                }
                 
                 // Variable typing speed for more natural feel
                 const baseDelay = 8;
@@ -685,6 +698,11 @@ Be direct, professional, and helpful. Give real advice to make profit. Use the t
     }
 
     smoothScrollToBottom(container) {
+        // Only scroll if user is near bottom and not actively scrolling
+        if (!this.isNearBottom || this.isUserScrolling) {
+            return;
+        }
+        
         const scrollHeight = container.scrollHeight;
         const currentScroll = container.scrollTop;
         const targetScroll = scrollHeight - container.clientHeight;
@@ -711,7 +729,11 @@ Be direct, professional, and helpful. Give real advice to make profit. Use the t
     showTypingIndicator() {
         document.getElementById('typingIndicator').classList.remove('hidden');
         const messagesContainer = document.getElementById('chatMessages');
-        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        
+        // Only auto-scroll to bottom if user is near bottom and not actively scrolling
+        if (this.isNearBottom && !this.isUserScrolling) {
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
     }
 
     hideTypingIndicator() {
@@ -744,6 +766,44 @@ Be direct, professional, and helpful. Give real advice to make profit. Use the t
         
         // Save the cleared state
         this.saveUserMemory();
+    }
+
+    initializeScrollManagement() {
+        const messagesContainer = document.getElementById('chatMessages');
+        
+        // Add scroll event listener to detect user scrolling
+        messagesContainer.addEventListener('scroll', () => {
+            this.handleUserScroll(messagesContainer);
+        });
+    }
+    
+    handleUserScroll(container) {
+        // Clear any existing timeout
+        if (this.userScrollTimeout) {
+            clearTimeout(this.userScrollTimeout);
+        }
+        
+        // Mark that user is scrolling
+        this.isUserScrolling = true;
+        
+        // Check if user is near the bottom (within 100px)
+        const scrollTop = container.scrollTop;
+        const scrollHeight = container.scrollHeight;
+        const clientHeight = container.clientHeight;
+        const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
+        
+        const wasNearBottom = this.isNearBottom;
+        this.isNearBottom = distanceFromBottom < 100;
+        
+        // If user scrolled back to bottom, re-enable auto-scroll immediately
+        if (!wasNearBottom && this.isNearBottom) {
+            this.isUserScrolling = false;
+        }
+        
+        // Set timeout to reset user scrolling flag after 1 second of no scrolling
+        this.userScrollTimeout = setTimeout(() => {
+            this.isUserScrolling = false;
+        }, 1000);
     }
 
     initializeMarketData() {
