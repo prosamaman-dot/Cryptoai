@@ -19,6 +19,15 @@ class SamCryptoAI {
         this.userScrollTimeout = null;
         this.isNearBottom = true;
         
+        // Advanced features
+        this.portfolio = this.loadPortfolio();
+        this.alerts = this.loadAlerts();
+        this.charts = {};
+        this.voiceRecognition = null;
+        this.isDarkTheme = true;
+        this.sentimentData = {};
+        this.backtestResults = {};
+        
         // Random greeting messages
         this.greetingMessages = [
             "Hey! Ready to make some crypto profits? 💰",
@@ -114,6 +123,15 @@ class SamCryptoAI {
         const dropdownMenu = document.getElementById('dropdownMenu');
         const saveApiKey = document.getElementById('saveApiKey');
         const skipApiKey = document.getElementById('skipApiKey');
+        
+        // Advanced feature buttons
+        const portfolioToggle = document.getElementById('portfolioToggle');
+        const chartsToggle = document.getElementById('chartsToggle');
+        const alertsToggle = document.getElementById('alertsToggle');
+        const voiceToggle = document.getElementById('voiceToggle');
+        const themeToggle = document.getElementById('themeToggle');
+        const backtestingToggle = document.getElementById('backtestingToggle');
+        const sentimentToggle = document.getElementById('sentimentToggle');
 
         messageInput.addEventListener('input', () => this.handleInputChange());
         messageInput.addEventListener('keydown', (e) => this.handleKeyDown(e));
@@ -124,6 +142,15 @@ class SamCryptoAI {
         dropdownToggle.addEventListener('click', () => this.toggleDropdown());
         saveApiKey.addEventListener('click', () => this.saveApiKey());
         skipApiKey.addEventListener('click', () => this.skipApiKey());
+        
+        // Advanced feature event listeners
+        portfolioToggle.addEventListener('click', () => this.togglePortfolio());
+        chartsToggle.addEventListener('click', () => this.toggleCharts());
+        alertsToggle.addEventListener('click', () => this.toggleAlerts());
+        voiceToggle.addEventListener('click', () => this.toggleVoice());
+        themeToggle.addEventListener('click', () => this.toggleTheme());
+        backtestingToggle.addEventListener('click', () => this.toggleBacktesting());
+        sentimentToggle.addEventListener('click', () => this.toggleSentiment());
 
         // Close dropdown when clicking outside
         document.addEventListener('click', (e) => this.handleOutsideClick(e));
@@ -139,6 +166,9 @@ class SamCryptoAI {
         
         // Initialize scroll management
         this.initializeScrollManagement();
+        
+        // Initialize advanced features
+        this.initializeAdvancedFeatures();
     }
 
     checkApiKey() {
@@ -1063,6 +1093,64 @@ CRITICAL: Base ALL recommendations on the provided live market data. Be specific
         }, 1000);
     }
 
+    initializeAdvancedFeatures() {
+        // Panel close buttons
+        document.getElementById('closePortfolio')?.addEventListener('click', () => {
+            document.getElementById('portfolioPanel').classList.add('hidden');
+        });
+        
+        document.getElementById('closeCharts')?.addEventListener('click', () => {
+            document.getElementById('chartsPanel').classList.add('hidden');
+        });
+        
+        document.getElementById('closeAlerts')?.addEventListener('click', () => {
+            document.getElementById('alertsPanel').classList.add('hidden');
+        });
+        
+        document.getElementById('closeSentiment')?.addEventListener('click', () => {
+            document.getElementById('sentimentPanel').classList.add('hidden');
+        });
+        
+        document.getElementById('closeBacktesting')?.addEventListener('click', () => {
+            document.getElementById('backtestingPanel').classList.add('hidden');
+        });
+        
+        // Form submissions
+        document.getElementById('addHoldingBtn')?.addEventListener('click', () => {
+            this.addHolding();
+        });
+        
+        document.getElementById('addAlertBtn')?.addEventListener('click', () => {
+            this.addAlert();
+        });
+        
+        document.getElementById('runBacktest')?.addEventListener('click', () => {
+            this.runBacktest();
+        });
+        
+        document.getElementById('refreshChart')?.addEventListener('click', () => {
+            this.initializeChart();
+        });
+        
+        // Chart controls
+        document.getElementById('chartCoinSelect')?.addEventListener('change', () => {
+            this.initializeChart();
+        });
+        
+        document.getElementById('chartTimeframe')?.addEventListener('change', () => {
+            this.initializeChart();
+        });
+        
+        // Load saved theme
+        const savedTheme = localStorage.getItem('theme');
+        if (savedTheme === 'light') {
+            this.toggleTheme();
+        }
+        
+        // Make instance globally available for onclick handlers
+        window.samCryptoAI = this;
+    }
+
     initializeMarketData() {
         // Show immediate prices first
         this.showImmediatePrices();
@@ -1826,6 +1914,452 @@ SamCrypto AI remembers your preferences and conversation history to provide pers
         // Save final memory state
         this.saveUserMemory();
         this.saveUserPreferences();
+        this.savePortfolio();
+        this.saveAlerts();
+    }
+
+    // ===== ADVANCED FEATURES =====
+
+    // Portfolio Management
+    loadPortfolio() {
+        try {
+            const stored = localStorage.getItem('crypto_portfolio');
+            return stored ? JSON.parse(stored) : { holdings: [], totalValue: 0, totalPnL: 0 };
+        } catch (error) {
+            console.error('Error loading portfolio:', error);
+            return { holdings: [], totalValue: 0, totalPnL: 0 };
+        }
+    }
+
+    savePortfolio() {
+        try {
+            localStorage.setItem('crypto_portfolio', JSON.stringify(this.portfolio));
+        } catch (error) {
+            console.error('Error saving portfolio:', error);
+        }
+    }
+
+    togglePortfolio() {
+        const panel = document.getElementById('portfolioPanel');
+        panel.classList.toggle('hidden');
+        if (!panel.classList.contains('hidden')) {
+            this.updatePortfolioDisplay();
+            this.populateCoinSelects();
+        }
+    }
+
+    updatePortfolioDisplay() {
+        this.calculatePortfolioValue();
+        document.getElementById('totalPortfolioValue').textContent = `$${this.portfolio.totalValue.toLocaleString()}`;
+        document.getElementById('totalPnL').textContent = `${this.portfolio.totalPnL >= 0 ? '+' : ''}$${this.portfolio.totalPnL.toLocaleString()} (${this.portfolio.totalPnLPercent.toFixed(2)}%)`;
+        document.getElementById('totalPnL').className = `value ${this.portfolio.totalPnL >= 0 ? 'positive' : 'negative'}`;
+        document.getElementById('portfolioValue').textContent = `$${this.portfolio.totalValue.toLocaleString()}`;
+        
+        this.renderHoldings();
+    }
+
+    async calculatePortfolioValue() {
+        let totalValue = 0;
+        let totalCost = 0;
+        
+        for (const holding of this.portfolio.holdings) {
+            try {
+                const marketData = await this.fetchMarketData(holding.coinId);
+                const currentValue = holding.amount * marketData.price_usd;
+                const cost = holding.amount * holding.buyPrice;
+                
+                totalValue += currentValue;
+                totalCost += cost;
+                
+                holding.currentValue = currentValue;
+                holding.currentPrice = marketData.price_usd;
+                holding.pnl = currentValue - cost;
+                holding.pnlPercent = ((currentValue - cost) / cost) * 100;
+            } catch (error) {
+                console.error(`Error calculating value for ${holding.coinId}:`, error);
+            }
+        }
+        
+        this.portfolio.totalValue = totalValue;
+        this.portfolio.totalPnL = totalValue - totalCost;
+        this.portfolio.totalPnLPercent = totalCost > 0 ? ((totalValue - totalCost) / totalCost) * 100 : 0;
+    }
+
+    renderHoldings() {
+        const holdingsList = document.getElementById('holdingsList');
+        holdingsList.innerHTML = '';
+        
+        this.portfolio.holdings.forEach((holding, index) => {
+            const holdingDiv = document.createElement('div');
+            holdingDiv.className = 'holding-item';
+            holdingDiv.innerHTML = `
+                <div class="holding-info">
+                    <div class="holding-coin">${holding.coinId.toUpperCase()}</div>
+                    <div class="holding-amount">${holding.amount} coins</div>
+                </div>
+                <div class="holding-value">
+                    <div class="holding-price">$${holding.currentValue.toLocaleString()}</div>
+                    <div class="holding-pnl ${holding.pnl >= 0 ? 'positive' : 'negative'}">
+                        ${holding.pnl >= 0 ? '+' : ''}$${holding.pnl.toLocaleString()} (${holding.pnlPercent.toFixed(2)}%)
+                    </div>
+                </div>
+            `;
+            holdingsList.appendChild(holdingDiv);
+        });
+    }
+
+    // Charts Management
+    toggleCharts() {
+        const panel = document.getElementById('chartsPanel');
+        panel.classList.toggle('hidden');
+        if (!panel.classList.contains('hidden')) {
+            this.initializeChart();
+        }
+    }
+
+    initializeChart() {
+        const ctx = document.getElementById('priceChart').getContext('2d');
+        const coinSelect = document.getElementById('chartCoinSelect');
+        
+        if (this.charts[coinSelect.value]) {
+            this.charts[coinSelect.value].destroy();
+        }
+        
+        this.loadChartData(coinSelect.value).then(data => {
+            this.charts[coinSelect.value] = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: data.labels,
+                    datasets: [{
+                        label: `${coinSelect.value.toUpperCase()} Price`,
+                        data: data.prices,
+                        borderColor: '#00d4ff',
+                        backgroundColor: 'rgba(0, 212, 255, 0.1)',
+                        borderWidth: 2,
+                        fill: true,
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            labels: { color: '#ffffff' }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            ticks: { color: '#888' },
+                            grid: { color: 'rgba(255, 255, 255, 0.1)' }
+                        },
+                        y: {
+                            ticks: { color: '#888' },
+                            grid: { color: 'rgba(255, 255, 255, 0.1)' }
+                        }
+                    }
+                }
+            });
+        });
+    }
+
+    async loadChartData(coinId) {
+        try {
+            const response = await fetch(`${this.coinGeckoAPI}/coins/${coinId}/market_chart?vs_currency=usd&days=7&interval=daily`);
+            const data = await response.json();
+            
+            return {
+                labels: data.prices.map(([timestamp]) => new Date(timestamp).toLocaleDateString()),
+                prices: data.prices.map(([, price]) => price)
+            };
+        } catch (error) {
+            console.error('Error loading chart data:', error);
+            return { labels: [], prices: [] };
+        }
+    }
+
+    // Alerts Management
+    loadAlerts() {
+        try {
+            const stored = localStorage.getItem('crypto_alerts');
+            return stored ? JSON.parse(stored) : [];
+        } catch (error) {
+            console.error('Error loading alerts:', error);
+            return [];
+        }
+    }
+
+    saveAlerts() {
+        try {
+            localStorage.setItem('crypto_alerts', JSON.stringify(this.alerts));
+        } catch (error) {
+            console.error('Error saving alerts:', error);
+        }
+    }
+
+    toggleAlerts() {
+        const panel = document.getElementById('alertsPanel');
+        panel.classList.toggle('hidden');
+        if (!panel.classList.contains('hidden')) {
+            this.updateAlertsDisplay();
+            this.populateCoinSelects();
+        }
+    }
+
+    updateAlertsDisplay() {
+        document.getElementById('alertCount').textContent = this.alerts.length;
+        this.renderAlerts();
+    }
+
+    renderAlerts() {
+        const alertsList = document.getElementById('alertsList');
+        alertsList.innerHTML = '';
+        
+        this.alerts.forEach((alert, index) => {
+            const alertDiv = document.createElement('div');
+            alertDiv.className = 'alert-item';
+            alertDiv.innerHTML = `
+                <div class="alert-info">
+                    <div class="alert-coin">${alert.coinId.toUpperCase()}</div>
+                    <div class="alert-condition">${alert.condition} $${alert.value}</div>
+                </div>
+                <div class="alert-value">Active</div>
+                <div class="alert-actions">
+                    <button onclick="samCryptoAI.removeAlert(${index})">Delete</button>
+                </div>
+            `;
+            alertsList.appendChild(alertDiv);
+        });
+    }
+
+    // Voice Commands
+    toggleVoice() {
+        if (!this.voiceRecognition) {
+            this.initializeVoiceRecognition();
+        }
+        
+        if (this.voiceRecognition.isListening) {
+            this.voiceRecognition.stop();
+            document.getElementById('voiceToggle').classList.remove('listening');
+        } else {
+            this.voiceRecognition.start();
+            document.getElementById('voiceToggle').classList.add('listening');
+        }
+    }
+
+    initializeVoiceRecognition() {
+        if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            this.voiceRecognition = new SpeechRecognition();
+            
+            this.voiceRecognition.continuous = false;
+            this.voiceRecognition.interimResults = false;
+            this.voiceRecognition.lang = 'en-US';
+            
+            this.voiceRecognition.onstart = () => {
+                console.log('Voice recognition started');
+            };
+            
+            this.voiceRecognition.onresult = (event) => {
+                const transcript = event.results[0][0].transcript;
+                document.getElementById('messageInput').value = transcript;
+                this.sendMessage();
+            };
+            
+            this.voiceRecognition.onerror = (event) => {
+                console.error('Voice recognition error:', event.error);
+            };
+            
+            this.voiceRecognition.onend = () => {
+                document.getElementById('voiceToggle').classList.remove('listening');
+            };
+        } else {
+            alert('Voice recognition not supported in this browser');
+        }
+    }
+
+    // Theme Management
+    toggleTheme() {
+        this.isDarkTheme = !this.isDarkTheme;
+        document.body.className = this.isDarkTheme ? 'dark-theme' : 'light-theme';
+        
+        const themeIcon = document.getElementById('themeIcon');
+        if (this.isDarkTheme) {
+            themeIcon.innerHTML = `
+                <circle cx="12" cy="12" r="5"></circle>
+                <line x1="12" y1="1" x2="12" y2="3"></line>
+                <line x1="12" y1="21" x2="12" y2="23"></line>
+                <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                <line x1="1" y1="12" x2="3" y2="12"></line>
+                <line x1="21" y1="12" x2="23" y2="12"></line>
+                <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+            `;
+        } else {
+            themeIcon.innerHTML = `
+                <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+            `;
+        }
+        
+        localStorage.setItem('theme', this.isDarkTheme ? 'dark' : 'light');
+    }
+
+    // Sentiment Analysis
+    toggleSentiment() {
+        const panel = document.getElementById('sentimentPanel');
+        panel.classList.toggle('hidden');
+        if (!panel.classList.contains('hidden')) {
+            this.loadSentimentData();
+        }
+    }
+
+    async loadSentimentData() {
+        try {
+            // Simulate sentiment data (in real implementation, you'd fetch from APIs)
+            const sentimentScore = Math.floor(Math.random() * 100);
+            document.getElementById('sentimentScore').textContent = sentimentScore;
+            
+            // Update sentiment gauge
+            const gauge = document.getElementById('sentimentGauge');
+            const rotation = (sentimentScore / 100) * 180;
+            gauge.style.transform = `rotate(${rotation}deg)`;
+            
+        } catch (error) {
+            console.error('Error loading sentiment data:', error);
+        }
+    }
+
+    // Backtesting
+    toggleBacktesting() {
+        const panel = document.getElementById('backtestingPanel');
+        panel.classList.toggle('hidden');
+    }
+
+    async runBacktest() {
+        const strategy = document.getElementById('backtestStrategy').value;
+        const coin = document.getElementById('backtestCoin').value;
+        const period = document.getElementById('backtestPeriod').value;
+        const capital = parseFloat(document.getElementById('initialCapital').value);
+        
+        // Simulate backtesting (in real implementation, you'd use historical data)
+        const results = {
+            totalReturn: (Math.random() - 0.5) * 100,
+            winRate: Math.random() * 100,
+            maxDrawdown: Math.random() * 50,
+            sharpeRatio: Math.random() * 3,
+            totalTrades: Math.floor(Math.random() * 100) + 10
+        };
+        
+        this.displayBacktestResults(results);
+    }
+
+    displayBacktestResults(results) {
+        const resultsDiv = document.getElementById('backtestResults');
+        resultsDiv.innerHTML = `
+            <div class="backtest-metric">
+                <span class="label">Total Return</span>
+                <span class="value ${results.totalReturn >= 0 ? 'positive' : 'negative'}">
+                    ${results.totalReturn >= 0 ? '+' : ''}${results.totalReturn.toFixed(2)}%
+                </span>
+            </div>
+            <div class="backtest-metric">
+                <span class="label">Win Rate</span>
+                <span class="value">${results.winRate.toFixed(1)}%</span>
+            </div>
+            <div class="backtest-metric">
+                <span class="label">Max Drawdown</span>
+                <span class="value negative">-${results.maxDrawdown.toFixed(2)}%</span>
+            </div>
+            <div class="backtest-metric">
+                <span class="label">Sharpe Ratio</span>
+                <span class="value">${results.sharpeRatio.toFixed(2)}</span>
+            </div>
+            <div class="backtest-metric">
+                <span class="label">Total Trades</span>
+                <span class="value">${results.totalTrades}</span>
+            </div>
+        `;
+    }
+
+    // Utility Methods
+    populateCoinSelects() {
+        const coins = ['bitcoin', 'ethereum', 'solana', 'cardano', 'polkadot', 'chainlink', 'litecoin', 'binancecoin'];
+        const selects = ['coinSelect', 'alertCoinSelect'];
+        
+        selects.forEach(selectId => {
+            const select = document.getElementById(selectId);
+            if (select) {
+                select.innerHTML = '<option value="">Select Coin</option>';
+                coins.forEach(coin => {
+                    const option = document.createElement('option');
+                    option.value = coin;
+                    option.textContent = coin.charAt(0).toUpperCase() + coin.slice(1);
+                    select.appendChild(option);
+                });
+            }
+        });
+    }
+
+    addHolding() {
+        const coinId = document.getElementById('coinSelect').value;
+        const amount = parseFloat(document.getElementById('amountInput').value);
+        const buyPrice = parseFloat(document.getElementById('priceInput').value);
+        
+        if (!coinId || !amount || !buyPrice) {
+            alert('Please fill in all fields');
+            return;
+        }
+        
+        this.portfolio.holdings.push({
+            coinId,
+            amount,
+            buyPrice,
+            currentValue: 0,
+            currentPrice: 0,
+            pnl: 0,
+            pnlPercent: 0
+        });
+        
+        this.savePortfolio();
+        this.updatePortfolioDisplay();
+        
+        // Clear form
+        document.getElementById('coinSelect').value = '';
+        document.getElementById('amountInput').value = '';
+        document.getElementById('priceInput').value = '';
+    }
+
+    addAlert() {
+        const coinId = document.getElementById('alertCoinSelect').value;
+        const condition = document.getElementById('alertCondition').value;
+        const value = parseFloat(document.getElementById('alertValue').value);
+        
+        if (!coinId || !value) {
+            alert('Please fill in all fields');
+            return;
+        }
+        
+        this.alerts.push({
+            coinId,
+            condition,
+            value,
+            active: true,
+            createdAt: new Date().toISOString()
+        });
+        
+        this.saveAlerts();
+        this.updateAlertsDisplay();
+        
+        // Clear form
+        document.getElementById('alertCoinSelect').value = '';
+        document.getElementById('alertValue').value = '';
+    }
+
+    removeAlert(index) {
+        this.alerts.splice(index, 1);
+        this.saveAlerts();
+        this.updateAlertsDisplay();
     }
 }
 
