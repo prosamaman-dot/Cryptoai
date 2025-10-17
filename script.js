@@ -22,6 +22,7 @@ class SamCryptoAI {
         // Advanced features
         this.portfolio = this.loadPortfolio();
         this.alerts = this.loadAlerts();
+        console.log('Portfolio loaded:', this.portfolio);
         this.charts = {};
         this.voiceRecognition = null;
         this.isDarkTheme = true;
@@ -1939,17 +1940,26 @@ SamCrypto AI remembers your preferences and conversation history to provide pers
         }
     }
 
-    togglePortfolio() {
+    async togglePortfolio() {
+        console.log('Portfolio button clicked!');
         const panel = document.getElementById('portfolioPanel');
+        if (!panel) {
+            console.error('Portfolio panel not found!');
+            return;
+        }
+        
         panel.classList.toggle('hidden');
+        console.log('Panel hidden class:', panel.classList.contains('hidden'));
+        
         if (!panel.classList.contains('hidden')) {
-            this.updatePortfolioDisplay();
+            console.log('Opening portfolio panel...');
+            await this.updatePortfolioDisplay();
             this.populateCoinSelects();
         }
     }
 
-    updatePortfolioDisplay() {
-        this.calculatePortfolioValue();
+    async updatePortfolioDisplay() {
+        await this.calculatePortfolioValue();
         document.getElementById('totalPortfolioValue').textContent = `$${this.portfolio.totalValue.toLocaleString()}`;
         document.getElementById('totalPnL').textContent = `${this.portfolio.totalPnL >= 0 ? '+' : ''}$${this.portfolio.totalPnL.toLocaleString()} (${this.portfolio.totalPnLPercent.toFixed(2)}%)`;
         document.getElementById('totalPnL').className = `value ${this.portfolio.totalPnL >= 0 ? 'positive' : 'negative'}`;
@@ -2301,7 +2311,7 @@ SamCrypto AI remembers your preferences and conversation history to provide pers
         });
     }
 
-    addHolding() {
+    async addHolding() {
         const coinId = document.getElementById('coinSelect').value;
         const amount = parseFloat(document.getElementById('amountInput').value);
         const buyPrice = parseFloat(document.getElementById('priceInput').value);
@@ -2322,7 +2332,7 @@ SamCrypto AI remembers your preferences and conversation history to provide pers
         });
         
         this.savePortfolio();
-        this.updatePortfolioDisplay();
+        await this.updatePortfolioDisplay();
         
         // Clear form
         document.getElementById('coinSelect').value = '';

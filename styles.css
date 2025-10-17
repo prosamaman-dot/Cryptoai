@@ -1086,7 +1086,7 @@ body {
     overflow-y: auto;
 }
 
-.side-panel.show {
+.side-panel:not(.hidden) {
     transform: translateX(0);
 }
 
