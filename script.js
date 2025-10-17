@@ -2314,44 +2314,384 @@ SamCrypto AI remembers your preferences and conversation history to provide pers
         const period = document.getElementById('backtestPeriod').value;
         const capital = parseFloat(document.getElementById('initialCapital').value);
         
-        // Simulate backtesting (in real implementation, you'd use historical data)
-        const results = {
-            totalReturn: (Math.random() - 0.5) * 100,
-            winRate: Math.random() * 100,
-            maxDrawdown: Math.random() * 50,
-            sharpeRatio: Math.random() * 3,
-            totalTrades: Math.floor(Math.random() * 100) + 10
-        };
+        if (!strategy || !coin || !period || !capital) {
+            alert('Please fill in all backtest parameters');
+            return;
+        }
         
-        this.displayBacktestResults(results);
+        console.log(`Running ${strategy} backtest for ${coin} over ${period} with $${capital}`);
+        
+        try {
+            // Show loading state
+            const resultsDiv = document.getElementById('backtestResults');
+            resultsDiv.innerHTML = '<div class="loading">Fetching historical data and running backtest...</div>';
+            
+            // Fetch historical data
+            const historicalData = await this.fetchHistoricalData(coin, period);
+            console.log(`Fetched ${historicalData.length} data points for ${coin}`);
+            
+            // Run the selected strategy
+            const results = await this.executeStrategy(strategy, historicalData, capital);
+            console.log('Backtest results:', results);
+            
+            // Display results
+            this.displayBacktestResults(results);
+            
+        } catch (error) {
+            console.error('Backtest error:', error);
+            resultsDiv.innerHTML = `<div class="error">Error running backtest: ${error.message}</div>`;
+        }
     }
 
     displayBacktestResults(results) {
         const resultsDiv = document.getElementById('backtestResults');
         resultsDiv.innerHTML = `
-            <div class="backtest-metric">
-                <span class="label">Total Return</span>
-                <span class="value ${results.totalReturn >= 0 ? 'positive' : 'negative'}">
-                    ${results.totalReturn >= 0 ? '+' : ''}${results.totalReturn.toFixed(2)}%
-                </span>
+            <div class="backtest-summary">
+                <h4>Backtest Results</h4>
+                <div class="summary-stats">
+                    <div class="stat-item">
+                        <span class="stat-label">Initial Capital:</span>
+                        <span class="stat-value">$${results.initialCapital.toLocaleString()}</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Final Capital:</span>
+                        <span class="stat-value">$${results.finalCapital.toLocaleString()}</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Total Return:</span>
+                        <span class="stat-value ${results.totalReturn >= 0 ? 'positive' : 'negative'}">${results.totalReturn.toFixed(2)}%</span>
+                    </div>
+                </div>
             </div>
-            <div class="backtest-metric">
-                <span class="label">Win Rate</span>
-                <span class="value">${results.winRate.toFixed(1)}%</span>
+            <div class="backtest-metrics">
+                <div class="backtest-metric">
+                    <span class="label">Win Rate</span>
+                    <span class="value">${results.winRate.toFixed(1)}%</span>
+                </div>
+                <div class="backtest-metric">
+                    <span class="label">Max Drawdown</span>
+                    <span class="value negative">-${results.maxDrawdown.toFixed(2)}%</span>
+                </div>
+                <div class="backtest-metric">
+                    <span class="label">Sharpe Ratio</span>
+                    <span class="value">${results.sharpeRatio.toFixed(2)}</span>
+                </div>
+                <div class="backtest-metric">
+                    <span class="label">Total Trades</span>
+                    <span class="value">${results.totalTrades}</span>
+                </div>
             </div>
-            <div class="backtest-metric">
-                <span class="label">Max Drawdown</span>
-                <span class="value negative">-${results.maxDrawdown.toFixed(2)}%</span>
-            </div>
-            <div class="backtest-metric">
-                <span class="label">Sharpe Ratio</span>
-                <span class="value">${results.sharpeRatio.toFixed(2)}</span>
-            </div>
-            <div class="backtest-metric">
-                <span class="label">Total Trades</span>
-                <span class="value">${results.totalTrades}</span>
+            <div class="trades-summary">
+                <h5>Recent Trades</h5>
+                <div class="trades-list">
+                    ${results.trades.slice(-6).map(trade => `
+                        <div class="trade-item ${trade.type.toLowerCase()}">
+                            <span class="trade-type">${trade.type}</span>
+                            <span class="trade-date">${trade.date.toLocaleDateString()}</span>
+                            <span class="trade-price">$${trade.price.toFixed(2)}</span>
+                            ${trade.capital ? `<span class="trade-capital">$${trade.capital.toFixed(2)}</span>` : ''}
+                        </div>
+                    `).join('')}
+                </div>
             </div>
         `;
+    }
+
+    async fetchHistoricalData(coinId, period) {
+        try {
+            // Convert period to days
+            const daysMap = {
+                '7d': 7,
+                '30d': 30,
+                '90d': 90,
+                '180d': 180,
+                '1y': 365,
+                '2y': 730
+            };
+            
+            const days = daysMap[period] || 30;
+            
+            // Fetch historical data from CoinGecko
+            const response = await fetch(
+                `${this.coinGeckoAPI}/coins/${coinId}/market_chart?vs_currency=usd&days=${days}&interval=daily`
+            );
+            
+            if (!response.ok) {
+                throw new Error(`Failed to fetch historical data: ${response.status}`);
+            }
+            
+            const data = await response.json();
+            
+            // Process the data into our format
+            const historicalData = data.prices.map((priceData, index) => ({
+                timestamp: priceData[0],
+                date: new Date(priceData[0]),
+                price: priceData[1],
+                volume: data.total_volumes[index] ? data.total_volumes[index][1] : 0,
+                marketCap: data.market_caps[index] ? data.market_caps[index][1] : 0
+            }));
+            
+            console.log(`Fetched ${historicalData.length} days of data for ${coinId}`);
+            return historicalData;
+            
+        } catch (error) {
+            console.error('Error fetching historical data:', error);
+            throw new Error(`Failed to fetch historical data for ${coinId}: ${error.message}`);
+        }
+    }
+
+    async executeStrategy(strategy, historicalData, initialCapital) {
+        console.log(`Executing ${strategy} strategy with ${historicalData.length} data points`);
+        
+        let trades = [];
+        let currentCapital = initialCapital;
+        let position = 0; // 0 = no position, 1 = long position
+        let entryPrice = 0;
+        let maxCapital = initialCapital;
+        let maxDrawdown = 0;
+        
+        // Calculate technical indicators
+        const indicators = this.calculateTechnicalIndicators(historicalData);
+        
+        // Execute strategy
+        for (let i = 1; i < historicalData.length; i++) {
+            const currentPrice = historicalData[i].price;
+            const signal = this.getTradingSignal(strategy, indicators, i);
+            
+            if (signal === 'BUY' && position === 0) {
+                // Enter long position
+                position = 1;
+                entryPrice = currentPrice;
+                const shares = currentCapital / currentPrice;
+                currentCapital = 0;
+                
+                trades.push({
+                    type: 'BUY',
+                    date: historicalData[i].date,
+                    price: currentPrice,
+                    shares: shares,
+                    capital: initialCapital - currentCapital
+                });
+                
+            } else if (signal === 'SELL' && position === 1) {
+                // Exit long position
+                position = 0;
+                const shares = trades[trades.length - 1].shares;
+                currentCapital = shares * currentPrice;
+                
+                trades.push({
+                    type: 'SELL',
+                    date: historicalData[i].date,
+                    price: currentPrice,
+                    shares: shares,
+                    capital: currentCapital
+                });
+                
+                // Update max capital and drawdown
+                if (currentCapital > maxCapital) {
+                    maxCapital = currentCapital;
+                }
+                
+                const currentDrawdown = ((maxCapital - currentCapital) / maxCapital) * 100;
+                if (currentDrawdown > maxDrawdown) {
+                    maxDrawdown = currentDrawdown;
+                }
+            }
+        }
+        
+        // Close any remaining position
+        if (position === 1 && trades.length > 0) {
+            const lastTrade = trades[trades.length - 1];
+            const finalPrice = historicalData[historicalData.length - 1].price;
+            currentCapital = lastTrade.shares * finalPrice;
+            
+            trades.push({
+                type: 'SELL',
+                date: historicalData[historicalData.length - 1].date,
+                price: finalPrice,
+                shares: lastTrade.shares,
+                capital: currentCapital
+            });
+        }
+        
+        // Calculate performance metrics
+        const totalReturn = ((currentCapital - initialCapital) / initialCapital) * 100;
+        const winningTrades = trades.filter(trade => trade.type === 'SELL' && trade.capital > 0).length;
+        const totalTrades = Math.floor(trades.length / 2); // Buy/Sell pairs
+        const winRate = totalTrades > 0 ? (winningTrades / totalTrades) * 100 : 0;
+        
+        // Calculate Sharpe ratio (simplified)
+        const returns = [];
+        for (let i = 1; i < trades.length; i += 2) {
+            if (trades[i] && trades[i-1]) {
+                const return_pct = ((trades[i].capital - trades[i-1].capital) / trades[i-1].capital) * 100;
+                returns.push(return_pct);
+            }
+        }
+        
+        const avgReturn = returns.reduce((a, b) => a + b, 0) / returns.length || 0;
+        const returnStdDev = Math.sqrt(returns.reduce((sum, ret) => sum + Math.pow(ret - avgReturn, 2), 0) / returns.length) || 1;
+        const sharpeRatio = returnStdDev > 0 ? avgReturn / returnStdDev : 0;
+        
+        return {
+            totalReturn: totalReturn,
+            winRate: winRate,
+            maxDrawdown: maxDrawdown,
+            sharpeRatio: sharpeRatio,
+            totalTrades: totalTrades,
+            finalCapital: currentCapital,
+            trades: trades,
+            initialCapital: initialCapital
+        };
+    }
+
+    calculateTechnicalIndicators(data) {
+        const prices = data.map(d => d.price);
+        const indicators = {
+            prices: prices,
+            rsi: this.calculateRSI(prices, 14),
+            sma20: this.calculateSMA(prices, 20),
+            sma50: this.calculateSMA(prices, 50),
+            ema12: this.calculateEMA(prices, 12),
+            ema26: this.calculateEMA(prices, 26),
+            macd: this.calculateMACD(prices),
+            bollinger: this.calculateBollingerBands(prices, 20, 2)
+        };
+        
+        return indicators;
+    }
+
+    calculateRSI(prices, period = 14) {
+        const rsi = [];
+        for (let i = period; i < prices.length; i++) {
+            let gains = 0;
+            let losses = 0;
+            
+            for (let j = i - period + 1; j <= i; j++) {
+                const change = prices[j] - prices[j - 1];
+                if (change > 0) gains += change;
+                else losses -= change;
+            }
+            
+            const avgGain = gains / period;
+            const avgLoss = losses / period;
+            const rs = avgLoss === 0 ? 100 : avgGain / avgLoss;
+            const rsiValue = 100 - (100 / (1 + rs));
+            
+            rsi.push(rsiValue);
+        }
+        
+        return rsi;
+    }
+
+    calculateSMA(prices, period) {
+        const sma = [];
+        for (let i = period - 1; i < prices.length; i++) {
+            const sum = prices.slice(i - period + 1, i + 1).reduce((a, b) => a + b, 0);
+            sma.push(sum / period);
+        }
+        return sma;
+    }
+
+    calculateEMA(prices, period) {
+        const ema = [];
+        const multiplier = 2 / (period + 1);
+        
+        // First EMA is SMA
+        const firstSMA = prices.slice(0, period).reduce((a, b) => a + b, 0) / period;
+        ema.push(firstSMA);
+        
+        for (let i = period; i < prices.length; i++) {
+            const emaValue = (prices[i] * multiplier) + (ema[ema.length - 1] * (1 - multiplier));
+            ema.push(emaValue);
+        }
+        
+        return ema;
+    }
+
+    calculateMACD(prices) {
+        const ema12 = this.calculateEMA(prices, 12);
+        const ema26 = this.calculateEMA(prices, 26);
+        
+        const macd = [];
+        const signal = [];
+        
+        for (let i = 0; i < Math.min(ema12.length, ema26.length); i++) {
+            macd.push(ema12[i] - ema26[i]);
+        }
+        
+        // Calculate signal line (9-period EMA of MACD)
+        const signalEMA = this.calculateEMA(macd, 9);
+        
+        return { macd, signal: signalEMA };
+    }
+
+    calculateBollingerBands(prices, period = 20, stdDev = 2) {
+        const bands = [];
+        
+        for (let i = period - 1; i < prices.length; i++) {
+            const slice = prices.slice(i - period + 1, i + 1);
+            const sma = slice.reduce((a, b) => a + b, 0) / period;
+            
+            const variance = slice.reduce((sum, price) => sum + Math.pow(price - sma, 2), 0) / period;
+            const standardDeviation = Math.sqrt(variance);
+            
+            bands.push({
+                upper: sma + (stdDev * standardDeviation),
+                middle: sma,
+                lower: sma - (stdDev * standardDeviation)
+            });
+        }
+        
+        return bands;
+    }
+
+    getTradingSignal(strategy, indicators, index) {
+        const prices = indicators.prices || [];
+        const currentPrice = prices[index] || 0;
+        
+        switch (strategy) {
+            case 'rsi':
+                if (index < indicators.rsi.length) {
+                    const rsi = indicators.rsi[index];
+                    if (rsi < 30) return 'BUY';
+                    if (rsi > 70) return 'SELL';
+                }
+                break;
+                
+            case 'macd':
+                if (index < indicators.macd.macd.length && index > 0) {
+                    const macd = indicators.macd.macd[index];
+                    const prevMacd = indicators.macd.macd[index - 1];
+                    const signal = indicators.macd.signal[index];
+                    
+                    if (macd > signal && prevMacd <= indicators.macd.signal[index - 1]) return 'BUY';
+                    if (macd < signal && prevMacd >= indicators.macd.signal[index - 1]) return 'SELL';
+                }
+                break;
+                
+            case 'ema':
+                if (index < indicators.ema12.length && index < indicators.ema26.length) {
+                    const ema12 = indicators.ema12[index];
+                    const ema26 = indicators.ema26[index];
+                    const prevEma12 = indicators.ema12[index - 1];
+                    const prevEma26 = indicators.ema26[index - 1];
+                    
+                    if (ema12 > ema26 && prevEma12 <= prevEma26) return 'BUY';
+                    if (ema12 < ema26 && prevEma12 >= prevEma26) return 'SELL';
+                }
+                break;
+                
+            case 'bollinger':
+                if (index < indicators.bollinger.length) {
+                    const bands = indicators.bollinger[index];
+                    if (currentPrice <= bands.lower) return 'BUY';
+                    if (currentPrice >= bands.upper) return 'SELL';
+                }
+                break;
+        }
+        
+        return 'HOLD';
     }
 
     // Utility Methods
