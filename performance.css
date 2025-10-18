@@ -1,0 +1,348 @@
+/* ============================================
+   PERFORMANCE OPTIMIZATIONS FOR 120FPS UI
+   ============================================ */
+
+/* Force GPU acceleration for all interactive elements */
+.message,
+.typing-indicator,
+.quick-btn,
+.auth-btn,
+.user-dropdown-menu,
+.auth-modal,
+.auth-modal-content,
+.dropdown-menu,
+.dropdown-toggle,
+.action-btn,
+button,
+input,
+textarea,
+select,
+.ticker-item,
+.panel {
+    will-change: auto;
+    transform: translate3d(0, 0, 0);
+    -webkit-transform: translate3d(0, 0, 0);
+}
+
+/* Optimize transitions - avoid 'all', use specific properties */
+.dropdown-toggle,
+.action-btn,
+.quick-btn,
+.auth-btn,
+button {
+    transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+                background-color 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+                box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+                border-color 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.dropdown-menu,
+.auth-modal-content,
+.user-dropdown-menu {
+    transition: opacity 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+                transform 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+                visibility 0s linear 0.2s;
+}
+
+.dropdown-menu.show,
+.user-dropdown-menu.show {
+    transition-delay: 0s;
+}
+
+/* Smooth input animations */
+input,
+textarea,
+select {
+    transition: border-color 0.15s ease,
+                box-shadow 0.15s ease,
+                background-color 0.15s ease;
+}
+
+/* Optimize hover states */
+.ticker-item,
+.panel-item,
+.message {
+    transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+                background-color 0.2s ease;
+}
+
+/* Smooth scroll behavior */
+#chatMessages,
+.panel {
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch;
+}
+
+/* Reduce motion for accessibility while maintaining smoothness */
+@media (prefers-reduced-motion: reduce) {
+    * {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+}
+
+/* Optimize animations with GPU */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px) translateZ(0);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) translateZ(0);
+    }
+}
+
+@keyframes slideIn {
+    from {
+        transform: translateX(100%) translateZ(0);
+    }
+    to {
+        transform: translateX(0) translateZ(0);
+    }
+}
+
+@keyframes pulse {
+    0%, 100% {
+        transform: scale(1) translateZ(0);
+    }
+    50% {
+        transform: scale(1.05) translateZ(0);
+    }
+}
+
+/* Optimize typing indicator */
+.typing-indicator .dot {
+    animation: typingDot 1.4s infinite ease-in-out;
+}
+
+@keyframes typingDot {
+    0%, 60%, 100% {
+        transform: translateY(0) translateZ(0);
+    }
+    30% {
+        transform: translateY(-10px) translateZ(0);
+    }
+}
+
+/* Smooth fade transitions */
+.hidden {
+    opacity: 0 !important;
+    pointer-events: none;
+    transform: translateZ(0);
+}
+
+/* Optimize message rendering */
+.message {
+    contain: layout style paint;
+    content-visibility: auto;
+}
+
+/* Debounce rapid DOM changes */
+.message-text {
+    will-change: contents;
+}
+
+/* Optimize modal animations */
+.auth-modal {
+    animation: fadeInModal 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes fadeInModal {
+    from {
+        opacity: 0;
+        backdrop-filter: blur(0);
+    }
+    to {
+        opacity: 1;
+        backdrop-filter: blur(8px);
+    }
+}
+
+/* Optimize button press feedback */
+button:active,
+.quick-btn:active,
+.action-btn:active {
+    transform: scale(0.95) translateZ(0);
+    transition-duration: 0.1s;
+}
+
+/* Smooth color transitions */
+.price-change {
+    transition: background-color 0.3s ease,
+                color 0.3s ease,
+                border-color 0.3s ease;
+}
+
+/* Optimize scroll indicators */
+.scroll-indicator {
+    transition: opacity 0.2s ease;
+}
+
+/* Container optimization */
+.chat-container {
+    contain: layout style;
+}
+
+/* Optimize backdrop blur */
+.auth-modal,
+.dropdown-menu,
+.user-dropdown-menu {
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+}
+
+/* Fast panel transitions */
+.panel {
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.panel.hidden {
+    transform: translateX(100%) translateZ(0);
+}
+
+/* Optimize focus states */
+input:focus,
+textarea:focus,
+select:focus,
+button:focus {
+    outline: none;
+    transition: box-shadow 0.15s ease,
+                border-color 0.15s ease;
+}
+
+/* Smooth loading states */
+.loading {
+    animation: shimmer 1.5s infinite;
+}
+
+@keyframes shimmer {
+    0% {
+        background-position: -1000px 0;
+    }
+    100% {
+        background-position: 1000px 0;
+    }
+}
+
+/* Optimize ticker animation */
+.ticker {
+    animation: marquee 60s linear infinite;
+    will-change: transform;
+}
+
+/* Reduce paint on scroll */
+.chat-header,
+.input-container {
+    will-change: auto;
+    contain: layout style paint;
+}
+
+/* Optimize gradient animations */
+.chat-header::before {
+    animation: gradientShift 12s ease infinite;
+    will-change: background-position;
+}
+
+/* Fast ripple effect */
+@keyframes ripple {
+    0% {
+        transform: scale(0) translateZ(0);
+        opacity: 1;
+    }
+    100% {
+        transform: scale(4) translateZ(0);
+        opacity: 0;
+    }
+}
+
+/* Optimize shadow transitions */
+.dropdown-toggle:hover,
+.action-btn:hover,
+.auth-btn:hover {
+    box-shadow: 0 8px 25px rgba(0, 212, 255, 0.3);
+}
+
+/* Performance mode for low-end devices */
+@media (max-width: 768px) {
+    * {
+        transition-duration: 0.2s !important;
+    }
+    
+    .ticker {
+        animation-duration: 80s !important;
+    }
+    
+    .chat-header::before {
+        animation: none !important;
+    }
+}
+
+/* Smooth text rendering */
+* {
+    text-rendering: optimizeSpeed;
+    -webkit-font-smoothing: subpixel-antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+/* Optimize image rendering (if any) */
+img {
+    image-rendering: -webkit-optimize-contrast;
+    image-rendering: crisp-edges;
+}
+
+/* CSS containment for better performance */
+.message,
+.ticker-item,
+.panel-item {
+    contain: content;
+}
+
+/* Optimize will-change for active animations only */
+.message.typing {
+    will-change: contents;
+}
+
+.dropdown-menu.show,
+.auth-modal:not(.hidden) {
+    will-change: transform, opacity;
+}
+
+/* Smooth page transitions */
+body {
+    transition: none; /* Prevent FOUC */
+}
+
+/* Optimize form inputs */
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="number"],
+textarea {
+    transition: border-color 0.15s ease,
+                box-shadow 0.15s ease,
+                background-color 0.15s ease;
+}
+
+/* Fast click response */
+button,
+.quick-btn,
+.action-btn,
+.auth-btn {
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+}
+
+/* Optimize for 120Hz displays */
+@media (min-resolution: 2dppx) {
+    * {
+        animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+    }
+}
+
+/* Remove lag from transitions */
+* {
+    -webkit-transform-style: preserve-3d;
+    transform-style: preserve-3d;
+}

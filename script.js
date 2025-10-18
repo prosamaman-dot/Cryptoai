@@ -278,19 +278,26 @@ class SamCryptoAI {
     }
 
     handleInputChange() {
-        const input = document.getElementById('messageInput');
-        const sendButton = document.getElementById('sendButton');
-        const charCount = document.querySelector('.char-count');
+        // Use requestAnimationFrame for smooth 60fps updates
+        if (this.inputChangeFrame) {
+            cancelAnimationFrame(this.inputChangeFrame);
+        }
         
-        // Auto-resize textarea
-        input.style.height = 'auto';
-        input.style.height = Math.min(input.scrollHeight, 120) + 'px';
-        
-        // Update character count
-        charCount.textContent = `${input.value.length}/1000`;
-        
-        // Enable/disable send button
-        sendButton.disabled = input.value.trim().length === 0;
+        this.inputChangeFrame = requestAnimationFrame(() => {
+            const input = document.getElementById('messageInput');
+            const sendButton = document.getElementById('sendButton');
+            const charCount = document.querySelector('.char-count');
+            
+            // Auto-resize textarea
+            input.style.height = 'auto';
+            input.style.height = Math.min(input.scrollHeight, 120) + 'px';
+            
+            // Update character count
+            charCount.textContent = `${input.value.length}/1000`;
+            
+            // Enable/disable send button
+            sendButton.disabled = input.value.trim().length === 0;
+        });
     }
 
     handleKeyDown(e) {
@@ -1519,10 +1526,18 @@ Bitcoin, Ethereum, Solana, Cardano, Ripple, Dogecoin, Polkadot, Avalanche, Polyg
     initializeScrollManagement() {
         const messagesContainer = document.getElementById('chatMessages');
         
-        // Add scroll event listener to detect user scrolling
+        // Throttle scroll events with requestAnimationFrame for smooth performance
+        let scrollTicking = false;
+        
         messagesContainer.addEventListener('scroll', () => {
-            this.handleUserScroll(messagesContainer);
-        });
+            if (!scrollTicking) {
+                requestAnimationFrame(() => {
+                    this.handleUserScroll(messagesContainer);
+                    scrollTicking = false;
+                });
+                scrollTicking = true;
+            }
+        }, { passive: true }); // Passive listener for better scroll performance
     }
     
     handleUserScroll(container) {
