@@ -1,0 +1,120 @@
+/* Voice Input Button Styling */
+.voice-button {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: #a0a0a0;
+    transition: all 0.3s ease;
+    margin-right: 8px;
+}
+
+.voice-button:hover {
+    background: rgba(0, 212, 255, 0.1);
+    border-color: rgba(0, 212, 255, 0.3);
+    color: #00d4ff;
+    transform: scale(1.05);
+}
+
+.voice-button:active {
+    transform: scale(0.95);
+}
+
+/* Recording state */
+.voice-button.recording {
+    background: rgba(255, 70, 70, 0.2);
+    border-color: rgba(255, 70, 70, 0.5);
+    color: #ff4646;
+    animation: pulse-recording 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse-recording {
+    0%, 100% {
+        transform: scale(1);
+        box-shadow: 0 0 0 0 rgba(255, 70, 70, 0.7);
+    }
+    50% {
+        transform: scale(1.05);
+        box-shadow: 0 0 0 10px rgba(255, 70, 70, 0);
+    }
+}
+
+/* Voice Status Message */
+.voice-status {
+    color: #00d4ff;
+    font-size: 12px;
+    font-weight: 500;
+    margin-left: 12px;
+    animation: fadeIn 0.3s ease;
+}
+
+.voice-status.hidden {
+    display: none;
+}
+
+.voice-status.error {
+    color: #ff4646;
+}
+
+.voice-status.success {
+    color: #00c851;
+}
+
+/* Input Footer Updates */
+.input-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 12px;
+    font-size: 12px;
+    color: #666;
+}
+
+/* Mobile Optimizations */
+@media (max-width: 768px) {
+    .voice-button {
+        width: 44px;
+        height: 44px;
+        margin-right: 6px;
+    }
+    
+    .voice-button svg {
+        width: 22px;
+        height: 22px;
+    }
+    
+    /* Larger touch targets for mobile */
+    .voice-button:active {
+        transform: scale(0.9);
+    }
+}
+
+@media (max-width: 480px) {
+    .voice-button {
+        width: 42px;
+        height: 42px;
+    }
+    
+    .voice-status {
+        font-size: 11px;
+        margin-left: 8px;
+    }
+}
+
+/* Disabled state */
+.voice-button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.voice-button:disabled:hover {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: rgba(255, 255, 255, 0.1);
+    color: #a0a0a0;
+    transform: none;
+}

@@ -48,6 +48,10 @@ class SamCryptoAI {
         // Message sending flag to prevent duplicates
         this.isSending = false;
         
+        // Voice input state
+        this.isRecording = false;
+        this.recognition = null;
+        
         // Professional greeting messages
         this.greetingMessages = [
             "Welcome to SamCrypto AI! Ready to analyze the markets and find profitable opportunities? 📈💰",
@@ -328,6 +332,10 @@ class SamCryptoAI {
                 }
             }
         });
+        
+        // Voice Input Button
+        const voiceInputButton = document.getElementById('voiceInputButton');
+        voiceInputButton?.addEventListener('click', () => this.toggleVoiceInput());
 
         // Initialize action buttons
         this.initializeActionButtons();
@@ -2475,6 +2483,142 @@ SamCrypto AI remembers your preferences and conversation history to provide pers
             
             // Restore body scroll
             document.body.style.overflow = '';
+        }
+    }
+
+    // Voice Input Methods
+    toggleVoiceInput() {
+        if (this.isRecording) {
+            this.stopVoiceInput();
+        } else {
+            this.startVoiceInput();
+        }
+    }
+
+    startVoiceInput() {
+        // Check for speech recognition support
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        
+        if (!SpeechRecognition) {
+            this.showVoiceStatus('Speech recognition not supported in this browser', 'error');
+            console.error('❌ Speech recognition not supported');
+            return;
+        }
+
+        try {
+            // Initialize recognition
+            if (!this.recognition) {
+                this.recognition = new SpeechRecognition();
+                this.recognition.continuous = false; // Stop after one result
+                this.recognition.interimResults = true; // Show interim results
+                this.recognition.lang = 'en-US'; // Set language
+                
+                // Handle results
+                this.recognition.onresult = (event) => {
+                    let transcript = '';
+                    for (let i = event.resultIndex; i < event.results.length; i++) {
+                        transcript += event.results[i][0].transcript;
+                    }
+                    
+                    // Update input with transcript
+                    const messageInput = document.getElementById('messageInput');
+                    messageInput.value = transcript;
+                    
+                    // Enable send button and update char count
+                    document.getElementById('sendButton').disabled = false;
+                    document.querySelector('.char-count').textContent = `${transcript.length}/1000`;
+                    
+                    // Show interim results
+                    if (event.results[event.results.length - 1].isFinal) {
+                        this.showVoiceStatus('✓ Speech captured', 'success');
+                        console.log('🎤 Final transcript:', transcript);
+                    } else {
+                        this.showVoiceStatus('Listening...', '');
+                    }
+                };
+
+                // Handle errors
+                this.recognition.onerror = (event) => {
+                    console.error('❌ Speech recognition error:', event.error);
+                    let errorMessage = 'Error: ';
+                    switch (event.error) {
+                        case 'no-speech':
+                            errorMessage += 'No speech detected';
+                            break;
+                        case 'audio-capture':
+                            errorMessage += 'No microphone found';
+                            break;
+                        case 'not-allowed':
+                            errorMessage += 'Microphone permission denied';
+                            break;
+                        default:
+                            errorMessage += event.error;
+                    }
+                    this.showVoiceStatus(errorMessage, 'error');
+                    this.stopVoiceInput();
+                };
+
+                // Handle end
+                this.recognition.onend = () => {
+                    this.stopVoiceInput();
+                };
+            }
+
+            // Start recording
+            this.recognition.start();
+            this.isRecording = true;
+            
+            // Update button state
+            const voiceButton = document.getElementById('voiceInputButton');
+            voiceButton.classList.add('recording');
+            
+            // Show status
+            this.showVoiceStatus('🎤 Listening...', '');
+            console.log('🎤 Voice input started');
+
+        } catch (error) {
+            console.error('❌ Failed to start voice input:', error);
+            this.showVoiceStatus('Failed to start recording', 'error');
+            this.isRecording = false;
+        }
+    }
+
+    stopVoiceInput() {
+        if (this.recognition) {
+            try {
+                this.recognition.stop();
+            } catch (error) {
+                console.error('Error stopping recognition:', error);
+            }
+        }
+        
+        this.isRecording = false;
+        
+        // Update button state
+        const voiceButton = document.getElementById('voiceInputButton');
+        voiceButton.classList.remove('recording');
+        
+        // Hide status after a delay
+        setTimeout(() => {
+            this.hideVoiceStatus();
+        }, 2000);
+        
+        console.log('🎤 Voice input stopped');
+    }
+
+    showVoiceStatus(message, type = '') {
+        const statusElement = document.getElementById('voiceStatus');
+        if (statusElement) {
+            statusElement.textContent = message;
+            statusElement.className = 'voice-status';
+            if (type) statusElement.classList.add(type);
+        }
+    }
+
+    hideVoiceStatus() {
+        const statusElement = document.getElementById('voiceStatus');
+        if (statusElement) {
+            statusElement.classList.add('hidden');
         }
     }
 
