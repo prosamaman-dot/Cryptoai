@@ -17,11 +17,15 @@ button,
 input,
 textarea,
 select,
-.ticker-item,
 .panel {
     will-change: auto;
     transform: translate3d(0, 0, 0);
     -webkit-transform: translate3d(0, 0, 0);
+}
+
+/* Ticker items - don't transform, let parent animate */
+.ticker-item {
+    will-change: auto;
 }
 
 /* Optimize transitions - avoid 'all', use specific properties */
@@ -229,7 +233,9 @@ button:focus {
 /* Optimize ticker animation */
 .ticker {
     animation: marquee 60s linear infinite;
+    animation-play-state: running !important;
     will-change: transform;
+    transform: translateZ(0); /* Force GPU acceleration */
 }
 
 /* Reduce paint on scroll */

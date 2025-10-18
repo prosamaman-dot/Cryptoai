@@ -3,8 +3,9 @@
 /* Auth Buttons in Header */
 .auth-buttons {
     display: flex;
-    gap: 8px;
+    gap: 6px;
     align-items: center;
+    flex-shrink: 0;
 }
 
 .auth-btn {
@@ -131,10 +132,12 @@
     width: 100%;
     height: 100%;
     background: rgba(0, 0, 0, 0.85);
-    z-index: 2000;
-    align-items: center;
+    z-index: 99999 !important;
     justify-content: center;
+    align-items: center;
     backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    animation: fadeIn 0.3s ease;
     overflow-y: auto;
     padding: 10px;
 }

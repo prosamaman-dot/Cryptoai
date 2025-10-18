@@ -1,0 +1,204 @@
+{
+  "meta": {
+    "project": "Crypto Rapper AI",
+    "date": "2025-10-18",
+    "prepared_by": "Software Development Manager"
+  },
+  "product_overview": "Crypto Rapper AI is an interactive AI-powered cryptocurrency trading assistant that delivers real-time market analysis, technical trading insights, and entertaining rap-style summaries. It provides a chat interface powered by Google's Gemini API, real-time market data integration, and comprehensive crypto trading tools for both beginners and experienced traders.",
+  "core_goals": [
+    "Enable natural language conversational AI interaction for crypto trading advice and analysis.",
+    "Provide real-time market data and price tracking for major cryptocurrencies.",
+    "Offer advanced technical analysis including RSI, MACD, and price action.",
+    "Deliver engaging rap summaries to make market analysis entertaining and memorable.",
+    "Allow secure user authentication and personalized profile management.",
+    "Support trading strategy backtesting and portfolio tracking features.",
+    "Ensure highly responsive and performant user experience on desktop and mobile devices."
+  ],
+  "key_features": [
+    "ChatGPT-style conversational interface with message bubbles, typing indicators, and markdown support.",
+    "Integration with Google Gemini API for AI-powered crypto trading advice and rap generation.",
+    "Real-time cryptocurrency price ticker with data from Binance and CoinGecko APIs.",
+    "Portfolio management and profit & loss calculation for multiple cryptocurrencies.",
+    "Interactive charts featuring multiple timeframes and technical indicators using Chart.js.",
+    "Robust user authentication system with registration, login, logout, and session persistence.",
+    "Customizable price alerts with notifications based on user-defined thresholds.",
+    "Market sentiment dashboard showing overall mood and confidence levels.",
+    "Voice command support for hands-free interaction with the AI assistant.",
+    "Dark/light theme toggle with persistent user preferences.",
+    "Persistent chat history with typewriter effect and conversation memory.",
+    "Quick action buttons for frequent queries and analysis.",
+    "Trading strategy backtesting engine for popular indicators like RSI, MACD, EMA, and Bollinger Bands.",
+    "Secure API key management for Gemini API and user profile settings.",
+    "Performance optimizations including GPU acceleration and 120fps UI rendering.",
+    "Mobile-responsive design optimized for touch interactions."
+  ],
+  "user_flow_summary": [
+    "User registers or logs in to the app and sets trading preferences including API keys and risk tolerance.",
+    "User initiates chat by typing or voice command, asking questions about specific cryptocurrencies.",
+    "AI processes the query using Gemini API and market data to provide real-time analysis and rap summaries.",
+    "User views live market ticker and interactive charts for detailed price and technical indicator information.",
+    "Users can manage their portfolio, set price alerts, and receive notifications when targets are hit.",
+    "Users utilize backtesting tools to simulate trading strategies against historical data and evaluate performance.",
+    "User can toggle dark/light theme and update profile settings at any time.",
+    "Chat history is saved and loaded for continuity in conversations."
+  ],
+  "validation_criteria": [
+    "All core functionalities tested on supported browsers: Chrome, Firefox, Safari, Edge.",
+    "Secure and persistent user authentication with correct session management.",
+    "Correct and timely real-time market data updates with graceful fallback.",
+    "Accurate AI responses with relevant trading analysis and rap content.",
+    "Responsive UI with consistent performance at 120fps on typical hardware.",
+    "Correct operation of portfolio tracker, price alert system, and backtesting engine.",
+    "Voice commands correctly recognized and executed.",
+    "User preferences including theme and profile settings persist across sessions.",
+    "Chat history accurately stored and restored with formatted display.",
+    "Mobile and desktop layouts render correctly and are fully usable.",
+    "Performance optimizations verified through profiling and load testing."
+  ],
+  "code_summary": {
+    "tech_stack": [
+      "HTML5",
+      "CSS3",
+      "JavaScript (Vanilla ES6+)",
+      "Chart.js",
+      "TradingView Widget",
+      "Google Gemini API",
+      "CoinGecko API",
+      "Binance API",
+      "LocalStorage"
+    ],
+    "features": [
+      {
+        "name": "User Authentication System",
+        "description": "Complete user registration, login, logout, and session management with localStorage persistence. Includes profile management and user preferences.",
+        "files": [
+          "user-manager.js",
+          "auth-styles.css",
+          "index.html"
+        ]
+      },
+      {
+        "name": "AI Crypto Trading Chat",
+        "description": "Interactive AI chatbot powered by Gemini API that provides crypto trading advice, market analysis, and personalized recommendations based on real-time market data.",
+        "files": [
+          "script.js",
+          "index.html",
+          "styles.css"
+        ]
+      },
+      {
+        "name": "Real-Time Market Data Ticker",
+        "description": "Live cryptocurrency price ticker showing BTC, ETH, and SOL prices with 24h changes. Uses Binance WebSocket and REST API with fallback mechanisms.",
+        "files": [
+          "script.js",
+          "styles.css",
+          "index.html"
+        ]
+      },
+      {
+        "name": "Portfolio Tracker",
+        "description": "User portfolio management system to track crypto holdings, calculate P&L, display current values, and manage multiple cryptocurrency positions.",
+        "files": [
+          "script.js",
+          "index.html",
+          "styles.css"
+        ]
+      },
+      {
+        "name": "Price Alerts System",
+        "description": "Cryptocurrency price alert functionality allowing users to set custom price thresholds and get notified when prices hit targets.",
+        "files": [
+          "script.js",
+          "index.html",
+          "styles.css"
+        ]
+      },
+      {
+        "name": "Interactive Charts",
+        "description": "Dynamic cryptocurrency price charts using Chart.js with multiple timeframes, historical data visualization, and technical indicators.",
+        "files": [
+          "script.js",
+          "index.html",
+          "styles.css"
+        ]
+      },
+      {
+        "name": "Trading Strategy Backtesting",
+        "description": "Backtesting engine for testing trading strategies (RSI, MACD, EMA, Bollinger Bands) against historical data with performance metrics and trade history.",
+        "files": [
+          "script.js",
+          "index.html",
+          "styles.css"
+        ]
+      },
+      {
+        "name": "Market Sentiment Analysis",
+        "description": "Sentiment analysis dashboard showing market mood and confidence levels for crypto assets.",
+        "files": [
+          "script.js",
+          "index.html",
+          "styles.css"
+        ]
+      },
+      {
+        "name": "Voice Commands",
+        "description": "Voice recognition system for hands-free interaction with the crypto trading assistant.",
+        "files": [
+          "script.js",
+          "index.html"
+        ]
+      },
+      {
+        "name": "Theme Switcher",
+        "description": "Dark/light theme toggle with persistent user preference storage.",
+        "files": [
+          "script.js",
+          "styles.css"
+        ]
+      },
+      {
+        "name": "Profile Settings",
+        "description": "User profile management with trading preferences, risk tolerance, experience level, currency preferences, and API key configuration.",
+        "files": [
+          "user-manager.js",
+          "auth-styles.css",
+          "index.html"
+        ]
+      },
+      {
+        "name": "Chat History Management",
+        "description": "Persistent chat history storage with typewriter effect, markdown formatting, and conversation memory system.",
+        "files": [
+          "script.js",
+          "styles.css"
+        ]
+      },
+      {
+        "name": "Quick Action Buttons",
+        "description": "Predefined quick action buttons for common queries and analysis requests.",
+        "files": [
+          "script.js",
+          "index.html",
+          "styles.css"
+        ]
+      },
+      {
+        "name": "Performance Optimizations",
+        "description": "GPU acceleration, requestAnimationFrame throttling, passive event listeners, and CSS optimizations for 120fps UI performance.",
+        "files": [
+          "performance.css",
+          "script.js"
+        ]
+      },
+      {
+        "name": "Responsive Design",
+        "description": "Mobile-responsive layout with adaptive components and touch-friendly interactions.",
+        "files": [
+          "styles.css",
+          "auth-styles.css",
+          "performance.css"
+        ]
+      }
+    ]
+  }
+}

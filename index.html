@@ -7,6 +7,7 @@
     <link rel="stylesheet" href="styles.css">
     <link rel="stylesheet" href="auth-styles.css">
     <link rel="stylesheet" href="performance.css">
+    <link rel="stylesheet" href="auth-fix.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <!-- Chart.js for interactive charts -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -476,7 +477,7 @@
     </div>
 
     <!-- Login Modal -->
-    <div id="loginModal" class="modal auth-modal">
+    <div id="loginModal" class="modal auth-modal hidden">
         <div class="modal-content auth-modal-content">
             <div class="modal-header">
                 <h2>🔐 Login to SamCrypto AI</h2>
@@ -509,7 +510,7 @@
     </div>
 
     <!-- Register Modal -->
-    <div id="registerModal" class="modal auth-modal">
+    <div id="registerModal" class="modal auth-modal hidden">
         <div class="modal-content auth-modal-content">
             <div class="modal-header">
                 <h2>🚀 Join SamCrypto AI</h2>
@@ -549,7 +550,7 @@
     </div>
 
     <!-- Profile Settings Modal -->
-    <div id="profileModal" class="modal">
+    <div id="profileModal" class="modal hidden">
         <div class="modal-content">
             <div class="modal-header">
                 <h2>👤 Profile Settings</h2>

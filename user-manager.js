@@ -4,9 +4,12 @@
 class UserManager {
     constructor() {
         this.currentUser = null;
-        this.users = this.loadUsers();
         this.sessionKey = 'samcrypto_session';
         this.usersKey = 'samcrypto_users';
+        
+        // Load users first (like loading from database)
+        this.users = this.loadUsers();
+        console.log('📊 Loaded users database:', Object.keys(this.users).length, 'users');
         
         // Initialize authentication state
         this.initializeAuth();
@@ -24,43 +27,151 @@ class UserManager {
         }
     }
 
-    // Save users to localStorage
+    // Save users to localStorage (like SQL INSERT/UPDATE)
     saveUsers() {
         try {
-            localStorage.setItem(this.usersKey, JSON.stringify(this.users));
+            const usersJSON = JSON.stringify(this.users, null, 2);
+            localStorage.setItem(this.usersKey, usersJSON);
+            console.log('💾 Users database saved:', Object.keys(this.users).length, 'users');
+            
+            // Auto-backup to downloadable JSON every time we save
+            this.autoBackupToJSON();
         } catch (error) {
-            console.error('Error saving users:', error);
+            console.error('❌ Error saving users:', error);
+        }
+    }
+    
+    // Auto-backup users to data.json format (like SQL backup)
+    autoBackupToJSON() {
+        try {
+            const backup = {
+                version: '1.0',
+                timestamp: new Date().toISOString(),
+                users: this.users,
+                totalUsers: Object.keys(this.users).length
+            };
+            
+            // Store backup in localStorage for recovery
+            localStorage.setItem('samcrypto_backup', JSON.stringify(backup));
+            console.log('📦 Auto-backup created');
+        } catch (error) {
+            console.error('❌ Backup failed:', error);
+        }
+    }
+    
+    // Export database to data.json file (like SQL dump)
+    exportDatabase() {
+        const backup = {
+            version: '1.0',
+            timestamp: new Date().toISOString(),
+            users: this.users,
+            totalUsers: Object.keys(this.users).length
+        };
+        
+        const dataStr = JSON.stringify(backup, null, 2);
+        const dataBlob = new Blob([dataStr], { type: 'application/json' });
+        
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(dataBlob);
+        link.download = `samcrypto_database_${new Date().toISOString().split('T')[0]}.json`;
+        link.click();
+        
+        this.showMessage('Database exported to data.json!', 'success');
+        console.log('📥 Database exported');
+    }
+    
+    // Import database from data.json file (like SQL restore)
+    importDatabase(jsonData) {
+        try {
+            const backup = JSON.parse(jsonData);
+            
+            if (backup.users) {
+                this.users = backup.users;
+                this.saveUsers();
+                this.showMessage(`Database imported! ${backup.totalUsers} users loaded.`, 'success');
+                console.log('📤 Database imported:', backup.totalUsers, 'users');
+                
+                // Reload page to apply
+                setTimeout(() => window.location.reload(), 1000);
+                return true;
+            } else {
+                throw new Error('Invalid backup format');
+            }
+        } catch (error) {
+            this.showMessage('Failed to import database: ' + error.message, 'error');
+            console.error('❌ Import failed:', error);
+            return false;
         }
     }
 
     // Initialize authentication on page load
     initializeAuth() {
+        console.log('🔑 Initializing authentication...');
+        
+        // Step 1: Get session from localStorage
         const session = this.getSession();
-        if (session && session.userId && this.users[session.userId]) {
-            this.currentUser = this.users[session.userId];
-            this.updateUIForLoggedInUser();
+        console.log('🔐 Session:', session ? `User: ${session.userId}` : 'No session');
+        console.log('👥 Database has', Object.keys(this.users).length, 'users');
+        
+        // Step 2: Check if session exists and user exists in database
+        if (session && session.userId) {
+            const user = this.users[session.userId];
+            
+            if (user) {
+                // Step 3: Check if session expired
+                const isExpired = session.expiresAt && Date.now() > session.expiresAt;
+                
+                if (isExpired) {
+                    console.log('⏰ Session expired, logging out');
+                    this.clearSession();
+                    this.currentUser = null;
+                    this.updateUIForLoggedOutUser();
+                } else {
+                    // Step 4: Session valid, restore user
+                    console.log('✅ Session valid! Logging in:', user.name);
+                    this.currentUser = user;
+                    
+                    // Update last active time
+                    this.currentUser.stats.lastActive = Date.now();
+                    this.saveUsers();
+                    
+                    // Update UI to show logged in state
+                    document.body.classList.add('logged-in');
+                    this.updateUIForLoggedInUser();
+                    
+                    console.log('✅ User restored:', this.currentUser.name);
+                }
+            } else {
+                console.log('❌ User not found in database for session:', session.userId);
+                this.clearSession();
+                this.currentUser = null;
+                this.updateUIForLoggedOutUser();
+            }
         } else {
+            console.log('❌ No session found');
+            this.currentUser = null;
             this.updateUIForLoggedOutUser();
-            // Auto-show signup for first-time visitors
-            this.checkForFirstTimeVisitor();
         }
+        
+        // Final UI sync
+        setTimeout(() => {
+            this.syncAuthUI();
+            console.log('🎯 Auth initialized. Logged in:', !!this.currentUser);
+        }, 100);
     }
 
     // Check if this is a first-time visitor and show signup
     checkForFirstTimeVisitor() {
         const hasVisited = localStorage.getItem('samcrypto_visited');
-        const hasUsers = Object.keys(this.users).length > 0;
         
-        if (!hasVisited && !hasUsers) {
-            // Mark as visited
+        // Just mark as visited, don't auto-show signup
+        // Users can click Sign Up button when they're ready
+        if (!hasVisited) {
             localStorage.setItem('samcrypto_visited', 'true');
-            
-            // Show signup modal after a short delay for better UX
-            setTimeout(() => {
-                this.showRegisterModal();
-                this.showMessage('Welcome to SamCrypto AI! Create your account to get started with personalized crypto trading advice! 🚀', 'info');
-            }, 1500);
+            console.log('👋 First time visitor detected - Welcome!');
         }
+        
+        // Removed auto-popup - users should click Sign Up when ready
     }
 
     // Get current session
@@ -75,14 +186,15 @@ class UserManager {
     }
 
     // Set user session
-    setSession(userId, rememberMe = false) {
+    setSession(userId, rememberMe = true) {
         const session = {
             userId: userId,
             loginTime: Date.now(),
-            expiresAt: rememberMe ? Date.now() + (30 * 24 * 60 * 60 * 1000) : Date.now() + (24 * 60 * 60 * 1000), // 30 days or 1 day
+            expiresAt: rememberMe ? Date.now() + (30 * 24 * 60 * 60 * 1000) : Date.now() + (7 * 24 * 60 * 60 * 1000), // 30 days or 7 days
             rememberMe: rememberMe
         };
         localStorage.setItem(this.sessionKey, JSON.stringify(session));
+        console.log('💾 Session saved:', session);
     }
 
     // Clear user session
@@ -206,13 +318,20 @@ class UserManager {
             // Save user
             this.users[userId] = newUser;
             this.saveUsers();
+            console.log('✅ User registered successfully:', newUser.email);
+            console.log('📦 Total users:', Object.keys(this.users).length);
 
             // Auto-login after registration
             this.currentUser = newUser;
-            this.setSession(userId, false);
+            this.setSession(userId, true); // Remember me by default
+            
+            // Force save to ensure persistence
+            this.saveUsers();
+            localStorage.setItem('last_user_id', userId);
+            
             this.updateUIForLoggedInUser();
 
-            this.showMessage('Account created successfully! Welcome to SamCrypto AI!', 'success');
+            this.showMessage(`🎉 Account created successfully! Welcome to SamCrypto AI, ${newUser.name}!`, 'success');
             this.closeModals();
 
             return { success: true, user: newUser };
@@ -251,13 +370,19 @@ class UserManager {
             user.lastLogin = Date.now();
             user.stats.lastActive = Date.now();
             this.saveUsers();
+            console.log('✅ User logged in successfully:', user.email);
 
             // Set session
             this.currentUser = user;
             this.setSession(user.id, rememberMe);
+            
+            // Force save to ensure persistence
+            this.saveUsers();
+            localStorage.setItem('last_user_id', user.id);
+            
             this.updateUIForLoggedInUser();
 
-            this.showMessage(`Welcome back, ${user.name}!`, 'success');
+            this.showMessage(`🎉 Welcome back, ${user.name}!`, 'success');
             this.closeModals();
 
             return { success: true, user: user };
@@ -423,6 +548,15 @@ class UserManager {
 
         // Update welcome message with personalized data
         this.updatePersonalizedWelcome();
+        
+        // Reload main app with user data
+        if (window.samCrypto) {
+            console.log('🔄 Reloading main app with user data...');
+            window.samCrypto.loadUserData();
+        }
+        // Add body class for CSS-based control
+        document.body.classList.add('logged-in');
+        this.syncAuthUI();
     }
 
     // Update UI for logged out user
@@ -435,6 +569,26 @@ class UserManager {
         }
         
         if (authButtons) {
+            authButtons.style.display = 'flex';
+        }
+        document.body.classList.remove('logged-in');
+        this.syncAuthUI();
+    }
+
+    // Ensure header UI matches auth state (extra safety for refresh/load)
+    syncAuthUI() {
+        const userProfileSection = document.getElementById('userProfileSection');
+        const authButtons = document.getElementById('authButtons');
+        if (!userProfileSection || !authButtons) return;
+        if (this.currentUser) {
+            userProfileSection.style.display = 'flex';
+            authButtons.style.display = 'none';
+            const welcomeUser = document.getElementById('welcomeUser');
+            const userInitials = document.getElementById('userInitials');
+            if (welcomeUser) welcomeUser.textContent = `Welcome, ${this.currentUser.name}!`;
+            if (userInitials) userInitials.textContent = this.getInitials(this.currentUser.name);
+        } else {
+            userProfileSection.style.display = 'none';
             authButtons.style.display = 'flex';
         }
     }
@@ -613,13 +767,29 @@ class UserManager {
 
     // Show modals
     showLoginModal() {
-        document.getElementById('loginModal').classList.remove('hidden');
-        document.getElementById('loginModal').style.display = 'flex';
+        const modal = document.getElementById('loginModal');
+        if (modal) {
+            modal.classList.remove('hidden');
+            modal.style.display = 'flex';
+            modal.style.visibility = 'visible';
+            modal.style.opacity = '1';
+            console.log('✅ Login modal opened');
+        } else {
+            console.error('❌ Login modal not found!');
+        }
     }
 
     showRegisterModal() {
-        document.getElementById('registerModal').classList.remove('hidden');
-        document.getElementById('registerModal').style.display = 'flex';
+        const modal = document.getElementById('registerModal');
+        if (modal) {
+            modal.classList.remove('hidden');
+            modal.style.display = 'flex';
+            modal.style.visibility = 'visible';
+            modal.style.opacity = '1';
+            console.log('✅ Register modal opened');
+        } else {
+            console.error('❌ Register modal not found!');
+        }
     }
 
     showProfileModal() {
@@ -631,18 +801,22 @@ class UserManager {
         document.getElementById('riskTolerance').value = this.currentUser.preferences.riskTolerance;
         document.getElementById('tradingExperience').value = this.currentUser.preferences.tradingExperience;
         document.getElementById('preferredCurrency').value = this.currentUser.preferences.preferredCurrency;
-        document.getElementById('profileApiKey').value = this.currentUser.preferences.apiKey || '';
         
-        document.getElementById('profileModal').classList.remove('hidden');
-        document.getElementById('profileModal').style.display = 'flex';
+        const modal = document.getElementById('profileModal');
+        if (modal) {
+            modal.classList.remove('hidden');
+            modal.style.display = 'flex';
+        }
     }
 
-    // Close modals
     closeModal(modalId) {
         const modal = document.getElementById(modalId);
         if (modal) {
             modal.classList.add('hidden');
             modal.style.display = 'none';
+            modal.style.visibility = 'hidden';
+            modal.style.opacity = '0';
+            console.log('✅ Modal closed:', modalId);
         }
     }
 
@@ -674,11 +848,38 @@ class UserManager {
         messageEl.textContent = message;
         messageEl.className = `auth-message ${type}`;
         messageEl.style.display = 'block';
+        messageEl.style.opacity = '1';
+        messageEl.style.visibility = 'visible';
+        messageEl.style.position = 'fixed';
+        messageEl.style.top = '20px';
+        messageEl.style.right = '20px';
+        messageEl.style.zIndex = '999999';
+        messageEl.style.padding = '15px 25px';
+        messageEl.style.borderRadius = '8px';
+        messageEl.style.fontWeight = '500';
+        messageEl.style.boxShadow = '0 4px 12px rgba(0,0,0,0.3)';
+        
+        // Color based on type
+        if (type === 'error') {
+            messageEl.style.background = 'linear-gradient(135deg, #ff4444, #cc0000)';
+            messageEl.style.color = '#ffffff';
+        } else if (type === 'success') {
+            messageEl.style.background = 'linear-gradient(135deg, #00c851, #007e33)';
+            messageEl.style.color = '#ffffff';
+        } else {
+            messageEl.style.background = 'linear-gradient(135deg, #33b5e5, #0099cc)';
+            messageEl.style.color = '#ffffff';
+        }
+
+        console.log(`📢 Message displayed: [${type.toUpperCase()}] ${message}`);
 
         // Auto-hide after 5 seconds
         setTimeout(() => {
             if (messageEl) {
-                messageEl.style.display = 'none';
+                messageEl.style.opacity = '0';
+                setTimeout(() => {
+                    messageEl.style.display = 'none';
+                }, 300);
             }
         }, 5000);
     }

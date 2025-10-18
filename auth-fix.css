@@ -1,0 +1,22 @@
+/* Force auth buttons to hide when logged in */
+body.logged-in #authButtons {
+    display: none !important;
+}
+
+body.logged-in #userProfileSection {
+    display: flex !important;
+}
+
+body:not(.logged-in) #authButtons {
+    display: flex !important;
+}
+
+body:not(.logged-in) #userProfileSection {
+    display: none !important;
+}
+
+/* Force ticker animation */
+#crypto-ticker {
+    animation: marquee 60s linear infinite !important;
+    animation-play-state: running !important;
+}

@@ -1,0 +1,16 @@
+{
+  "status": "commited",
+  "type": "frontend",
+  "scope": "codebase",
+  "localEndpoint": "http://localhost:5500",
+  "executionArgs": {
+    "projectName": "Crypto ai",
+    "projectPath": "c:\\Users\\hp\\Crypto ai",
+    "testIds": [],
+    "additionalInstruction": "Re-testing after fixes applied. Focus on: 1) User signup and login persistence after page refresh (should now stay logged in), 2) Error message visibility (should show clear red/green messages), 3) Ticker animation (prices should scroll smoothly and update continuously)",
+    "envs": {
+      "API_KEY": "sk-user-Y-I7lZCwSknIdW_WeodWUXhDgaDouggvSSJAU_YalOCT3BohNaTOTZJgs04GDPat648Q4ggk4Jlu5dVfmER1Iur_UMuL0wE85xme5es8VZopWG1U1AKDfCzjWV2K-3GDj_4"
+    }
+  },
+  "proxy": "http://b2ebf910-d2ac-4226-b544-3ef88c1625c4:Iuq3a3UdjNm6o4IoMUTxI3t6m4Rn5GzE@tun.testsprite.com:8080"
+}

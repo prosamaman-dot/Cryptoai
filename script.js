@@ -1706,6 +1706,8 @@ Bitcoin, Ethereum, Solana, Cardano, Ripple, Dogecoin, Polkadot, Avalanche, Polyg
     initializeMarketData() {
         // Show immediate prices first
         this.showImmediatePrices();
+        // Ensure CSS animation starts
+        this.restartTickerAnimation();
         
         // Connect to Binance WebSocket for real-time data
         this.connectToBinanceWebSocket();
@@ -1713,6 +1715,8 @@ Bitcoin, Ethereum, Solana, Cardano, Ripple, Dogecoin, Polkadot, Avalanche, Polyg
         // Fallback: Update prices every 3 seconds using REST API
         this.fallbackInterval = setInterval(() => {
             this.updateMarketPricesFallback();
+            // Keep animation alive
+            this.restartTickerAnimation();
         }, 3000);
     }
 
@@ -1858,16 +1862,28 @@ Bitcoin, Ethereum, Solana, Cardano, Ripple, Dogecoin, Polkadot, Avalanche, Polyg
     connectToBinanceWebSocket() {
         try {
             // Binance WebSocket stream for BTC, ETH, SOL
-            this.ws = new WebSocket('wss://stream.binance.com:9443/ws/btcusdt@ticker/ethusdt@ticker/solusdt@ticker');
+            this.ws = new WebSocket('wss://stream.binance.com:9443/stream?streams=btcusdt@ticker/ethusdt@ticker/solusdt@ticker');
             
             this.ws.onopen = () => {
                 console.log('Connected to Binance WebSocket');
                 this.isConnected = true;
+                // Stop REST API fallback if it was running
+                if (this.restApiInterval) {
+                    clearInterval(this.restApiInterval);
+                    this.restApiInterval = null;
+                    console.log('Stopped REST API fallback after WS connect');
+                }
             };
             
             this.ws.onmessage = (event) => {
-                const data = JSON.parse(event.data);
-                this.updatePriceFromWebSocket(data);
+                try {
+                    const payload = JSON.parse(event.data);
+                    // Combined streams use { stream, data }, single stream sends the data directly
+                    const msg = payload && payload.data ? payload.data : payload;
+                    this.updatePriceFromWebSocket(msg);
+                } catch (e) {
+                    console.error('Error parsing WebSocket message:', e);
+                }
             };
             
             this.ws.onclose = () => {
@@ -1877,16 +1893,72 @@ Bitcoin, Ethereum, Solana, Cardano, Ripple, Dogecoin, Polkadot, Avalanche, Polyg
                 setTimeout(() => {
                     this.connectToBinanceWebSocket();
                 }, 2000);
+                // Start REST fallback while reconnecting
+                if (!this.restApiInterval) {
+                    this.startRestApiFallback();
+                }
             };
             
             this.ws.onerror = (error) => {
-                console.log('WebSocket error:', error);
+                console.error('❌ WebSocket error:', error);
                 this.isConnected = false;
+                // Start REST API fallback on error
+                if (!this.restApiInterval) {
+                    this.startRestApiFallback();
+                }
             };
             
         } catch (error) {
-            console.log('Failed to connect to Binance WebSocket:', error);
+            console.error('❌ Failed to connect to Binance WebSocket:', error);
             this.isConnected = false;
+            // Start REST API fallback
+            this.startRestApiFallback();
+        }
+    }
+    
+    // REST API fallback when WebSocket fails
+    startRestApiFallback() {
+        if (this.restApiInterval) return; // Already running
+        
+        console.log('🔄 Starting REST API fallback for price updates...');
+        
+        // Update immediately
+        this.fetchPricesViaRestAPI();
+        
+        // Then update every 10 seconds
+        this.restApiInterval = setInterval(() => {
+            if (!this.isConnected) {
+                this.fetchPricesViaRestAPI();
+            } else {
+                // WebSocket reconnected, stop fallback
+                clearInterval(this.restApiInterval);
+                this.restApiInterval = null;
+                console.log('✅ WebSocket reconnected, stopping REST API fallback');
+            }
+        }, 10000);
+    }
+    
+    async fetchPricesViaRestAPI() {
+        try {
+            const response = await fetch('https://api.binance.com/api/v3/ticker/24hr?symbols=["BTCUSDT","ETHUSDT","SOLUSDT"]');
+            const data = await response.json();
+            
+            data.forEach(ticker => {
+                const symbolMap = {
+                    'BTCUSDT': 'BTC',
+                    'ETHUSDT': 'ETH',
+                    'SOLUSDT': 'SOL'
+                };
+                
+                const coinCode = symbolMap[ticker.symbol];
+                if (coinCode) {
+                    this.updateTickerItem(coinCode, parseFloat(ticker.lastPrice), parseFloat(ticker.priceChangePercent));
+                }
+            });
+            
+            console.log('✅ Prices updated via REST API fallback');
+        } catch (error) {
+            console.error('❌ REST API fallback failed:', error);
         }
     }
 
@@ -2031,6 +2103,18 @@ Bitcoin, Ethereum, Solana, Cardano, Ripple, Dogecoin, Polkadot, Avalanche, Polyg
         
         // Force update from fallback API
         this.updateMarketPricesFallback();
+        this.restartTickerAnimation();
+    }
+
+    // Restart CSS marquee animation reliably
+    restartTickerAnimation() {
+        const ticker = document.getElementById('crypto-ticker');
+        if (!ticker) return;
+        // Toggle animation to force restart
+        ticker.style.animation = 'none';
+        // Force reflow
+        void ticker.offsetWidth;
+        ticker.style.animation = 'marquee 60s linear infinite';
     }
 
     // Memory Management System
@@ -3347,4 +3431,17 @@ document.addEventListener('DOMContentLoaded', () => {
     window.samCrypto = new SamCryptoAI();
     window.samCryptoAI = window.samCrypto; // For backwards compatibility
     console.log('✅ SamCrypto AI initialized and ready!');
+    // Extra safety: ensure auth UI matches session state after full DOM ready
+    try {
+        const um = window.samCrypto.userManager;
+        const session = um.getSession();
+        if (session && session.userId && um.users[session.userId]) {
+            um.currentUser = um.users[session.userId];
+            um.updateUIForLoggedInUser();
+        } else {
+            um.updateUIForLoggedOutUser();
+        }
+    } catch (e) {
+        console.error('Auth UI sync failed:', e);
+    }
 });

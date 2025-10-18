@@ -1,0 +1,567 @@
+[
+  {
+    "id": "TC001",
+    "title": "User Registration with Valid Data",
+    "description": "Verify that a new user can register successfully with valid username, email, and password.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to the registration page."
+      },
+      {
+        "type": "action",
+        "description": "Enter valid username, email, and password."
+      },
+      {
+        "type": "action",
+        "description": "Submit the registration form."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify account is created and user is redirected to the dashboard or welcome page."
+      }
+    ]
+  },
+  {
+    "id": "TC002",
+    "title": "User Registration with Invalid Email Format",
+    "description": "Verify the registration fails with an invalid email format and appropriate error message is shown.",
+    "category": "error handling",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to the registration page."
+      },
+      {
+        "type": "action",
+        "description": "Enter valid username and password, but an invalid email format."
+      },
+      {
+        "type": "action",
+        "description": "Submit the registration form."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify registration is blocked and an informative error message about invalid email is displayed."
+      }
+    ]
+  },
+  {
+    "id": "TC003",
+    "title": "User Login with Correct Credentials",
+    "description": "Check that a registered user can successfully log in using valid credentials.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to the login page."
+      },
+      {
+        "type": "action",
+        "description": "Enter valid username/email and password."
+      },
+      {
+        "type": "action",
+        "description": "Click on the login button."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify that the user is authenticated and redirected to the dashboard."
+      }
+    ]
+  },
+  {
+    "id": "TC004",
+    "title": "User Login with Incorrect Password",
+    "description": "Ensure login fails when a registered user enters an incorrect password.",
+    "category": "error handling",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to the login page."
+      },
+      {
+        "type": "action",
+        "description": "Enter valid username/email and incorrect password."
+      },
+      {
+        "type": "action",
+        "description": "Click on the login button."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify that login is denied and an error message about incorrect password is displayed."
+      }
+    ]
+  },
+  {
+    "id": "TC005",
+    "title": "Session Persistence after Login",
+    "description": "Verify the user session persists after page reload or browser close/open until user explicitly logs out.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Log in with valid credentials."
+      },
+      {
+        "type": "action",
+        "description": "Reload the page or close and reopen the browser."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the user remains logged in and session data persists."
+      }
+    ]
+  },
+  {
+    "id": "TC006",
+    "title": "Logout Functionality",
+    "description": "Check that the logout option terminates the session and returns the user to the login or home page.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Log in to the application."
+      },
+      {
+        "type": "action",
+        "description": "Click the logout button."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify user session is terminated and redirected to login or landing page."
+      }
+    ]
+  },
+  {
+    "id": "TC007",
+    "title": "Chat Interface Message Sending and Receiving",
+    "description": "Validate that user can send a message via chat interface and receive AI responses powered by Gemini API with correct message display including typing indicators and markdown formatting.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Open the chat interface after login."
+      },
+      {
+        "type": "action",
+        "description": "Type a valid crypto trading question."
+      },
+      {
+        "type": "action",
+        "description": "Send the message."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify typing indicator is shown while AI is responding."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify AI response includes relevant trading advice and rap-style summary with correct markdown formatting."
+      }
+    ]
+  },
+  {
+    "id": "TC008",
+    "title": "Chat Interface Handles Empty or Invalid Input",
+    "description": "Ensure that the chat interface gracefully handles empty or invalid queries and shows appropriate error or guidance messages.",
+    "category": "error handling",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Open chat interface."
+      },
+      {
+        "type": "action",
+        "description": "Send empty message or invalid input such as special characters only."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify system displays helpful error message or prompts user to enter a valid query."
+      }
+    ]
+  },
+  {
+    "id": "TC009",
+    "title": "Real-Time Market Data Updates",
+    "description": "Validate real-time price ticker updates for BTC, ETH, and SOL using Binance WebSocket and fallback to REST APIs, including 24h price changes display.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Open the app dashboard displaying market ticker."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify price ticker shows current prices for BTC, ETH, SOL and 24h percentage changes."
+      },
+      {
+        "type": "action",
+        "description": "Simulate websocket disconnection."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify price data continues updating using REST API fallback gracefully."
+      }
+    ]
+  },
+  {
+    "id": "TC010",
+    "title": "Portfolio Management CRUD Operations",
+    "description": "Verify user can add, edit, delete cryptocurrency holdings to portfolio, and system calculates profit & loss correctly for multiple assets.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to portfolio management page."
+      },
+      {
+        "type": "action",
+        "description": "Add new crypto holdings with valid amount and price."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify new holdings are listed with correct value and total portfolio value is updated."
+      },
+      {
+        "type": "action",
+        "description": "Edit existing holdings."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify changes reflected in portfolio summary and profit/loss recalculated."
+      },
+      {
+        "type": "action",
+        "description": "Delete a holding."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify holding is removed and portfolio values updated."
+      }
+    ]
+  },
+  {
+    "id": "TC011",
+    "title": "Price Alerts Creation and Notifications",
+    "description": "Ensure users can create custom price alerts with thresholds and receive notifications when target prices hit.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to price alerts section."
+      },
+      {
+        "type": "action",
+        "description": "Create a new price alert for a cryptocurrency with a target price."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify alert is saved and appears in alert list."
+      },
+      {
+        "type": "action",
+        "description": "Simulate market price hitting alert threshold."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify user receives notification alert."
+      }
+    ]
+  },
+  {
+    "id": "TC012",
+    "title": "Interactive Charts with Technical Indicators",
+    "description": "Verify that interactive charts render correctly with multiple selectable timeframes and technical indicators like RSI, MACD, EMA, Bollinger Bands using Chart.js.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to crypto charts page."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify charts display correct historical price data."
+      },
+      {
+        "type": "action",
+        "description": "Select different timeframes (1h, 24h, 7d, 1m)."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify chart updates accordingly."
+      },
+      {
+        "type": "action",
+        "description": "Enable/disable technical indicators (RSI, MACD, EMA, Bollinger Bands)."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify indicators are properly rendered on the chart."
+      }
+    ]
+  },
+  {
+    "id": "TC013",
+    "title": "Trading Strategy Backtesting Accuracy",
+    "description": "Ensure backtesting engine accurately simulates trading strategies RSI, MACD, EMA, and Bollinger Bands on historical data and displays correct performance metrics and trade history.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to the trading strategy backtesting tool."
+      },
+      {
+        "type": "action",
+        "description": "Select a strategy (e.g. RSI) and set strategy parameters."
+      },
+      {
+        "type": "action",
+        "description": "Run backtest on historical data."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify backtest completes without errors."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify trade history and performance metrics (profit, win rate) are displayed and plausible."
+      }
+    ]
+  },
+  {
+    "id": "TC014",
+    "title": "Market Sentiment Dashboard Data Accuracy and Updates",
+    "description": "Verify that the market sentiment dashboard correctly shows overall mood and confidence levels and updates in real-time.",
+    "category": "functional",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Open market sentiment dashboard."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify sentiment indicators (mood, confidence) are displayed for major cryptos."
+      },
+      {
+        "type": "action",
+        "description": "Simulate market data updates."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify sentiment data refreshes accordingly."
+      }
+    ]
+  },
+  {
+    "id": "TC015",
+    "title": "Voice Command Recognition and Execution",
+    "description": "Test the voice command feature correctly recognizes spoken commands and interacts with the AI assistant as expected.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Activate voice command feature."
+      },
+      {
+        "type": "action",
+        "description": "Speak a valid trading query, e.g., 'What is the current price of BTC?'"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the command is recognized, transcribed, and the AI provides an appropriate response."
+      },
+      {
+        "type": "action",
+        "description": "Speak an unrecognized or unclear command."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the system prompts user to repeat or clarify."
+      }
+    ]
+  },
+  {
+    "id": "TC016",
+    "title": "Theme Toggle and Persistence",
+    "description": "Verify that toggling between dark and light themes updates the UI immediately and the user’s choice persists across sessions.",
+    "category": "functional",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Toggle theme from light to dark."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify UI theme changes immediately."
+      },
+      {
+        "type": "action",
+        "description": "Reload the application."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the selected theme (dark) persists."
+      },
+      {
+        "type": "action",
+        "description": "Toggle back to light theme and verify persistence again."
+      }
+    ]
+  },
+  {
+    "id": "TC017",
+    "title": "Persistent Chat History with Formatting and Typewriter Effect",
+    "description": "Verify chat history is saved and restored with markdown formatting and typewriter effect for AI replies.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Engage in chat session with multiple queries and AI responses."
+      },
+      {
+        "type": "action",
+        "description": "Close and reopen the application."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify entire chat history loads correctly with markdown formatting applied."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify AI messages display typewriter effect on new responses."
+      }
+    ]
+  },
+  {
+    "id": "TC018",
+    "title": "Quick Action Buttons Functionality",
+    "description": "Test that quick action buttons insert predefined queries and trigger AI responses correctly.",
+    "category": "functional",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Click on a quick action button for a common query."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the query is inserted into the chat input and sent automatically or after user confirmation."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify AI returns a valid response to the quick query."
+      }
+    ]
+  },
+  {
+    "id": "TC019",
+    "title": "API Key Management and Validation",
+    "description": "Validate users can securely add, update and remove their Gemini API keys and that invalid keys show proper error messages.",
+    "category": "security",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to profile settings page."
+      },
+      {
+        "type": "action",
+        "description": "Add a valid Gemini API key and save."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify key is saved successfully."
+      },
+      {
+        "type": "action",
+        "description": "Add an invalid or malformed API key."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify validation error is displayed."
+      },
+      {
+        "type": "action",
+        "description": "Remove existing API key."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify key is removed securely."
+      }
+    ]
+  },
+  {
+    "id": "TC020",
+    "title": "Mobile-Responsive Layout Verification",
+    "description": "Ensure the application layout and interaction components render correctly and remain fully usable on various mobile screen sizes and orientations.",
+    "category": "ui",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Open application on various mobile devices or emulator with different screen sizes."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify all UI components are visible and correctly aligned."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify touch interactions are functional and easy to use."
+      },
+      {
+        "type": "action",
+        "description": "Rotate screen orientation."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify UI adjusts correctly to landscape and portrait modes."
+      }
+    ]
+  },
+  {
+    "id": "TC021",
+    "title": "Performance Verification at 120fps",
+    "description": "Test UI performance meets 120fps rendering target including GPU acceleration, passive event listeners, and smooth animations on typical hardware.",
+    "category": "performance",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Load the application on test hardware."
+      },
+      {
+        "type": "action",
+        "description": "Perform typical user interactions: chat, theme toggle, navigation, chart viewing."
+      },
+      {
+        "type": "assertion",
+        "description": "Using profiling tools, verify frame rate consistently meets or exceeds 120fps."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify no UI jank or lag during animations and interactions."
+      }
+    ]
+  }
+]
