@@ -315,24 +315,27 @@ class UserManager {
                 }
             };
 
-            // Save user
+            // Save user to database (like SQL INSERT)
             this.users[userId] = newUser;
-            this.saveUsers();
-            console.log('✅ User registered successfully:', newUser.email);
-            console.log('📦 Total users:', Object.keys(this.users).length);
+            this.saveUsers(); // Saves to localStorage + auto-backup
+            console.log('✅ User registered:', newUser.email);
+            console.log('📊 Total users in database:', Object.keys(this.users).length);
 
             // Auto-login after registration
             this.currentUser = newUser;
-            this.setSession(userId, true); // Remember me by default
+            this.setSession(userId, true); // Remember me by default (30 days)
             
-            // Force save to ensure persistence
+            // Double-save for safety
             this.saveUsers();
-            localStorage.setItem('last_user_id', userId);
             
+            // Update UI immediately
+            document.body.classList.add('logged-in');
             this.updateUIForLoggedInUser();
 
-            this.showMessage(`🎉 Account created successfully! Welcome to SamCrypto AI, ${newUser.name}!`, 'success');
+            this.showMessage(`🎉 Account created! Welcome ${newUser.name}! You are now logged in.`, 'success');
             this.closeModals();
+            
+            console.log('✅ Registration complete. User logged in:', this.currentUser.name);
 
             return { success: true, user: newUser };
 
@@ -366,24 +369,28 @@ class UserManager {
                 throw new Error('Invalid email or password');
             }
 
-            // Update last login
+            // Update last login in database (like SQL UPDATE)
             user.lastLogin = Date.now();
             user.stats.lastActive = Date.now();
-            this.saveUsers();
-            console.log('✅ User logged in successfully:', user.email);
+            this.users[user.id] = user; // Update in database
+            this.saveUsers(); // Save to localStorage + backup
+            console.log('✅ User logged in:', user.email);
 
-            // Set session
+            // Set current user and session
             this.currentUser = user;
             this.setSession(user.id, rememberMe);
             
-            // Force save to ensure persistence
+            // Double-save for persistence
             this.saveUsers();
-            localStorage.setItem('last_user_id', user.id);
             
+            // Update UI immediately
+            document.body.classList.add('logged-in');
             this.updateUIForLoggedInUser();
 
-            this.showMessage(`🎉 Welcome back, ${user.name}!`, 'success');
+            this.showMessage(`🎉 Welcome back, ${user.name}! You are logged in.`, 'success');
             this.closeModals();
+            
+            console.log('✅ Login complete. User:', this.currentUser.name);
 
             return { success: true, user: user };
 
