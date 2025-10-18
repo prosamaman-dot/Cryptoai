@@ -291,6 +291,32 @@ class SamCryptoAI {
             this.closeFeaturesPage();
             this.showMemoryStatus();
         });
+        
+        // Profile and Data Management in Features Page
+        const openProfileSettings = document.getElementById('openProfileSettings');
+        const openDataExport = document.getElementById('openDataExport');
+        
+        openProfileSettings?.addEventListener('click', () => {
+            this.closeFeaturesPage();
+            // Check if user is logged in
+            if (this.userManager.isLoggedIn()) {
+                this.userManager.showProfileModal();
+            } else {
+                this.userManager.showMessage('Please login to access profile settings', 'info');
+                setTimeout(() => this.userManager.showLoginModal(), 1000);
+            }
+        });
+        
+        openDataExport?.addEventListener('click', () => {
+            this.closeFeaturesPage();
+            // Check if user is logged in
+            if (this.userManager.isLoggedIn()) {
+                this.userManager.exportUserData();
+            } else {
+                this.userManager.showMessage('Please login to export your data', 'info');
+                setTimeout(() => this.userManager.showLoginModal(), 1000);
+            }
+        });
 
         // Initialize action buttons
         this.initializeActionButtons();
