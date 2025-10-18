@@ -763,17 +763,25 @@ class SamCryptoAI {
         }
 
         try {
-            // Check if user is asking about news
+            // Detect user intent for smarter responses
+            const intent = this.detectIntent(userMessage);
+            
+            // Gather comprehensive context
             const isNewsQuery = this.isNewsRelatedQuery(userMessage);
             let newsData = null;
             
-            if (isNewsQuery) {
+            if (isNewsQuery || intent.topic === 'news') {
                 newsData = await this.fetchCoinDeskNews();
             }
             
-            const systemPrompt = this.createSystemPrompt(marketData, newsData);
-            const memoryContext = this.getMemoryContext();
-            const prompt = `${systemPrompt}\n\n${memoryContext}\n\nUser: ${userMessage}\n\nSamCrypto AI:`;
+            // Build enhanced system prompt
+            const systemPrompt = this.createAdvancedSystemPrompt(marketData, newsData, intent);
+            
+            // Build conversation history for multi-turn context
+            const conversationContents = this.buildConversationHistory(systemPrompt, userMessage);
+            
+            // Dynamic generation config based on intent
+            const generationConfig = this.getOptimalGenerationConfig(intent);
             
             const response = await fetch(`${this.geminiAPI}?key=${this.apiKey}`, {
                 method: 'POST',
@@ -781,25 +789,30 @@ class SamCryptoAI {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
-                    contents: [{
-                        parts: [{
-                            text: prompt
-                        }]
-                    }],
-                    generationConfig: {
-                        temperature: 0.3, // Lower temperature for more focused, professional responses
-                        topK: 20, // More focused token selection
-                        topP: 0.8, // More deterministic responses
-                        maxOutputTokens: 2048, // Allow longer, more detailed responses
-                    }
+                    contents: conversationContents,
+                    generationConfig: generationConfig,
+                    safetySettings: [
+                        {
+                            category: 'HARM_CATEGORY_FINANCIAL',
+                            threshold: 'BLOCK_NONE'
+                        }
+                    ]
                 })
             });
 
             if (!response.ok) {
-                throw new Error('API request failed');
+                const errorData = await response.json();
+                console.error('API error details:', errorData);
+                throw new Error(`API request failed: ${response.status}`);
             }
 
             const data = await response.json();
+            
+            if (!data.candidates || !data.candidates[0] || !data.candidates[0].content) {
+                console.error('Invalid response structure:', data);
+                throw new Error('Invalid API response');
+            }
+            
             return data.candidates[0].content.parts[0].text;
             
         } catch (error) {
@@ -808,7 +821,110 @@ class SamCryptoAI {
         }
     }
 
-    createSystemPrompt(marketData, newsData) {
+    detectIntent(message) {
+        const messageLower = message.toLowerCase();
+        
+        // Intent categories
+        const intents = {
+            trade_advice: ['buy', 'sell', 'trade', 'invest', 'should i', 'recommend', 'good time', 'entry', 'exit'],
+            price_check: ['price', 'cost', 'worth', 'value', 'how much'],
+            analysis: ['analyze', 'analysis', 'technical', 'chart', 'indicator', 'rsi', 'macd'],
+            portfolio: ['portfolio', 'holdings', 'my coins', 'balance', 'profit', 'loss', 'p&l'],
+            news: ['news', 'latest', 'update', 'happening', 'events'],
+            learning: ['how', 'what is', 'explain', 'teach', 'learn', 'understand', 'why'],
+            comparison: ['vs', 'versus', 'compare', 'better', 'difference between'],
+            prediction: ['predict', 'forecast', 'future', 'will', 'expect', 'outlook'],
+            risk: ['risk', 'safe', 'danger', 'volatile', 'secure', 'risky']
+        };
+        
+        let detectedIntent = 'general';
+        let confidence = 0;
+        
+        for (const [intent, keywords] of Object.entries(intents)) {
+            const matches = keywords.filter(keyword => messageLower.includes(keyword));
+            if (matches.length > confidence) {
+                confidence = matches.length;
+                detectedIntent = intent;
+            }
+        }
+        
+        // Detect urgency
+        const urgencyKeywords = ['now', 'quickly', 'urgent', 'asap', 'immediately'];
+        const isUrgent = urgencyKeywords.some(kw => messageLower.includes(kw));
+        
+        // Detect sentiment
+        const positiveWords = ['good', 'great', 'awesome', 'excellent', 'bullish'];
+        const negativeWords = ['bad', 'worry', 'scared', 'bearish', 'crash'];
+        const sentiment = positiveWords.some(w => messageLower.includes(w)) ? 'positive' :
+                         negativeWords.some(w => messageLower.includes(w)) ? 'negative' : 'neutral';
+        
+        return {
+            type: detectedIntent,
+            confidence: confidence,
+            urgent: isUrgent,
+            sentiment: sentiment,
+            topic: this.extractCryptoMentions(message).length > 0 ? 'crypto_specific' : 'general'
+        };
+    }
+
+    buildConversationHistory(systemPrompt, currentMessage) {
+        const contents = [];
+        
+        // Add system instruction as first user message
+        contents.push({
+            role: 'user',
+            parts: [{ text: systemPrompt }]
+        });
+        
+        // Add acknowledgment from model
+        contents.push({
+            role: 'model',
+            parts: [{ text: 'Understood! I\'m ready to provide professional crypto trading advice with real-time data, technical analysis, and personalized recommendations. I\'ll be friendly, detailed, and always include specific numbers and actionable insights.' }]
+        });
+        
+        // Add recent conversation history (last 6 messages for context)
+        const recentHistory = this.conversationHistory.slice(-6);
+        for (const msg of recentHistory) {
+            contents.push({
+                role: msg.role === 'user' ? 'user' : 'model',
+                parts: [{ text: msg.content }]
+            });
+        }
+        
+        // Add current user message
+        contents.push({
+            role: 'user',
+            parts: [{ text: currentMessage }]
+        });
+        
+        return contents;
+    }
+
+    getOptimalGenerationConfig(intent) {
+        // Dynamic config based on intent
+        const baseConfig = {
+            temperature: 0.7,
+            topK: 40,
+            topP: 0.95,
+            maxOutputTokens: 2048,
+        };
+        
+        // Adjust based on intent type
+        switch (intent.type) {
+            case 'trade_advice':
+            case 'price_check':
+                return { ...baseConfig, temperature: 0.4, topK: 30 }; // More focused for trading
+            case 'learning':
+            case 'comparison':
+                return { ...baseConfig, temperature: 0.8, maxOutputTokens: 3072 }; // More creative for explanations
+            case 'analysis':
+                return { ...baseConfig, temperature: 0.5, topK: 35 }; // Balanced for analysis
+            default:
+                return baseConfig;
+        }
+    }
+
+    createAdvancedSystemPrompt(marketData, newsData, intent) {
         const currentTime = new Date().toISOString();
         const userPortfolio = this.portfolio;
         const userAlerts = this.alerts;
@@ -853,12 +969,39 @@ ${JSON.stringify(this.tradingStrategies, null, 2)}
                 const marketCapFormatted = data.market_cap ? `$${(data.market_cap / 1000000000).toFixed(2)}B` : 'N/A';
                 const source = data.source || 'Unknown';
                 
-                prompt += `\n${coinName} (${source}):
+                prompt += `\n\n📊 ${coinName} (${source}):
 - Current Price: $${data.price_usd.toLocaleString()}
 - 24h Change: ${data.change_24h > 0 ? '+' : ''}${data.change_24h.toFixed(2)}%
 - 24h Volume: ${volumeFormatted}
 - Market Cap: ${marketCapFormatted}
 - Last Updated: ${data.last_updated ? new Date(data.last_updated).toLocaleString() : 'Unknown'}`;
+                
+                // Add technical indicators if available
+                if (data.technical_indicators) {
+                    const ti = data.technical_indicators;
+                    prompt += `\n\n📈 TECHNICAL ANALYSIS:
+- RSI: ${ti.rsi ? ti.rsi.toFixed(2) : 'N/A'} ${ti.rsi < 30 ? '(OVERSOLD - BUY SIGNAL)' : ti.rsi > 70 ? '(OVERBOUGHT - SELL SIGNAL)' : '(NEUTRAL)'}
+- Support Level: $${ti.support_level ? ti.support_level.toLocaleString() : 'N/A'}
+- Resistance Level: $${ti.resistance_level ? ti.resistance_level.toLocaleString() : 'N/A'}
+- Market Cap Rank: #${ti.market_cap_rank || 'N/A'}
+- 7d Change: ${ti.price_change_7d ? (ti.price_change_7d > 0 ? '+' : '') + ti.price_change_7d.toFixed(2) + '%' : 'N/A'}
+- 30d Change: ${ti.price_change_30d ? (ti.price_change_30d > 0 ? '+' : '') + ti.price_change_30d.toFixed(2) + '%' : 'N/A'}
+- All-Time High: $${ti.ath ? ti.ath.toLocaleString() : 'N/A'} (${ti.ath_change_percentage ? ti.ath_change_percentage.toFixed(2) : 'N/A'}% from ATH)
+- All-Time Low: $${ti.atl ? ti.atl.toLocaleString() : 'N/A'} (${ti.atl_change_percentage ? '+' + ti.atl_change_percentage.toFixed(2) : 'N/A'}% from ATL)`;
+                }
+                
+                // Add market sentiment if available
+                if (data.market_sentiment) {
+                    const sentiment = data.market_sentiment.sentiment.replace('_', ' ').toUpperCase();
+                    const strength = data.market_sentiment.strength.toUpperCase();
+                    prompt += `\n- Market Sentiment: ${sentiment} (${strength} confidence)`;
+                }
+                
+                // Add volatility if available
+                if (data.volatility) {
+                    const vol = data.volatility.replace('_', ' ').toUpperCase();
+                    prompt += `\n- Volatility: ${vol}`;
+                }
             }
         }
 
@@ -872,60 +1015,109 @@ ${JSON.stringify(this.tradingStrategies, null, 2)}
             });
         }
 
+        // Add intent-specific guidance
+        let intentGuidance = '';
+        if (intent.type === 'trade_advice') {
+            intentGuidance = `\n\n🎯 USER INTENT: They want TRADING ADVICE
+- Provide specific BUY/SELL/HOLD recommendation
+- Include exact entry price, target, and stop-loss
+- Calculate potential profit in dollars
+- Explain risk/reward ratio
+- Reference the trading strategies that apply`;
+        } else if (intent.type === 'analysis') {
+            intentGuidance = `\n\n🎯 USER INTENT: They want TECHNICAL ANALYSIS
+- Deep dive into RSI, MACD, support/resistance
+- Explain current trend and momentum
+- Identify chart patterns
+- Provide multi-timeframe perspective
+- Use the technical indicators data provided`;
+        } else if (intent.type === 'learning') {
+            intentGuidance = `\n\n🎯 USER INTENT: They want to LEARN
+- Explain concepts in simple, clear language
+- Use examples from current market data
+- Break down complex ideas step-by-step
+- Relate to their portfolio when possible
+- End with practical takeaways`;
+        } else if (intent.type === 'prediction') {
+            intentGuidance = `\n\n🎯 USER INTENT: They want PREDICTIONS
+- Analyze current trends and momentum
+- Reference technical indicators
+- Mention key support/resistance levels
+- Discuss potential scenarios (bullish/bearish)
+- Always emphasize this is analysis, not financial advice`;
+        } else if (intent.type === 'portfolio') {
+            intentGuidance = `\n\n🎯 USER INTENT: Portfolio Management
+- Review their current holdings
+- Analyze their P&L
+- Suggest rebalancing if needed
+- Identify opportunities to improve returns
+- Reference their actual portfolio data`;
+        } else if (intent.type === 'news') {
+            intentGuidance = `\n\n🎯 USER INTENT: Market News
+- Summarize the latest news provided
+- Explain how it affects crypto prices
+- Connect news to trading opportunities
+- Discuss market sentiment impact`;
+        }
+
+        prompt += intentGuidance;
+
         prompt += `\n\n🎯 HOW TO RESPOND (Be my awesome trading buddy!):
 
 **ALWAYS START WITH:**
-- A friendly greeting or acknowledgment
-- Reference their current portfolio if relevant
-- Show excitement about helping them make money!
+- A friendly, enthusiastic greeting
+- Acknowledge what they're asking about
+- Reference their portfolio if relevant ($${userPortfolio.totalValue.toLocaleString()} total value)
+- Show genuine excitement about helping them!
 
-**GIVE THEM SPECIFIC PROFIT OPPORTUNITIES:**
-- "Here's how you can make $XXX profit..."
-- "I found a great opportunity for you..."
-- "Based on your portfolio, here's what I recommend..."
+**PROVIDE COMPREHENSIVE ANALYSIS:**
+- Use ALL the live market data I provided above
+- Reference technical indicators (RSI, support/resistance, volatility)
+- Analyze price trends (24h, 7d, 30d changes)
+- Consider market sentiment and volume
+- Apply relevant trading strategies from my list
 
-**INCLUDE EXACT NUMBERS:**
-- Current Price: $X,XXX.XX (from live data)
-- Buy Price: $X,XXX.XX (exact entry point)
-- Target Price: $X,XXX.XX (where to take profits)
-- Stop Loss: $X,XXX.XX (where to cut losses)
-- Potential Profit: $XXX (exact dollar amount)
-- Risk: X% of your portfolio
+**GIVE SPECIFIC, ACTIONABLE ADVICE:**
+- Current Price: $X,XXX.XX (exact from live data)
+- Recommended Action: BUY/SELL/HOLD with confidence %
+- Entry Price: $X,XXX.XX (specific level)
+- Target Prices: $X,XXX.XX (short-term), $X,XXX.XX (long-term)
+- Stop Loss: $X,XXX.XX (risk management)
+- Position Size: $XXX or X% of portfolio
+- Potential Profit: $XXX (XX% gain)
+- Risk/Reward Ratio: 1:X
 
-**EXPLAIN WHY (in simple terms):**
-- "I'm recommending this because..."
-- "The technical analysis shows..."
-- "This could make you X% profit because..."
-- "The risk is low because..."
+**EXPLAIN YOUR REASONING:**
+- WHY this is a good/bad trade right now
+- WHICH technical indicators support this
+- WHAT strategy you're applying
+- HOW the risk is managed
+- WHEN to enter/exit
 
-**BE ENCOURAGING & REALISTIC:**
-- Celebrate potential wins
-- Be honest about risks
-- Give them confidence in the trade
-- Remind them of risk management
-
-**END WITH ACTION:**
-- "Ready to make some money?"
-- "Want me to set up an alert for this?"
-- "Should we add this to your portfolio?"
-- "Let's get you some profits! 🚀"
-
-**REMEMBER:**
-- I'm their FRIEND who wants them to succeed
-- I give them REAL opportunities to make money
-- I'm excited about helping them profit
-- I explain everything in simple terms
-- I'm honest about risks but focus on profits
-- I use their actual portfolio data to personalize advice
-- I always end with encouragement and next steps
+**STRUCTURE YOUR RESPONSE:**
+1. Friendly greeting + acknowledge their question
+2. Current market analysis with real numbers
+3. Your recommendation with specific prices
+4. Detailed explanation of WHY
+5. Risk management guidance
+6. Encouraging action step
 
 **CRITICAL RULES:**
-- ALWAYS use the live market data I provided
-- ALWAYS give specific dollar amounts and percentages
-- ALWAYS explain WHY this trade can make them money
-- ALWAYS be friendly and encouraging
-- NEVER give generic advice - make it personal!
-- ALWAYS reference their current portfolio when relevant
+- ALWAYS use the actual live data provided (prices, RSI, volume, etc.)
+- ALWAYS give EXACT dollar amounts and percentages
+- ALWAYS explain WHY using technical analysis
+- BE SPECIFIC - no vague "the price might go up" - give targets!
+- REFERENCE their portfolio value and personalize advice
+- USE emojis strategically for engagement 💰📈🚀
+- BALANCE optimism with realistic risk assessment
+- END with a clear call-to-action
+
+**TONE & STYLE:**
+- Friendly and encouraging like a trading buddy
+- Professional and knowledgeable
+- Clear and easy to understand
+- Excited about opportunities but honest about risks
+- Personal and engaging, not robotic
 
 Let's help them make some serious profits! 🚀💰`;
 
@@ -1052,37 +1244,50 @@ ${recommendation}
         const userPortfolio = this.portfolio;
         const portfolioValue = userPortfolio.totalValue;
         const holdingsCount = userPortfolio.holdings.length;
+        const pnl = userPortfolio.totalPnL;
+        const pnlPercent = userPortfolio.totalPnLPercent;
         
-        return `Hey there! I'm SamCrypto AI, your personal crypto profit finder! 🚀💰
+        return `Hey there! 👋 I'm SamCrypto AI, your personal crypto trading expert! 🚀💰
 
-I'm here to help YOU make real money in crypto, not just give you boring generic advice!
+I'm NOT just another chatbot - I'm your PROFIT-FOCUSED trading buddy who uses REAL market data and technical analysis to help you make REAL money!
 
-**🎯 WHAT I DO FOR YOU:**
-- Find you SPECIFIC profit opportunities
-- Give you EXACT buy/sell prices
-- Tell you HOW MUCH to invest
-- Show you the profit potential
-- Help you manage risk like a pro
+**📊 YOUR PORTFOLIO SNAPSHOT:**
+- Total Value: $${portfolioValue.toLocaleString()}
+- Holdings: ${holdingsCount} cryptocurrency${holdingsCount !== 1 ? 's' : ''}
+- Current P&L: ${pnl >= 0 ? '+' : ''}$${pnl.toLocaleString()} (${pnlPercent >= 0 ? '+' : ''}${pnlPercent.toFixed(2)}%)
+${portfolioValue === 0 ? '- *Start building your portfolio by asking me about profitable trades!*' : ''}
 
-**📊 YOUR CURRENT SITUATION:**
-- Portfolio Value: $${portfolioValue.toLocaleString()}
-- Holdings: ${holdingsCount} coins
-- I'm watching the markets 24/7 for YOU!
+**🎯 WHAT I CAN DO FOR YOU:**
+✅ **Trade Analysis** - "Should I buy Bitcoin now?" → Get specific entry/exit prices + profit targets
+✅ **Technical Breakdown** - "Analyze Ethereum" → RSI, MACD, support/resistance levels
+✅ **Profit Opportunities** - "Find me a good trade" → I'll scan top cryptos for opportunities
+✅ **Portfolio Review** - "How's my portfolio?" → Personalized optimization advice
+✅ **Market News** - "What's happening in crypto?" → Latest news + impact analysis
+✅ **Learning** - "Explain RSI to me" → Clear explanations with real examples
 
-**💡 JUST ASK ME:**
-- "What's Bitcoin doing?" → I'll give you a specific trade
-- "Should I buy ETH now?" → I'll tell you exactly when and how much
-- "Find me a profit opportunity" → I'll scan the market for you
-- "What should I do with my portfolio?" → I'll give you personalized advice
+**💡 TRY ASKING ME:**
+🔸 "What's the best crypto to buy right now?"
+🔸 "Should I sell my Bitcoin?"
+🔸 "Give me a technical analysis of Solana"
+🔸 "What's happening with Ethereum?"
+🔸 "How can I make $500 this week?"
+🔸 "Compare Bitcoin vs Ethereum"
+🔸 "What are the risks of buying now?"
 
-**🚀 I'M DIFFERENT BECAUSE:**
-- I use REAL market data, not fake numbers
-- I give you EXACT dollar amounts you can make
-- I explain WHY each trade can be profitable
-- I'm your FRIEND who wants you to succeed
-- I celebrate your wins and help you learn from losses
+**🚀 WHY I'M DIFFERENT:**
+- **Real Data** → Live prices from CoinGecko & Binance APIs
+- **Smart Analysis** → 9 trading strategies (RSI, MACD, EMA, Bollinger Bands, etc.)
+- **Specific Advice** → Exact dollar amounts, not vague predictions
+- **Risk Management** → Stop-loss levels & position sizing
+- **Personalized** → Tailored to YOUR portfolio and goals
+- **24/7 Watchful** → Always monitoring the markets for you
 
-**Ready to make some serious profits?** Just ask me about any crypto and I'll find you a winning trade! 💎`;
+**💰 SUPPORTED CRYPTOCURRENCIES:**
+Bitcoin, Ethereum, Solana, Cardano, Ripple, Dogecoin, Polkadot, Avalanche, Polygon, Chainlink, Litecoin, Uniswap, and 15+ more!
+
+**Ready to make your next profitable trade?** Just ask me about any crypto and I'll give you a detailed, actionable recommendation! 📈💎
+
+*Tip: For the best experience, get your free Gemini API key to unlock my full AI-powered analysis!*`;
     }
 
     addMessage(content, sender, saveToHistory = true) {
