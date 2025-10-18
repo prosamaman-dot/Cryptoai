@@ -16,7 +16,13 @@ class SamCryptoAI {
         // Professional memory system (user-specific)
         this.userMemory = {};
         this.sessionMemory = [];
-        this.userPreferences = {};
+        this.userPreferences = {
+            favoriteCoins: [],
+            tradingStyle: 'unknown',
+            riskTolerance: 'unknown',
+            experienceLevel: 'unknown',
+            interests: []
+        };
         
         // Scroll management
         this.isUserScrolling = false;
@@ -2244,7 +2250,30 @@ Bitcoin, Ethereum, Solana, Cardano, Ripple, Dogecoin, Polkadot, Avalanche, Polyg
     }
 
     extractUserPreferences(message) {
+        // Safety check - ensure message and content exist
+        if (!message || !message.content) {
+            console.warn('⚠️ extractUserPreferences called with invalid message:', message);
+            return;
+        }
+        
         const content = message.content.toLowerCase();
+        
+        // Safety check - ensure userPreferences is initialized
+        if (!this.userPreferences) {
+            console.warn('⚠️ userPreferences not initialized, initializing now...');
+            this.userPreferences = {
+                favoriteCoins: [],
+                tradingStyle: 'unknown',
+                riskTolerance: 'unknown',
+                experienceLevel: 'unknown',
+                interests: []
+            };
+        }
+        
+        // Ensure favoriteCoins array exists
+        if (!this.userPreferences.favoriteCoins) {
+            this.userPreferences.favoriteCoins = [];
+        }
         
         // Extract favorite coins
         const coinMentions = ['bitcoin', 'btc', 'ethereum', 'eth', 'solana', 'sol', 'cardano', 'ada', 'polkadot', 'dot'];

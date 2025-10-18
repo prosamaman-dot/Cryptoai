@@ -696,7 +696,17 @@ class UserManager {
 
         // User menu
         document.getElementById('userMenuToggle')?.addEventListener('click', (e) => {
+            e.preventDefault(); // Prevent default link behavior
+            e.stopPropagation(); // Stop event bubbling
+            console.log('🔽 User menu toggle clicked');
+            this.toggleUserMenu();
+        });
+        
+        // Also make the avatar clickable
+        document.getElementById('userAvatar')?.addEventListener('click', (e) => {
+            e.preventDefault();
             e.stopPropagation();
+            console.log('🔽 User avatar clicked');
             this.toggleUserMenu();
         });
 
@@ -836,22 +846,42 @@ class UserManager {
     // Toggle user menu
     toggleUserMenu() {
         const dropdown = document.getElementById('userDropdown');
-        const userAvatar = document.getElementById('userMenuToggle');
+        const userProfileSection = document.getElementById('userProfileSection');
         
-        if (dropdown) {
-            if (dropdown.style.display === 'block') {
-                // Close dropdown
-                dropdown.style.display = 'none';
-            } else {
-                // Open dropdown and position it
-                dropdown.style.display = 'block';
+        console.log('🛠️ toggleUserMenu called');
+        console.log('Dropdown element:', dropdown);
+        console.log('Current display:', dropdown ? dropdown.style.display : 'not found');
+        
+        if (!dropdown) {
+            console.error('❌ userDropdown element not found!');
+            return;
+        }
+        
+        const isCurrentlyVisible = dropdown.style.display === 'block';
+        
+        if (isCurrentlyVisible) {
+            // Close dropdown
+            dropdown.style.display = 'none';
+            console.log('❌ Dropdown closed');
+        } else {
+            // Open dropdown and position it
+            dropdown.style.display = 'block';
+            
+            // Position dropdown below user profile section using fixed positioning
+            if (userProfileSection) {
+                const rect = userProfileSection.getBoundingClientRect();
+                const top = rect.bottom + 5; // 5px below user section
+                const right = window.innerWidth - rect.right;
                 
-                // Position dropdown below avatar using fixed positioning
-                if (userAvatar) {
-                    const rect = userAvatar.getBoundingClientRect();
-                    dropdown.style.top = (rect.bottom + 8) + 'px'; // 8px below avatar
-                    dropdown.style.right = (window.innerWidth - rect.right) + 'px'; // Align to right edge
-                }
+                dropdown.style.top = top + 'px';
+                dropdown.style.right = right + 'px';
+                
+                console.log('✅ Dropdown opened at position:', { top, right });
+            } else {
+                // Fallback positioning
+                dropdown.style.top = '60px';
+                dropdown.style.right = '10px';
+                console.log('⚠️ Using fallback positioning');
             }
         }
     }
