@@ -2255,77 +2255,43 @@ SamCrypto AI remembers your preferences and conversation history to provide pers
     }
 
     updateWelcomeMessage() {
-        const welcomeMessage = document.getElementById('welcomeMessage');
-        if (welcomeMessage) {
-            const randomGreeting = this.greetingMessages[Math.floor(Math.random() * this.greetingMessages.length)];
-            const messageText = welcomeMessage.querySelector('.message-text');
-            if (messageText) {
-                messageText.innerHTML = `
-                    <h2 class="welcome-title">What can I help with?</h2>
-                    <div class="action-buttons">
-                        <button class="action-btn" data-action="analyze-bitcoin">
-                            <div class="btn-icon bitcoin-icon">
-                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <circle cx="12" cy="12" r="10"/>
-                                    <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/>
-                                    <path d="M12 17h.01"/>
-                                </svg>
-                            </div>
-                            <span>Bitcoin</span>
-                        </button>
-                        <button class="action-btn" data-action="get-advice">
-                            <div class="btn-icon advice-icon">
-                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <path d="M9 12l2 2 4-4"/>
-                                    <path d="M21 12c-1 0-3-1-3-3s2-3 3-3 3 1 3 3-2 3-3 3"/>
-                                    <path d="M3 12c1 0 3-1 3-3s-2-3-3-3-3 1-3 3 2 3 3 3"/>
-                                </svg>
-                            </div>
-                            <span>Advice</span>
-                        </button>
-                        <button class="action-btn" data-action="market-analysis">
-                            <div class="btn-icon chart-icon">
-                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <polyline points="22,12 18,12 15,21 9,3 6,12 2,12"/>
-                                </svg>
-                            </div>
-                            <span>Analysis</span>
-                        </button>
-                        <button class="action-btn" data-action="portfolio-help">
-                            <div class="btn-icon portfolio-icon">
-                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
-                                    <line x1="8" y1="21" x2="16" y2="21"/>
-                                    <line x1="12" y1="17" x2="12" y2="21"/>
-                                </svg>
-                            </div>
-                            <span>Portfolio</span>
-                        </button>
-                        <button class="action-btn" data-action="latest-news">
-                            <div class="btn-icon news-icon">
-                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <path d="M4 11a9 9 0 0 1 9 9"></path>
-                                    <path d="M4 4a16 16 0 0 1 16 16"></path>
-                                    <circle cx="5" cy="19" r="1"></circle>
-                                </svg>
-                            </div>
-                            <span>News</span>
-                        </button>
-                        <button class="action-btn" data-action="more-options">
-                            <div class="btn-icon more-icon">
-                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <circle cx="12" cy="12" r="1"/>
-                                    <circle cx="19" cy="12" r="1"/>
-                                    <circle cx="5" cy="12" r="1"/>
-                                </svg>
-                            </div>
-                            <span>More</span>
-                        </button>
-                    </div>
+        const messagesContainer = document.getElementById('chatMessages');
+        if (messagesContainer && messagesContainer.children.length === 0) {
+            const welcomeDiv = document.createElement('div');
+            welcomeDiv.className = 'welcome-message';
+            
+            // Update personalized welcome through UserManager first
+            this.userManager.updatePersonalizedWelcome();
+            
+            // Check if UserManager created welcome message
+            const existingWelcome = document.querySelector('.welcome-message');
+            if (!existingWelcome) {
+                // Create default welcome message
+                const randomGreeting = this.greetingMessages[Math.floor(Math.random() * this.greetingMessages.length)];
+                
+                welcomeDiv.innerHTML = `
+                    <h2>Welcome to SamCrypto AI! 🚀</h2>
+                    <p class="greeting-text">${randomGreeting}</p>
                 `;
+                
+                messagesContainer.appendChild(welcomeDiv);
             }
-            // Re-initialize action buttons after updating
-            this.initializeActionButtons();
+            
+            // Add quick action buttons to the welcome message
+            const currentWelcome = document.querySelector('.welcome-message');
+            if (currentWelcome) {
+                const quickActionsDiv = document.createElement('div');
+                quickActionsDiv.className = 'quick-actions';
+                quickActionsDiv.innerHTML = `
+                    <button onclick="samCrypto.sendMessage('What should I buy now?')" class="quick-btn">💰 What should I buy?</button>
+                    <button onclick="samCrypto.sendMessage('Analyze Bitcoin')" class="quick-btn">📊 Analyze Bitcoin</button>
+                    <button onclick="samCrypto.sendMessage('Show me market news')" class="quick-btn">📰 Market News</button>
+                    <button onclick="samCrypto.sendMessage('Help me learn about crypto')" class="quick-btn">📚 Learn Crypto</button>
+                `;
+                currentWelcome.appendChild(quickActionsDiv);
+            }
+            
+            this.scrollToBottom();
         }
     }
 

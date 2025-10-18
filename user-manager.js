@@ -41,6 +41,25 @@ class UserManager {
             this.updateUIForLoggedInUser();
         } else {
             this.updateUIForLoggedOutUser();
+            // Auto-show signup for first-time visitors
+            this.checkForFirstTimeVisitor();
+        }
+    }
+
+    // Check if this is a first-time visitor and show signup
+    checkForFirstTimeVisitor() {
+        const hasVisited = localStorage.getItem('samcrypto_visited');
+        const hasUsers = Object.keys(this.users).length > 0;
+        
+        if (!hasVisited && !hasUsers) {
+            // Mark as visited
+            localStorage.setItem('samcrypto_visited', 'true');
+            
+            // Show signup modal after a short delay for better UX
+            setTimeout(() => {
+                this.showRegisterModal();
+                this.showMessage('Welcome to SamCrypto AI! Create your account to get started with personalized crypto trading advice! 🚀', 'info');
+            }, 1500);
         }
     }
 
@@ -427,18 +446,38 @@ class UserManager {
 
     // Update personalized welcome message
     updatePersonalizedWelcome() {
-        if (!this.currentUser) return;
+        if (!this.currentUser) {
+            // Show welcome message for non-logged in users
+            const welcomeMessage = document.querySelector('.welcome-message');
+            if (welcomeMessage) {
+                welcomeMessage.innerHTML = `
+                    <h2>Welcome to SamCrypto AI! 🚀</h2>
+                    <p>Your personal crypto trading assistant powered by advanced AI and real-time market data.</p>
+                    <p>Create an account to unlock personalized trading recommendations! 💰</p>
+                `;
+            }
+            return;
+        }
 
         const welcomeMessage = document.querySelector('.welcome-message');
         if (welcomeMessage) {
             const daysSinceJoin = Math.floor((Date.now() - this.currentUser.stats.joinDate) / (1000 * 60 * 60 * 24));
             const portfolioValue = this.currentUser.portfolio.totalValue;
             
-            welcomeMessage.innerHTML = `
-                <h2>Welcome back, ${this.currentUser.name}! 👋</h2>
-                <p>You've been with SamCrypto AI for ${daysSinceJoin} days. Your portfolio is worth $${portfolioValue.toLocaleString()}.</p>
-                <p>Ready to make some profitable trades today? 🚀</p>
-            `;
+            // Different messages for new vs returning users
+            if (daysSinceJoin === 0) {
+                welcomeMessage.innerHTML = `
+                    <h2>Welcome to SamCrypto AI, ${this.currentUser.name}! 🎉</h2>
+                    <p>Your account has been created! Let's start building your crypto portfolio.</p>
+                    <p>Ask me about any cryptocurrency to get personalized trading advice! 🚀</p>
+                `;
+            } else {
+                welcomeMessage.innerHTML = `
+                    <h2>Welcome back, ${this.currentUser.name}! 👋</h2>
+                    <p>You've been with SamCrypto AI for ${daysSinceJoin} day${daysSinceJoin !== 1 ? 's' : ''}. Your portfolio is worth $${portfolioValue.toLocaleString()}.</p>
+                    <p>Ready to make some profitable trades today? 🚀</p>
+                `;
+            }
         }
     }
 
@@ -495,25 +534,39 @@ class UserManager {
         });
 
         // User menu
-        document.getElementById('userMenuToggle')?.addEventListener('click', () => {
+        document.getElementById('userMenuToggle')?.addEventListener('click', (e) => {
+            e.stopPropagation();
             this.toggleUserMenu();
+        });
+
+        // Close dropdown when clicking outside
+        document.addEventListener('click', (e) => {
+            const dropdown = document.getElementById('userDropdown');
+            const userProfile = document.getElementById('userProfileSection');
+            
+            if (dropdown && userProfile && !userProfile.contains(e.target)) {
+                dropdown.style.display = 'none';
+            }
         });
 
         // Profile settings
         document.getElementById('profileSettings')?.addEventListener('click', (e) => {
             e.preventDefault();
+            this.toggleUserMenu(); // Close dropdown
             this.showProfileModal();
         });
 
         // Data export
         document.getElementById('dataExport')?.addEventListener('click', (e) => {
             e.preventDefault();
+            this.toggleUserMenu(); // Close dropdown
             this.exportUserData();
         });
 
         // Logout
         document.getElementById('logoutBtn')?.addEventListener('click', (e) => {
             e.preventDefault();
+            this.toggleUserMenu(); // Close dropdown
             this.logout();
         });
 
