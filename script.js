@@ -2495,13 +2495,42 @@ SamCrypto AI remembers your preferences and conversation history to provide pers
         }
     }
 
-    startVoiceInput() {
+    async startVoiceInput() {
         // Check for speech recognition support
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
         
         if (!SpeechRecognition) {
             this.showVoiceStatus('Speech recognition not supported in this browser', 'error');
             console.error('❌ Speech recognition not supported');
+            return;
+        }
+
+        // Request microphone permission explicitly (especially important for PWA/mobile)
+        try {
+            console.log('🎤 Requesting microphone permission...');
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            
+            // Permission granted, stop the stream (we only needed it to trigger permission)
+            stream.getTracks().forEach(track => track.stop());
+            console.log('✅ Microphone permission granted');
+            
+        } catch (permissionError) {
+            console.error('❌ Microphone permission denied:', permissionError);
+            
+            // Show detailed error message with instructions
+            let errorMsg = 'Microphone access denied. ';
+            if (navigator.userAgent.match(/iPhone|iPad|iPod/i)) {
+                errorMsg += 'Go to Settings > Safari > Microphone and enable it.';
+            } else if (navigator.userAgent.match(/Android/i)) {
+                errorMsg += 'Go to Settings > Apps > Browser > Permissions and enable Microphone.';
+            } else {
+                errorMsg += 'Please allow microphone access in your browser settings.';
+            }
+            
+            this.showVoiceStatus(errorMsg, 'error');
+            
+            // Show alert with instructions
+            alert('🎤 Microphone Permission Required\n\n' + errorMsg);
             return;
         }
 

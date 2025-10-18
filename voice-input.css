@@ -118,3 +118,13 @@
     color: #a0a0a0;
     transform: none;
 }
+
+/* Permission help link */
+.voice-status.error {
+    cursor: pointer;
+    text-decoration: underline;
+}
+
+.voice-status.error:hover {
+    color: #ff6666;
+}
