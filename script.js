@@ -233,15 +233,12 @@ class SamCryptoAI {
     initializeEventListeners() {
         const messageInput = document.getElementById('messageInput');
         const sendButton = document.getElementById('sendButton');
-        const clearChat = document.getElementById('clearChat');
-        const refreshMarket = document.getElementById('refreshMarket');
-        const memoryStatus = document.getElementById('memoryStatus');
-        const dropdownToggle = document.getElementById('dropdownToggle');
-        const dropdownMenu = document.getElementById('dropdownMenu');
         const saveApiKey = document.getElementById('saveApiKey');
         const skipApiKey = document.getElementById('skipApiKey');
         
-        // Advanced feature buttons
+        // Features Page buttons
+        const openFeaturesPage = document.getElementById('openFeaturesPage');
+        const closeFeaturesPage = document.getElementById('closeFeaturesPage');
         const portfolioToggle = document.getElementById('portfolioToggle');
         const chartsToggle = document.getElementById('chartsToggle');
         const alertsToggle = document.getElementById('alertsToggle');
@@ -249,31 +246,51 @@ class SamCryptoAI {
         const themeToggle = document.getElementById('themeToggle');
         const backtestingToggle = document.getElementById('backtestingToggle');
         const sentimentToggle = document.getElementById('sentimentToggle');
+        const memoryStatus = document.getElementById('memoryStatus');
 
         messageInput.addEventListener('input', () => this.handleInputChange());
         messageInput.addEventListener('keydown', (e) => this.handleKeyDown(e));
         sendButton.addEventListener('click', () => this.sendMessage());
-        clearChat.addEventListener('click', () => this.clearConversation());
-        refreshMarket.addEventListener('click', () => this.refreshMarketData());
-        memoryStatus.addEventListener('click', () => this.showMemoryStatus());
-        dropdownToggle.addEventListener('click', () => this.toggleDropdown());
-        saveApiKey.addEventListener('click', () => this.saveApiKey());
-        skipApiKey.addEventListener('click', () => this.skipApiKey());
+        saveApiKey?.addEventListener('click', () => this.saveApiKey());
+        skipApiKey?.addEventListener('click', () => this.skipApiKey());
         
-        // Advanced feature event listeners
-        portfolioToggle.addEventListener('click', () => this.togglePortfolio());
-        chartsToggle.addEventListener('click', () => this.toggleCharts());
-        alertsToggle.addEventListener('click', () => this.toggleAlerts());
-        voiceToggle.addEventListener('click', () => this.toggleVoice());
-        themeToggle.addEventListener('click', () => this.toggleTheme());
-        backtestingToggle.addEventListener('click', () => this.toggleBacktesting());
-        sentimentToggle.addEventListener('click', () => this.toggleSentiment());
-
-        // Close dropdown when clicking outside
-        document.addEventListener('click', (e) => this.handleOutsideClick(e));
+        // Features Page event listeners
+        openFeaturesPage?.addEventListener('click', () => this.openFeaturesPage());
+        closeFeaturesPage?.addEventListener('click', () => this.closeFeaturesPage());
         
-        // Reposition dropdown on window resize
-        window.addEventListener('resize', () => this.repositionDropdown());
+        // Feature card event listeners (inside features page)
+        portfolioToggle?.addEventListener('click', () => {
+            this.closeFeaturesPage();
+            this.togglePortfolio();
+        });
+        chartsToggle?.addEventListener('click', () => {
+            this.closeFeaturesPage();
+            this.toggleCharts();
+        });
+        alertsToggle?.addEventListener('click', () => {
+            this.closeFeaturesPage();
+            this.toggleAlerts();
+        });
+        voiceToggle?.addEventListener('click', () => {
+            this.closeFeaturesPage();
+            this.toggleVoice();
+        });
+        themeToggle?.addEventListener('click', () => {
+            this.closeFeaturesPage();
+            this.toggleTheme();
+        });
+        backtestingToggle?.addEventListener('click', () => {
+            this.closeFeaturesPage();
+            this.toggleBacktesting();
+        });
+        sentimentToggle?.addEventListener('click', () => {
+            this.closeFeaturesPage();
+            this.toggleSentiment();
+        });
+        memoryStatus?.addEventListener('click', () => {
+            this.closeFeaturesPage();
+            this.showMemoryStatus();
+        });
 
         // Initialize action buttons
         this.initializeActionButtons();
@@ -2394,10 +2411,33 @@ SamCrypto AI remembers your preferences and conversation history to provide pers
         const dropdownMenu = document.getElementById('dropdownMenu');
         const dropdownToggle = document.getElementById('dropdownToggle');
         
-        if (dropdownMenu.classList.contains('show')) {
+        if (dropdownMenu && dropdownToggle && dropdownMenu.classList.contains('show')) {
             const toggleRect = dropdownToggle.getBoundingClientRect();
             dropdownMenu.style.top = (toggleRect.bottom + 5) + 'px';
             dropdownMenu.style.right = (window.innerWidth - toggleRect.right) + 'px';
+        }
+    }
+
+    // Features Page methods
+    openFeaturesPage() {
+        const featuresPage = document.getElementById('featuresPage');
+        if (featuresPage) {
+            featuresPage.classList.remove('hidden');
+            console.log('✅ Features page opened');
+            
+            // Prevent body scroll when features page is open
+            document.body.style.overflow = 'hidden';
+        }
+    }
+
+    closeFeaturesPage() {
+        const featuresPage = document.getElementById('featuresPage');
+        if (featuresPage) {
+            featuresPage.classList.add('hidden');
+            console.log('❌ Features page closed');
+            
+            // Restore body scroll
+            document.body.style.overflow = '';
         }
     }
 

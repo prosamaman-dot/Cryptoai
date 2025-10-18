@@ -8,6 +8,7 @@
     <link rel="stylesheet" href="auth-styles.css">
     <link rel="stylesheet" href="performance.css">
     <link rel="stylesheet" href="auth-fix.css">
+    <link rel="stylesheet" href="features-page.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <!-- Chart.js for interactive charts -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -52,109 +53,165 @@
                     <button id="registerBtn" class="auth-btn register-btn">Sign Up</button>
                 </div>
 
-                <!-- Keep only essential buttons in header -->
-                <button id="portfolioToggle" class="header-btn" title="Portfolio Tracker">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
-                        <line x1="8" y1="21" x2="16" y2="21"></line>
-                        <line x1="12" y1="17" x2="12" y2="21"></line>
+                <!-- Single Features Button -->
+                <button id="openFeaturesPage" class="features-btn" title="Open Features">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="3" y="3" width="7" height="7" rx="1"></rect>
+                        <rect x="14" y="3" width="7" height="7" rx="1"></rect>
+                        <rect x="14" y="14" width="7" height="7" rx="1"></rect>
+                        <rect x="3" y="14" width="7" height="7" rx="1"></rect>
                     </svg>
-                    <span id="portfolioValue">$0.00</span>
+                    <span>Features</span>
                 </button>
-                
-                <!-- Alerts Button with badge -->
-                <button id="alertsToggle" class="header-btn" title="Price Alerts">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
-                        <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
-                    </svg>
-                    <span id="alertCount" class="alert-badge">0</span>
-                </button>
-                
-                <!-- Main Menu with all other features -->
-                <div class="dropdown-container">
-                    <button id="dropdownToggle" class="dropdown-toggle" title="Menu">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <circle cx="12" cy="12" r="1"></circle>
-                            <circle cx="19" cy="12" r="1"></circle>
-                            <circle cx="5" cy="12" r="1"></circle>
-                        </svg>
-                    </button>
-                    <div id="dropdownMenu" class="dropdown-menu">
-                        <button id="chartsToggle" class="dropdown-item" title="Interactive Charts">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <polyline points="22,12 18,12 15,21 9,3 6,12 2,12"></polyline>
-                            </svg>
-                            <span>Interactive Charts</span>
-                        </button>
-                        <button id="voiceToggle" class="dropdown-item" title="Voice Commands">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
-                                <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
-                                <line x1="12" y1="19" x2="12" y2="23"></line>
-                                <line x1="8" y1="23" x2="16" y2="23"></line>
-                            </svg>
-                            <span>Voice Commands</span>
-                        </button>
-                        <button id="themeToggle" class="dropdown-item" title="Dark/Light Theme">
-                            <svg id="themeIcon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <circle cx="12" cy="12" r="5"></circle>
-                                <line x1="12" y1="1" x2="12" y2="3"></line>
-                                <line x1="12" y1="21" x2="12" y2="23"></line>
-                                <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
-                                <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
-                                <line x1="1" y1="12" x2="3" y2="12"></line>
-                                <line x1="21" y1="12" x2="23" y2="12"></line>
-                                <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
-                                <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
-                            </svg>
-                            <span>Theme Switcher</span>
-                        </button>
-                        <div class="dropdown-divider"></div>
-                        <button id="memoryStatus" class="dropdown-item" title="Memory Status">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M9 12l2 2 4-4"></path>
-                                <path d="M21 12c-1 0-3-1-3-3s2-3 3-3 3 1 3 3-2 3-3 3"></path>
-                                <path d="M3 12c1 0 3-1 3-3s-2-3-3-3-3 1-3 3 2 3 3 3"></path>
-                                <path d="M12 3c0 1-1 3-3 3s-3-2-3-3 1-3 3-3 3 2 3 3"></path>
-                                <path d="M12 21c0-1 1-3 3-3s3 2 3 3-1 3-3 3-3-2-3-3"></path>
-                            </svg>
-                            <span>Memory Status</span>
-                        </button>
-                        <button id="backtestingToggle" class="dropdown-item" title="Strategy Backtesting">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <polyline points="22,12 18,12 15,21 9,3 6,12 2,12"></polyline>
-                                <path d="M12 2v20"></path>
-                            </svg>
-                            <span>Backtesting</span>
-                        </button>
-                        <button id="sentimentToggle" class="dropdown-item" title="Market Sentiment">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M9 12l2 2 4-4"></path>
-                                <path d="M21 12c-1 0-3-1-3-3s2-3 3-3 3 1 3 3-2 3-3 3"></path>
-                                <path d="M3 12c1 0 3-1 3-3s-2-3-3-3-3 1-3 3 2 3 3 3"></path>
-                            </svg>
-                            <span>Sentiment Analysis</span>
-                        </button>
-                        <div class="dropdown-divider"></div>
-                        <button id="refreshMarket" class="dropdown-item" title="Refresh market data">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <polyline points="23 4 23 10 17 10"></polyline>
-                                <polyline points="1 20 1 14 7 14"></polyline>
-                                <path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"></path>
-                            </svg>
-                            <span>Refresh Market</span>
-                        </button>
-                        <button id="clearChat" class="dropdown-item" title="Clear conversation">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6M10 11v6M14 11v6"/>
-                            </svg>
-                            <span>Clear Chat</span>
-                        </button>
-                    </div>
-                </div>
             </div>
         </header>
+
+        <!-- Full-Page Features Panel -->
+        <div id="featuresPage" class="features-page hidden">
+            <div class="features-page-header">
+                <h2>Features & Tools</h2>
+                <button id="closeFeaturesPage" class="close-features-btn">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                </button>
+            </div>
+            
+            <div class="features-page-content">
+                <!-- Portfolio Section -->
+                <div class="feature-card" id="portfolioToggle">
+                    <div class="feature-icon">
+                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+                            <line x1="8" y1="21" x2="16" y2="21"></line>
+                            <line x1="12" y1="17" x2="12" y2="21"></line>
+                        </svg>
+                    </div>
+                    <h3>Portfolio Tracker</h3>
+                    <p>Track your crypto holdings and profits</p>
+                    <span class="feature-value" id="portfolioValue">$0.00</span>
+                </div>
+                
+                <!-- Alerts Section -->
+                <div class="feature-card" id="alertsToggle">
+                    <div class="feature-icon">
+                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+                            <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+                        </svg>
+                    </div>
+                    <h3>Price Alerts</h3>
+                    <p>Set custom price alerts for any coin</p>
+                    <span class="feature-badge" id="alertCount">0</span>
+                </div>
+                
+                <!-- Charts Section -->
+                <div class="feature-card" id="chartsToggle">
+                    <div class="feature-icon">
+                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="22,12 18,12 15,21 9,3 6,12 2,12"></polyline>
+                        </svg>
+                    </div>
+                    <h3>Interactive Charts</h3>
+                    <p>View real-time price charts and indicators</p>
+                </div>
+                
+                <!-- Voice Commands -->
+                <div class="feature-card" id="voiceToggle">
+                    <div class="feature-icon">
+                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
+                            <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+                            <line x1="12" y1="19" x2="12" y2="23"></line>
+                            <line x1="8" y1="23" x2="16" y2="23"></line>
+                        </svg>
+                    </div>
+                    <h3>Voice Commands</h3>
+                    <p>Control the app with your voice</p>
+                </div>
+                
+                <!-- Theme Switcher -->
+                <div class="feature-card" id="themeToggle">
+                    <div class="feature-icon">
+                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="5"></circle>
+                            <line x1="12" y1="1" x2="12" y2="3"></line>
+                            <line x1="12" y1="21" x2="12" y2="23"></line>
+                            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                            <line x1="1" y1="12" x2="3" y2="12"></line>
+                            <line x1="21" y1="12" x2="23" y2="12"></line>
+                        </svg>
+                    </div>
+                    <h3>Theme Switcher</h3>
+                    <p>Toggle between dark and light modes</p>
+                </div>
+                
+                <!-- Memory Status -->
+                <div class="feature-card" id="memoryStatus">
+                    <div class="feature-icon">
+                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M9 12l2 2 4-4"></path>
+                            <circle cx="12" cy="12" r="10"></circle>
+                        </svg>
+                    </div>
+                    <h3>Memory Status</h3>
+                    <p>View your conversation history</p>
+                </div>
+                
+                <!-- Backtesting -->
+                <div class="feature-card" id="backtestingToggle">
+                    <div class="feature-icon">
+                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline>
+                            <polyline points="17 6 23 6 23 12"></polyline>
+                        </svg>
+                    </div>
+                    <h3>Strategy Backtesting</h3>
+                    <p>Test trading strategies on historical data</p>
+                </div>
+                
+                <!-- Sentiment Analysis -->
+                <div class="feature-card" id="sentimentToggle">
+                    <div class="feature-icon">
+                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <path d="M8 14s1.5 2 4 2 4-2 4-2"></path>
+                            <line x1="9" y1="9" x2="9.01" y2="9"></line>
+                            <line x1="15" y1="9" x2="15.01" y2="9"></line>
+                        </svg>
+                    </div>
+                    <h3>Sentiment Analysis</h3>
+                    <p>Track market sentiment and trends</p>
+                </div>
+                
+                <!-- Profile Settings -->
+                <div class="feature-card" id="openProfileSettings">
+                    <div class="feature-icon">
+                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                            <circle cx="12" cy="7" r="4"></circle>
+                        </svg>
+                    </div>
+                    <h3>Profile Settings</h3>
+                    <p>Manage your account and preferences</p>
+                </div>
+                
+                <!-- Export Data -->
+                <div class="feature-card" id="openDataExport">
+                    <div class="feature-icon">
+                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                            <polyline points="7 10 12 15 17 10"></polyline>
+                            <line x1="12" y1="15" x2="12" y2="3"></line>
+                        </svg>
+                    </div>
+                    <h3>Export Data</h3>
+                    <p>Download your account data as JSON</p>
+                </div>
+            </div>
+        </div>
 
         <!-- Chat Messages -->
         <div class="chat-messages" id="chatMessages">
