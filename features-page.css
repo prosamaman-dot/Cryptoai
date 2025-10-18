@@ -2,14 +2,14 @@
 .features-btn {
     display: flex;
     align-items: center;
-    gap: 8px;
-    padding: 8px 16px;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    padding: 0;
     background: linear-gradient(135deg, #00d4ff 0%, #0099cc 100%);
     border: none;
-    border-radius: 8px;
+    border-radius: 10px;
     color: white;
-    font-weight: 500;
-    font-size: 14px;
     cursor: pointer;
     transition: all 0.3s ease;
     box-shadow: 0 4px 12px rgba(0, 212, 255, 0.3);
@@ -17,12 +17,24 @@
 
 .features-btn:hover {
     background: linear-gradient(135deg, #00e5ff 0%, #00aad4 100%);
-    transform: translateY(-2px);
+    transform: translateY(-2px) scale(1.05);
     box-shadow: 0 6px 20px rgba(0, 212, 255, 0.5);
 }
 
 .features-btn:active {
-    transform: translateY(0);
+    transform: translateY(0) scale(0.98);
+}
+
+.features-btn svg {
+    flex-shrink: 0;
+}
+
+/* Mobile optimization */
+@media (max-width: 768px) {
+    .features-btn {
+        width: 42px;
+        height: 42px;
+    }
 }
 
 /* Full-Page Features Panel */
