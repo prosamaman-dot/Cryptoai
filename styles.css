@@ -361,6 +361,11 @@ body {
     padding-top: 12px;
 }
 
+/* Hide avatar in welcome message for cleaner look */
+.welcome-message .message-avatar {
+    display: none;
+}
+
 .chat-messages::-webkit-scrollbar {
     width: 6px;
 }
@@ -526,12 +531,26 @@ body {
 }
 
 /* Welcome Message and Action Buttons */
+.welcome-message {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 40vh;
+    padding: 40px 20px;
+}
+
+.welcome-message .message-content {
+    max-width: 100%;
+    width: 100%;
+}
+
 .welcome-title {
     color: #ffffff;
-    font-size: 1.3rem;
+    font-size: 2rem;
     font-weight: 600;
-    margin: 0 0 16px 0;
+    margin: 0 0 32px 0;
     text-align: center;
+    letter-spacing: -0.5px;
 }
 
 .action-buttons {
@@ -1013,8 +1032,13 @@ body {
     }
     
     .welcome-title {
-        font-size: 1.2rem;
-        margin-bottom: 14px;
+        font-size: 1.5rem;
+        margin-bottom: 24px;
+    }
+    
+    .welcome-message {
+        min-height: 30vh;
+        padding: 20px 16px;
     }
     
     .message {

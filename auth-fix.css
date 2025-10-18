@@ -3,15 +3,16 @@ body.logged-in #authButtons {
     display: none !important;
 }
 
-body.logged-in #userProfileSection {
-    display: flex !important;
-}
-
 body:not(.logged-in) #authButtons {
     display: flex !important;
 }
 
-body:not(.logged-in) #userProfileSection {
+/* Show/hide logout in features page based on login state */
+body.logged-in #openLogout {
+    display: block !important;
+}
+
+body:not(.logged-in) #openLogout {
     display: none !important;
 }
 

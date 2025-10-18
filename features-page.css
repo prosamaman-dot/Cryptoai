@@ -196,6 +196,55 @@
     box-shadow: 0 4px 12px rgba(255, 107, 107, 0.4);
 }
 
+/* Login Required Badge */
+.feature-card .login-required {
+    position: absolute;
+    bottom: 16px;
+    right: 16px;
+    background: rgba(255, 193, 7, 0.2);
+    color: #ffc107;
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 500;
+    border: 1px solid rgba(255, 193, 7, 0.3);
+}
+
+/* Profile-specific styling */
+#openProfileSettings .feature-icon,
+#openDataExport .feature-icon {
+    background: linear-gradient(135deg, rgba(138, 43, 226, 0.2) 0%, rgba(103, 32, 169, 0.1) 100%);
+    color: #8a2be2;
+}
+
+#openProfileSettings:hover .feature-icon,
+#openDataExport:hover .feature-icon {
+    background: linear-gradient(135deg, rgba(138, 43, 226, 0.3) 0%, rgba(103, 32, 169, 0.2) 100%);
+}
+
+#openProfileSettings::before,
+#openDataExport::before {
+    background: linear-gradient(90deg, #8a2be2 0%, #6a1ba7 100%);
+}
+
+/* Logout-specific styling (red/orange theme) */
+#openLogout .feature-icon {
+    background: linear-gradient(135deg, rgba(255, 70, 70, 0.2) 0%, rgba(200, 35, 35, 0.1) 100%);
+    color: #ff4646;
+}
+
+#openLogout:hover .feature-icon {
+    background: linear-gradient(135deg, rgba(255, 70, 70, 0.3) 0%, rgba(200, 35, 35, 0.2) 100%);
+}
+
+#openLogout::before {
+    background: linear-gradient(90deg, #ff4646 0%, #c82323 100%);
+}
+
+#openLogout:hover {
+    border-color: rgba(255, 70, 70, 0.4);
+}
+
 /* Responsive Design */
 @media (max-width: 1024px) {
     .features-page-content {

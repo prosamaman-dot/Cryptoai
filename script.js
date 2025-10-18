@@ -317,6 +317,17 @@ class SamCryptoAI {
                 setTimeout(() => this.userManager.showLoginModal(), 1000);
             }
         });
+        
+        // Logout in Features Page
+        const openLogout = document.getElementById('openLogout');
+        openLogout?.addEventListener('click', () => {
+            this.closeFeaturesPage();
+            if (this.userManager.isLoggedIn()) {
+                if (confirm('Are you sure you want to logout?')) {
+                    this.userManager.logout();
+                }
+            }
+        });
 
         // Initialize action buttons
         this.initializeActionButtons();

@@ -539,18 +539,16 @@ class UserManager {
     updateUIForLoggedInUser() {
         if (!this.currentUser) return;
 
-        // Show user profile section
-        const userProfileSection = document.getElementById('userProfileSection');
+        // Hide auth buttons, show logout in features page
         const authButtons = document.getElementById('authButtons');
-        
-        if (userProfileSection) {
-            userProfileSection.style.display = 'flex';
-            document.getElementById('welcomeUser').textContent = `Welcome, ${this.currentUser.name}!`;
-            document.getElementById('userInitials').textContent = this.getInitials(this.currentUser.name);
-        }
+        const logoutCard = document.getElementById('openLogout');
         
         if (authButtons) {
             authButtons.style.display = 'none';
+        }
+        
+        if (logoutCard) {
+            logoutCard.style.display = 'block';
         }
 
         // Update welcome message with personalized data
@@ -561,42 +559,42 @@ class UserManager {
             console.log('🔄 Reloading main app with user data...');
             window.samCrypto.loadUserData();
         }
+        
         // Add body class for CSS-based control
         document.body.classList.add('logged-in');
-        this.syncAuthUI();
+        console.log('✅ UI updated for logged in user:', this.currentUser.name);
     }
 
     // Update UI for logged out user
     updateUIForLoggedOutUser() {
-        const userProfileSection = document.getElementById('userProfileSection');
         const authButtons = document.getElementById('authButtons');
-        
-        if (userProfileSection) {
-            userProfileSection.style.display = 'none';
-        }
+        const logoutCard = document.getElementById('openLogout');
         
         if (authButtons) {
             authButtons.style.display = 'flex';
         }
+        
+        if (logoutCard) {
+            logoutCard.style.display = 'none';
+        }
+        
         document.body.classList.remove('logged-in');
-        this.syncAuthUI();
+        console.log('✅ UI updated for logged out user');
     }
 
     // Ensure header UI matches auth state (extra safety for refresh/load)
     syncAuthUI() {
-        const userProfileSection = document.getElementById('userProfileSection');
         const authButtons = document.getElementById('authButtons');
-        if (!userProfileSection || !authButtons) return;
+        const logoutCard = document.getElementById('openLogout');
+        
         if (this.currentUser) {
-            userProfileSection.style.display = 'flex';
-            authButtons.style.display = 'none';
-            const welcomeUser = document.getElementById('welcomeUser');
-            const userInitials = document.getElementById('userInitials');
-            if (welcomeUser) welcomeUser.textContent = `Welcome, ${this.currentUser.name}!`;
-            if (userInitials) userInitials.textContent = this.getInitials(this.currentUser.name);
+            // Logged in: hide auth buttons, show logout
+            if (authButtons) authButtons.style.display = 'none';
+            if (logoutCard) logoutCard.style.display = 'block';
         } else {
-            userProfileSection.style.display = 'none';
-            authButtons.style.display = 'flex';
+            // Logged out: show auth buttons, hide logout
+            if (authButtons) authButtons.style.display = 'flex';
+            if (logoutCard) logoutCard.style.display = 'none';
         }
     }
 
@@ -607,39 +605,10 @@ class UserManager {
 
     // Update personalized welcome message
     updatePersonalizedWelcome() {
-        if (!this.currentUser) {
-            // Show welcome message for non-logged in users
-            const welcomeMessage = document.querySelector('.welcome-message');
-            if (welcomeMessage) {
-                welcomeMessage.innerHTML = `
-                    <h2>Welcome to SamCrypto AI! 🚀</h2>
-                    <p>Your personal crypto trading assistant powered by advanced AI and real-time market data.</p>
-                    <p>Create an account to unlock personalized trading recommendations! 💰</p>
-                `;
-            }
-            return;
-        }
-
-        const welcomeMessage = document.querySelector('.welcome-message');
-        if (welcomeMessage) {
-            const daysSinceJoin = Math.floor((Date.now() - this.currentUser.stats.joinDate) / (1000 * 60 * 60 * 24));
-            const portfolioValue = this.currentUser.portfolio.totalValue;
-            
-            // Different messages for new vs returning users
-            if (daysSinceJoin === 0) {
-                welcomeMessage.innerHTML = `
-                    <h2>Welcome to SamCrypto AI, ${this.currentUser.name}! 🎉</h2>
-                    <p>Your account has been created! Let's start building your crypto portfolio.</p>
-                    <p>Ask me about any cryptocurrency to get personalized trading advice! 🚀</p>
-                `;
-            } else {
-                welcomeMessage.innerHTML = `
-                    <h2>Welcome back, ${this.currentUser.name}! 👋</h2>
-                    <p>You've been with SamCrypto AI for ${daysSinceJoin} day${daysSinceJoin !== 1 ? 's' : ''}. Your portfolio is worth $${portfolioValue.toLocaleString()}.</p>
-                    <p>Ready to make some profitable trades today? 🚀</p>
-                `;
-            }
-        }
+        // Keep the simple "What can I help with?" message
+        // No need to change it based on login state
+        // This keeps it clean like ChatGPT mobile
+        console.log('✅ Keeping simple welcome message');
     }
 
     // Setup event listeners
