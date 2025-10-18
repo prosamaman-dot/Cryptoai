@@ -87,15 +87,47 @@ class SamCryptoAI {
             this.conversationHistory = currentUser.chatHistory || [];
             
             // Load user's memory and preferences
-            this.userMemory = currentUser.conversationMemory || {};
-            this.userPreferences = currentUser.preferences || {};
+            this.userMemory = currentUser.conversationMemory || {
+                conversations: [],
+                userProfile: {},
+                tradingHistory: [],
+                preferences: {},
+                lastUpdated: new Date().toISOString()
+            };
+            this.userPreferences = currentUser.preferences || {
+                favoriteCoins: [],
+                tradingStyle: 'unknown',
+                riskTolerance: 'unknown',
+                experienceLevel: 'unknown',
+                interests: []
+            };
             
             // Load API key from user profile
-            if (currentUser.preferences.apiKey) {
+            if (currentUser.preferences && currentUser.preferences.apiKey) {
                 this.apiKey = currentUser.preferences.apiKey;
             }
             
             console.log('User data loaded successfully for:', currentUser.name);
+        } else {
+            // Ensure defaults are set even when no user is logged in
+            console.log('No user logged in, using default values');
+            this.portfolio = { totalValue: 0, totalPnL: 0, totalPnLPercent: 0, holdings: [] };
+            this.alerts = [];
+            this.conversationHistory = [];
+            this.userMemory = {
+                conversations: [],
+                userProfile: {},
+                tradingHistory: [],
+                preferences: {},
+                lastUpdated: new Date().toISOString()
+            };
+            this.userPreferences = {
+                favoriteCoins: [],
+                tradingStyle: 'unknown',
+                riskTolerance: 'unknown',
+                experienceLevel: 'unknown',
+                interests: []
+            };
         }
     }
 
@@ -339,15 +371,29 @@ class SamCryptoAI {
             // Generate AI response
             const response = await this.generateAIResponse(message, marketData);
             
+            // Safety check - ensure we have a valid response
+            if (!response || response.trim() === '') {
+                throw new Error('Empty response received');
+            }
+            
             // Hide typing indicator and add AI response
             this.hideTypingIndicator();
             this.addMessage(response, 'ai');
             this.addToConversationHistory('assistant', response);
             
         } catch (error) {
-            console.error('Error generating response:', error);
+            console.error('❌ Error generating response:', error);
             this.hideTypingIndicator();
-            this.addMessage('Sorry, I encountered an error. Please try again.', 'ai');
+            
+            // Generate a fallback response using demo
+            try {
+                const fallbackResponse = this.generateDemoResponse(message, null);
+                this.addMessage(fallbackResponse, 'ai');
+                this.addToConversationHistory('assistant', fallbackResponse);
+            } catch (fallbackError) {
+                console.error('❌ Fallback also failed:', fallbackError);
+                this.addMessage('Hey! I\'m having a bit of trouble right now, but I\'m still here to help! 🚀 Try asking me about Bitcoin, Ethereum, or any crypto you\'re interested in!', 'ai');
+            }
         }
     }
 
@@ -829,13 +875,18 @@ class SamCryptoAI {
     }
 
     async generateAIResponse(userMessage, marketData) {
+        console.log('🤖 Generating AI response for:', userMessage);
+        console.log('🔑 API Key available:', !!this.apiKey);
+        
         if (!this.apiKey) {
+            console.warn('⚠️ No API key, using demo response');
             return this.generateDemoResponse(userMessage, marketData);
         }
 
         try {
             // Detect user intent for smarter responses
             const intent = this.detectIntent(userMessage);
+            console.log('🎯 Detected intent:', intent);
             
             // Gather comprehensive context
             const isNewsQuery = this.isNewsRelatedQuery(userMessage);
@@ -850,10 +901,12 @@ class SamCryptoAI {
             
             // Build conversation history for multi-turn context
             const conversationContents = this.buildConversationHistory(systemPrompt, userMessage);
+            console.log('📝 Conversation contents prepared, messages:', conversationContents.length);
             
             // Dynamic generation config based on intent
             const generationConfig = this.getOptimalGenerationConfig(intent);
             
+            console.log('📡 Sending request to Gemini API...');
             const response = await fetch(`${this.geminiAPI}?key=${this.apiKey}`, {
                 method: 'POST',
                 headers: {
@@ -864,30 +917,48 @@ class SamCryptoAI {
                     generationConfig: generationConfig,
                     safetySettings: [
                         {
-                            category: 'HARM_CATEGORY_FINANCIAL',
+                            category: 'HARM_CATEGORY_HARASSMENT',
+                            threshold: 'BLOCK_NONE'
+                        },
+                        {
+                            category: 'HARM_CATEGORY_HATE_SPEECH',
+                            threshold: 'BLOCK_NONE'
+                        },
+                        {
+                            category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT',
+                            threshold: 'BLOCK_NONE'
+                        },
+                        {
+                            category: 'HARM_CATEGORY_DANGEROUS_CONTENT',
                             threshold: 'BLOCK_NONE'
                         }
                     ]
                 })
             });
 
+            console.log('📡 Response status:', response.status);
+
             if (!response.ok) {
-                const errorData = await response.json();
-                console.error('API error details:', errorData);
-                throw new Error(`API request failed: ${response.status}`);
+                const errorText = await response.text();
+                console.error('❌ API error details:', errorText);
+                throw new Error(`API request failed: ${response.status} - ${errorText}`);
             }
 
             const data = await response.json();
+            console.log('✅ API response received:', data);
             
             if (!data.candidates || !data.candidates[0] || !data.candidates[0].content) {
-                console.error('Invalid response structure:', data);
-                throw new Error('Invalid API response');
+                console.error('❌ Invalid response structure:', data);
+                throw new Error('Invalid API response - no candidates');
             }
             
-            return data.candidates[0].content.parts[0].text;
+            const aiResponse = data.candidates[0].content.parts[0].text;
+            console.log('✅ AI response generated successfully, length:', aiResponse.length);
+            return aiResponse;
             
         } catch (error) {
-            console.error('Gemini API error:', error);
+            console.error('❌ Gemini API error:', error);
+            console.log('🔄 Falling back to demo response');
             return this.generateDemoResponse(userMessage, marketData);
         }
     }
@@ -2025,6 +2096,29 @@ Bitcoin, Ethereum, Solana, Cardano, Ripple, Dogecoin, Polkadot, Avalanche, Polyg
     }
 
     addToConversationHistory(role, content, timestamp = new Date().toISOString()) {
+        // Safety check: ensure arrays are initialized
+        if (!this.conversationHistory) {
+            console.warn(' conversationHistory was undefined, initializing...');
+            this.conversationHistory = [];
+        }
+        if (!this.sessionMemory) {
+            console.warn(' sessionMemory was undefined, initializing...');
+            this.sessionMemory = [];
+        }
+        if (!this.userMemory) {
+            console.warn(' userMemory was undefined, initializing...');
+            this.userMemory = {
+                conversations: [],
+                userProfile: {},
+                tradingHistory: [],
+                preferences: {},
+                lastUpdated: new Date().toISOString()
+            };
+        }
+        if (!this.userMemory.conversations) {
+            this.userMemory.conversations = [];
+        }
+        
         const message = { role, content, timestamp };
         this.conversationHistory.push(message);
         this.sessionMemory.push(message);
@@ -3250,5 +3344,7 @@ SamCrypto AI remembers your preferences and conversation history to provide pers
 
 // Initialize the application when DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {
-    new SamCryptoAI();
+    window.samCrypto = new SamCryptoAI();
+    window.samCryptoAI = window.samCrypto; // For backwards compatibility
+    console.log('✅ SamCrypto AI initialized and ready!');
 });
