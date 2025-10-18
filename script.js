@@ -6,7 +6,7 @@ class SamCryptoAI {
         this.userManager = new UserManager();
         
         // Core API configuration
-        this.apiKey = null; // Will be loaded from user profile or localStorage
+        this.apiKey = 'AIzaSyBAgDmA7Uak6FIGh9MsN2582ouRaqpQ_Cg'; // Default API key
         this.conversationHistory = [];
         this.coinGeckoAPI = 'https://api.coingecko.com/api/v3';
         this.geminiAPI = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent';
@@ -102,23 +102,21 @@ class SamCryptoAI {
     // Configure API key based on user login status
     configureApiKey() {
         const currentUser = this.userManager.getCurrentUser();
+        
+        // If user has their own API key, use it
         if (currentUser && currentUser.preferences.apiKey) {
             this.apiKey = currentUser.preferences.apiKey;
-            this.hideApiModal();
         } else {
             // Check localStorage as fallback
             const savedApiKey = localStorage.getItem('gemini_api_key');
             if (savedApiKey) {
                 this.apiKey = savedApiKey;
-                this.hideApiModal();
-            } else if (currentUser) {
-                // User is logged in but no API key - show modal
-                this.showApiModal();
-            } else {
-                // Not logged in - they need to login first
-                this.hideApiModal();
             }
+            // Otherwise, use the default API key (already set in constructor)
         }
+        
+        // Always hide API modal since we have a default key
+        this.hideApiModal();
     }
 
     initializeTradingStrategies() {
@@ -253,10 +251,9 @@ class SamCryptoAI {
         const savedApiKey = localStorage.getItem('gemini_api_key');
         if (savedApiKey) {
             this.apiKey = savedApiKey;
-            this.hideApiModal();
-        } else {
-            this.showApiModal();
         }
+        // Always hide modal since we have default API key
+        this.hideApiModal();
     }
 
     showApiModal() {
