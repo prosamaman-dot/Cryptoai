@@ -2,7 +2,7 @@
 
 class SamCryptoAI {
     constructor() {
-        this.apiKey = 'AIzaSyBAgDmA7Uak6FIGh9MsN2582ouRaqpQ_Cg';
+        this.apiKey = null; // Will be loaded from localStorage or user input
         this.conversationHistory = [];
         this.coinGeckoAPI = 'https://api.coingecko.com/api/v3';
         this.geminiAPI = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent';
@@ -29,6 +29,13 @@ class SamCryptoAI {
         this.sentimentData = {};
         this.backtestResults = {};
         
+        // API caching and rate limiting
+        this.cache = new Map(); // Simple in-memory cache
+        this.cacheTTL = 30000; // 30 seconds cache TTL
+        this.pendingRequests = new Map(); // Prevent duplicate concurrent requests
+        this.requestQueue = [];
+        this.maxConcurrentRequests = 3;
+        
         // Random greeting messages
         this.greetingMessages = [
             "Hey there! Ready to make some serious crypto profits? Let's find you some winning trades! 💰🚀",
@@ -42,7 +49,7 @@ class SamCryptoAI {
         ];
         
         this.initializeEventListeners();
-        this.hideApiModal(); // Hide modal since we have API key
+        this.checkApiKey(); // Check for stored API key or show modal
         this.loadChatHistory();
         this.updateWelcomeMessage();
     }
@@ -320,7 +327,7 @@ class SamCryptoAI {
             const volume24h = marketDataInfo.total_volume?.usd || marketData.volume_24h;
             
             // Calculate RSI approximation based on price change
-            const rsi = this.calculateRSI(priceChange24h);
+            const rsi = this.estimateRSIFromChange(priceChange24h);
             
             // Calculate support and resistance levels
             const support = currentPrice * 0.95; // 5% below current price
@@ -348,8 +355,9 @@ class SamCryptoAI {
         }
     }
 
-    calculateRSI(priceChange24h) {
-        // Simplified RSI calculation based on 24h price change
+    estimateRSIFromChange(priceChange24h) {
+        // Simplified RSI estimation based on 24h price change
+        // This is a quick approximation, not true RSI calculation
         if (priceChange24h > 5) return 75; // Overbought
         if (priceChange24h > 2) return 65; // Bullish
         if (priceChange24h > 0) return 55; // Slightly bullish
@@ -410,7 +418,31 @@ class SamCryptoAI {
             'bitcoin cash': 'bitcoin-cash',
             'bch': 'bitcoin-cash',
             'stellar': 'stellar',
-            'xlm': 'stellar'
+            'xlm': 'stellar',
+            'ripple': 'ripple',
+            'xrp': 'ripple',
+            'dogecoin': 'dogecoin',
+            'doge': 'dogecoin',
+            'avalanche': 'avalanche-2',
+            'avax': 'avalanche-2',
+            'polygon': 'matic-network',
+            'matic': 'matic-network',
+            'uniswap': 'uniswap',
+            'uni': 'uniswap',
+            'tron': 'tron',
+            'trx': 'tron',
+            'monero': 'monero',
+            'xmr': 'monero',
+            'ethereum classic': 'ethereum-classic',
+            'etc': 'ethereum-classic',
+            'cosmos': 'cosmos',
+            'atom': 'cosmos',
+            'algorand': 'algorand',
+            'algo': 'algorand',
+            'vechain': 'vechain',
+            'vet': 'vechain',
+            'filecoin': 'filecoin',
+            'fil': 'filecoin'
         };
         
         const queryLower = query.toLowerCase();
@@ -428,26 +460,57 @@ class SamCryptoAI {
     }
 
     async fetchMarketData(coinId) {
-        try {
-            // Try multiple APIs for more accurate data
-            const [coinGeckoData, binanceData] = await Promise.allSettled([
-                this.fetchFromCoinGecko(coinId),
-                this.fetchFromBinance(coinId)
-            ]);
-            
-            // Use CoinGecko as primary source, Binance as backup
-            if (coinGeckoData.status === 'fulfilled' && coinGeckoData.value) {
-                return coinGeckoData.value;
-            } else if (binanceData.status === 'fulfilled' && binanceData.value) {
-                return binanceData.value;
-            } else {
-                throw new Error('All API sources failed');
-            }
-        } catch (error) {
-            console.error('Market data fetch error:', error);
-            // Return mock data for demo purposes
-            return this.getMockMarketData(coinId);
+        // Check cache first
+        const cacheKey = `market_${coinId}`;
+        const cached = this.getFromCache(cacheKey);
+        if (cached) {
+            console.log(`Using cached data for ${coinId}`);
+            return cached;
         }
+        
+        // Check if there's already a pending request for this coin
+        if (this.pendingRequests.has(cacheKey)) {
+            console.log(`Waiting for pending request for ${coinId}`);
+            return await this.pendingRequests.get(cacheKey);
+        }
+        
+        // Create new request
+        const requestPromise = (async () => {
+            try {
+                // Try multiple APIs for more accurate data
+                const [coinGeckoData, binanceData] = await Promise.allSettled([
+                    this.fetchFromCoinGecko(coinId),
+                    this.fetchFromBinance(coinId)
+                ]);
+                
+                let result;
+                // Use CoinGecko as primary source, Binance as backup
+                if (coinGeckoData.status === 'fulfilled' && coinGeckoData.value) {
+                    result = coinGeckoData.value;
+                } else if (binanceData.status === 'fulfilled' && binanceData.value) {
+                    result = binanceData.value;
+                } else {
+                    throw new Error('All API sources failed');
+                }
+                
+                // Cache the result
+                this.setCache(cacheKey, result);
+                return result;
+                
+            } catch (error) {
+                console.error('Market data fetch error:', error);
+                // Return mock data for demo purposes
+                return this.getMockMarketData(coinId);
+            } finally {
+                // Remove from pending requests
+                this.pendingRequests.delete(cacheKey);
+            }
+        })();
+        
+        // Store pending request
+        this.pendingRequests.set(cacheKey, requestPromise);
+        
+        return requestPromise;
     }
 
     async fetchFromCoinGecko(coinId) {
@@ -470,7 +533,7 @@ class SamCryptoAI {
                 change_24h: coinData.usd_24h_change,
                 volume_24h: coinData.usd_24h_vol,
                 market_cap: coinData.usd_market_cap,
-                last_updated: coinData.last_updated_at,
+                last_updated: coinData.last_updated_at * 1000, // Convert to milliseconds
                 source: 'CoinGecko'
             };
         } catch (error) {
@@ -513,7 +576,7 @@ class SamCryptoAI {
                 change_24h: parseFloat(data.priceChangePercent),
                 volume_24h: parseFloat(data.volume) * parseFloat(data.lastPrice),
                 market_cap: 0, // Binance doesn't provide market cap
-                last_updated: data.closeTime,
+                last_updated: data.closeTime, // Already in milliseconds
                 source: 'Binance'
             };
         } catch (error) {
@@ -795,7 +858,7 @@ ${JSON.stringify(this.tradingStrategies, null, 2)}
 - 24h Change: ${data.change_24h > 0 ? '+' : ''}${data.change_24h.toFixed(2)}%
 - 24h Volume: ${volumeFormatted}
 - Market Cap: ${marketCapFormatted}
-- Last Updated: ${data.last_updated ? new Date(data.last_updated * 1000).toLocaleString() : 'Unknown'}`;
+- Last Updated: ${data.last_updated ? new Date(data.last_updated).toLocaleString() : 'Unknown'}`;
             }
         }
 
@@ -2905,6 +2968,33 @@ SamCrypto AI remembers your preferences and conversation history to provide pers
         this.alerts.splice(index, 1);
         this.saveAlerts();
         this.updateAlertsDisplay();
+    }
+
+    // Cache management methods
+    getFromCache(key) {
+        const cached = this.cache.get(key);
+        if (!cached) return null;
+        
+        const now = Date.now();
+        if (now - cached.timestamp > this.cacheTTL) {
+            // Cache expired
+            this.cache.delete(key);
+            return null;
+        }
+        
+        return cached.data;
+    }
+
+    setCache(key, data) {
+        this.cache.set(key, {
+            data: data,
+            timestamp: Date.now()
+        });
+    }
+
+    clearCache() {
+        this.cache.clear();
+        console.log('Cache cleared');
     }
 }
 
