@@ -95,16 +95,16 @@
 }
 
 .user-dropdown-menu {
-    position: absolute;
-    top: 100%;
-    right: 0;
+    position: fixed; /* Changed from absolute to fixed */
+    top: auto; /* Let JS position it */
+    right: 20px; /* Fixed position from right */
     background: rgba(26, 26, 46, 0.98);
     border: 1px solid rgba(0, 212, 255, 0.3);
     border-radius: 8px;
     padding: 8px 0;
     min-width: 180px;
     display: none;
-    z-index: 9999; /* Higher than chat interface */
+    z-index: 999999 !important; /* Highest z-index to appear above everything */
     backdrop-filter: blur(15px);
     box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5), 0 0 20px rgba(0, 212, 255, 0.1);
     margin-top: 8px;

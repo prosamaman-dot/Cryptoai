@@ -836,8 +836,23 @@ class UserManager {
     // Toggle user menu
     toggleUserMenu() {
         const dropdown = document.getElementById('userDropdown');
+        const userAvatar = document.getElementById('userMenuToggle');
+        
         if (dropdown) {
-            dropdown.style.display = dropdown.style.display === 'block' ? 'none' : 'block';
+            if (dropdown.style.display === 'block') {
+                // Close dropdown
+                dropdown.style.display = 'none';
+            } else {
+                // Open dropdown and position it
+                dropdown.style.display = 'block';
+                
+                // Position dropdown below avatar using fixed positioning
+                if (userAvatar) {
+                    const rect = userAvatar.getBoundingClientRect();
+                    dropdown.style.top = (rect.bottom + 8) + 'px'; // 8px below avatar
+                    dropdown.style.right = (window.innerWidth - rect.right) + 'px'; // Align to right edge
+                }
+            }
         }
     }
 

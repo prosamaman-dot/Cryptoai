@@ -419,6 +419,7 @@ body {
     border-radius: 18px;
     padding: 12px 16px;
     word-wrap: break-word;
+    overflow-wrap: break-word;
     line-height: 1.4;
 }
 
@@ -428,8 +429,10 @@ body {
     color: #ffffff;
     display: inline-block;
     max-width: fit-content;
-    white-space: normal;
-    word-break: normal;
+    white-space: pre-wrap;
+    word-break: keep-all;
+    overflow-wrap: break-word;
+    hyphens: none;
 }
 
 .user-message .message-text br {
