@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SamCrypto AI - Chat Interface</title>
     <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="auth-styles.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <!-- Chart.js for interactive charts -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -23,6 +24,32 @@
                 </div>
             </div>
             <div class="header-actions">
+                <!-- User Profile Section -->
+                <div id="userProfileSection" class="user-profile" style="display: none;">
+                    <span id="welcomeUser" class="welcome-text">Welcome, User!</span>
+                    <div class="user-avatar" id="userAvatar">
+                        <span id="userInitials">U</span>
+                    </div>
+                    <div class="user-dropdown">
+                        <button id="userMenuToggle" class="user-menu-btn">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polyline points="6,9 12,15 18,9"></polyline>
+                            </svg>
+                        </button>
+                        <div id="userDropdown" class="user-dropdown-menu">
+                            <a href="#" id="profileSettings">Profile Settings</a>
+                            <a href="#" id="dataExport">Export Data</a>
+                            <a href="#" id="logoutBtn">Logout</a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Login/Register Buttons (shown when not logged in) -->
+                <div id="authButtons" class="auth-buttons">
+                    <button id="loginBtn" class="auth-btn login-btn">Login</button>
+                    <button id="registerBtn" class="auth-btn register-btn">Sign Up</button>
+                </div>
+
                 <!-- Keep only essential buttons in header -->
                 <button id="portfolioToggle" class="header-btn" title="Portfolio Tracker">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -447,6 +474,141 @@
         </div>
     </div>
 
+    <!-- Login Modal -->
+    <div id="loginModal" class="modal auth-modal">
+        <div class="modal-content auth-modal-content">
+            <div class="modal-header">
+                <h2>🔐 Login to SamCrypto AI</h2>
+                <button class="modal-close" id="loginModalClose">&times;</button>
+            </div>
+            <form id="loginForm" class="auth-form">
+                <div class="form-group">
+                    <label for="loginEmail">Email Address</label>
+                    <input type="email" id="loginEmail" required placeholder="your@email.com">
+                </div>
+                <div class="form-group">
+                    <label for="loginPassword">Password</label>
+                    <input type="password" id="loginPassword" required placeholder="Your password">
+                </div>
+                <div class="form-options">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="rememberMe">
+                        <span class="checkmark"></span>
+                        Remember me
+                    </label>
+                    <a href="#" id="forgotPassword" class="forgot-link">Forgot password?</a>
+                </div>
+                <button type="submit" class="auth-submit-btn">Login</button>
+                <div class="auth-divider">
+                    <span>Don't have an account?</span>
+                </div>
+                <button type="button" id="switchToRegister" class="auth-switch-btn">Create Account</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Register Modal -->
+    <div id="registerModal" class="modal auth-modal">
+        <div class="modal-content auth-modal-content">
+            <div class="modal-header">
+                <h2>🚀 Join SamCrypto AI</h2>
+                <button class="modal-close" id="registerModalClose">&times;</button>
+            </div>
+            <form id="registerForm" class="auth-form">
+                <div class="form-group">
+                    <label for="registerName">Full Name</label>
+                    <input type="text" id="registerName" required placeholder="John Doe">
+                </div>
+                <div class="form-group">
+                    <label for="registerEmail">Email Address</label>
+                    <input type="email" id="registerEmail" required placeholder="your@email.com">
+                </div>
+                <div class="form-group">
+                    <label for="registerPassword">Password</label>
+                    <input type="password" id="registerPassword" required placeholder="Minimum 8 characters">
+                </div>
+                <div class="form-group">
+                    <label for="confirmPassword">Confirm Password</label>
+                    <input type="password" id="confirmPassword" required placeholder="Confirm your password">
+                </div>
+                <div class="form-options">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="agreeTerms" required>
+                        <span class="checkmark"></span>
+                        I agree to the <a href="#" class="terms-link">Terms of Service</a>
+                    </label>
+                </div>
+                <button type="submit" class="auth-submit-btn">Create Account</button>
+                <div class="auth-divider">
+                    <span>Already have an account?</span>
+                </div>
+                <button type="button" id="switchToLogin" class="auth-switch-btn">Login</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Profile Settings Modal -->
+    <div id="profileModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>👤 Profile Settings</h2>
+                <button class="modal-close" id="profileModalClose">&times;</button>
+            </div>
+            <form id="profileForm" class="profile-form">
+                <div class="profile-section">
+                    <h3>Personal Information</h3>
+                    <div class="form-group">
+                        <label for="profileName">Full Name</label>
+                        <input type="text" id="profileName" placeholder="Your name">
+                    </div>
+                    <div class="form-group">
+                        <label for="profileEmail">Email</label>
+                        <input type="email" id="profileEmail" readonly>
+                    </div>
+                </div>
+                <div class="profile-section">
+                    <h3>Trading Preferences</h3>
+                    <div class="form-group">
+                        <label for="riskTolerance">Risk Tolerance</label>
+                        <select id="riskTolerance">
+                            <option value="low">Conservative (Low Risk)</option>
+                            <option value="medium">Balanced (Medium Risk)</option>
+                            <option value="high">Aggressive (High Risk)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="tradingExperience">Trading Experience</label>
+                        <select id="tradingExperience">
+                            <option value="beginner">Beginner (0-1 years)</option>
+                            <option value="intermediate">Intermediate (1-3 years)</option>
+                            <option value="advanced">Advanced (3+ years)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="preferredCurrency">Preferred Currency</label>
+                        <select id="preferredCurrency">
+                            <option value="USD">USD ($)</option>
+                            <option value="EUR">EUR (€)</option>
+                            <option value="BTC">BTC (₿)</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="profile-section">
+                    <h3>API Configuration</h3>
+                    <div class="form-group">
+                        <label for="profileApiKey">Gemini API Key</label>
+                        <input type="password" id="profileApiKey" placeholder="Enter your Gemini API key...">
+                        <small class="form-hint">Get your free API key from <a href="https://makersuite.google.com/app/apikey" target="_blank">Google AI Studio</a></small>
+                    </div>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" id="profileCancel" class="cancel-btn">Cancel</button>
+                    <button type="submit" class="save-btn">Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <!-- API Configuration Modal -->
     <div id="apiModal" class="modal">
         <div class="modal-content">
@@ -466,6 +628,9 @@
         </div>
     </div>
 
+    <!-- Load UserManager first -->
+    <script src="user-manager.js"></script>
+    <!-- Then load main application -->
     <script src="script.js"></script>
 </body>
 </html>

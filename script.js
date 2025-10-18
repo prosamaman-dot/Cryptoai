@@ -2,27 +2,30 @@
 
 class SamCryptoAI {
     constructor() {
-        this.apiKey = null; // Will be loaded from localStorage or user input
+        // Initialize UserManager first
+        this.userManager = new UserManager();
+        
+        // Core API configuration
+        this.apiKey = null; // Will be loaded from user profile or localStorage
         this.conversationHistory = [];
         this.coinGeckoAPI = 'https://api.coingecko.com/api/v3';
         this.geminiAPI = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent';
         this.coinDeskAPI = 'https://api.coindesk.com/v1';
         this.tradingStrategies = this.initializeTradingStrategies();
         
-        // Memory system
-        this.userMemory = this.loadUserMemory();
+        // Professional memory system (user-specific)
+        this.userMemory = {};
         this.sessionMemory = [];
-        this.userPreferences = this.loadUserPreferences();
+        this.userPreferences = {};
         
         // Scroll management
         this.isUserScrolling = false;
         this.userScrollTimeout = null;
         this.isNearBottom = true;
         
-        // Advanced features
-        this.portfolio = this.loadPortfolio();
-        this.alerts = this.loadAlerts();
-        console.log('Portfolio loaded:', this.portfolio);
+        // Professional features (user-specific data)
+        this.portfolio = { totalValue: 0, totalPnL: 0, totalPnLPercent: 0, holdings: [] };
+        this.alerts = [];
         this.charts = {};
         this.voiceRecognition = null;
         this.isDarkTheme = true;
@@ -30,28 +33,92 @@ class SamCryptoAI {
         this.backtestResults = {};
         
         // API caching and rate limiting
-        this.cache = new Map(); // Simple in-memory cache
+        this.cache = new Map();
         this.cacheTTL = 30000; // 30 seconds cache TTL
-        this.pendingRequests = new Map(); // Prevent duplicate concurrent requests
+        this.pendingRequests = new Map();
         this.requestQueue = [];
         this.maxConcurrentRequests = 3;
         
-        // Random greeting messages
+        // Professional greeting messages
         this.greetingMessages = [
-            "Hey there! Ready to make some serious crypto profits? Let's find you some winning trades! 💰🚀",
-            "What's up! I'm here to help you turn your crypto portfolio into a money-making machine! 💎",
-            "Yo! Time to make some smart moves and stack those profits! Let's analyze the market together! 📈",
-            "Hey! I've got my eye on some great opportunities for you. Ready to make some money? ⚡",
-            "What's good! I'm excited to help you find the next big crypto winner! Let's get you some gains! 🎯",
-            "Hey there! I've been watching the markets and I think I found some profit opportunities for you! 💰",
-            "What's up! Ready to turn your crypto knowledge into real profits? I'm here to help! 🚀",
-            "Yo! I'm your personal crypto profit finder! Let's discover some winning trades together! 💎"
+            "Welcome to SamCrypto AI! Ready to analyze the markets and find profitable opportunities? 📈💰",
+            "Hello! I'm your professional crypto trading assistant. Let's dive into market analysis! 🚀",
+            "Greetings! Time for some serious market analysis and trading insights. What can I help you with? 💎",
+            "Welcome! I'm here to provide professional crypto analysis and trading recommendations. 📊⚡",
+            "Hello trader! Ready to explore market opportunities with data-driven insights? 🎯💰",
+            "Welcome to professional crypto analysis! Let's find you some winning trading opportunities! 📈🚀"
         ];
         
+        // Initialize application
+        this.initializeApplication();
+    }
+
+    // New initialization method that handles user-specific setup
+    initializeApplication() {
+        // Load user-specific data if logged in
+        this.loadUserData();
+        
+        // Setup event listeners
         this.initializeEventListeners();
-        this.checkApiKey(); // Check for stored API key or show modal
+        
+        // Configure API key based on user
+        this.configureApiKey();
+        
+        // Load chat history
         this.loadChatHistory();
+        
+        // Update welcome message
         this.updateWelcomeMessage();
+        
+        console.log('SamCrypto AI initialized successfully');
+    }
+
+    // Load user-specific data
+    loadUserData() {
+        const currentUser = this.userManager.getCurrentUser();
+        if (currentUser) {
+            // Load user's portfolio
+            this.portfolio = currentUser.portfolio || { totalValue: 0, totalPnL: 0, totalPnLPercent: 0, holdings: [] };
+            
+            // Load user's alerts
+            this.alerts = currentUser.alerts || [];
+            
+            // Load user's chat history
+            this.conversationHistory = currentUser.chatHistory || [];
+            
+            // Load user's memory and preferences
+            this.userMemory = currentUser.conversationMemory || {};
+            this.userPreferences = currentUser.preferences || {};
+            
+            // Load API key from user profile
+            if (currentUser.preferences.apiKey) {
+                this.apiKey = currentUser.preferences.apiKey;
+            }
+            
+            console.log('User data loaded successfully for:', currentUser.name);
+        }
+    }
+
+    // Configure API key based on user login status
+    configureApiKey() {
+        const currentUser = this.userManager.getCurrentUser();
+        if (currentUser && currentUser.preferences.apiKey) {
+            this.apiKey = currentUser.preferences.apiKey;
+            this.hideApiModal();
+        } else {
+            // Check localStorage as fallback
+            const savedApiKey = localStorage.getItem('gemini_api_key');
+            if (savedApiKey) {
+                this.apiKey = savedApiKey;
+                this.hideApiModal();
+            } else if (currentUser) {
+                // User is logged in but no API key - show modal
+                this.showApiModal();
+            } else {
+                // Not logged in - they need to login first
+                this.hideApiModal();
+            }
+        }
     }
 
     initializeTradingStrategies() {
