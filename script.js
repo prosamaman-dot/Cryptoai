@@ -39,6 +39,9 @@ class SamCryptoAI {
         this.requestQueue = [];
         this.maxConcurrentRequests = 3;
         
+        // Message sending flag to prevent duplicates
+        this.isSending = false;
+        
         // Professional greeting messages
         this.greetingMessages = [
             "Welcome to SamCrypto AI! Ready to analyze the markets and find profitable opportunities? 📈💰",
@@ -345,6 +348,15 @@ class SamCryptoAI {
         
         if (!message) return;
         
+        // Prevent multiple simultaneous sends
+        if (this.isSending) {
+            console.warn('⚠️ Already sending a message, please wait...');
+            return;
+        }
+        
+        this.isSending = true;
+        console.log('📤 Sending message:', message);
+        
         // Hide welcome message on first user message
         this.hideWelcomeMessage();
         
@@ -383,17 +395,25 @@ class SamCryptoAI {
             
         } catch (error) {
             console.error('❌ Error generating response:', error);
+            console.error('❌ Error stack:', error.stack);
             this.hideTypingIndicator();
             
             // Generate a fallback response using demo
             try {
+                console.log('🔄 Attempting fallback response...');
                 const fallbackResponse = this.generateDemoResponse(message, null);
+                console.log('✅ Fallback generated:', fallbackResponse.substring(0, 100) + '...');
                 this.addMessage(fallbackResponse, 'ai');
                 this.addToConversationHistory('assistant', fallbackResponse);
             } catch (fallbackError) {
                 console.error('❌ Fallback also failed:', fallbackError);
+                console.error('❌ Fallback stack:', fallbackError.stack);
                 this.addMessage('Hey! I\'m having a bit of trouble right now, but I\'m still here to help! 🚀 Try asking me about Bitcoin, Ethereum, or any crypto you\'re interested in!', 'ai');
             }
+        } finally {
+            // Always reset sending flag
+            this.isSending = false;
+            console.log('✅ Message send complete');
         }
     }
 
