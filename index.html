@@ -365,15 +365,15 @@
             </div>
             
             <div class="add-holding">
-                <h4>Add Holding</h4>
+                <h4>Buy Crypto</h4>
                 <div class="form-group">
                     <select id="coinSelect">
                         <option value="">Select Coin</option>
                     </select>
-                    <input type="number" id="amountInput" placeholder="Amount" step="0.00000001">
-                    <input type="number" id="priceInput" placeholder="Buy Price (USDT)" step="0.01">
+                    <input type="number" id="usdtAmountInput" placeholder="USDT Amount (e.g., 1000)" step="0.01" min="0">
                     <button id="addHoldingBtn">Buy with USDT</button>
                 </div>
+                <small class="input-hint">Enter how much USDT you want to spend (uses current market price)</small>
             </div>
             <div class="holdings-list" id="holdingsList">
                 <!-- Holdings will be added here -->

@@ -1277,8 +1277,7 @@ ${JSON.stringify(this.tradingStrategies, null, 2)}
 - Analyze current trends and momentum
 - Reference technical indicators
 - Mention key support/resistance levels
-- Discuss potential scenarios (bullish/bearish)
-- Always emphasize this is analysis, not financial advice`;
+- Discuss potential scenarios (bullish/bearish)`;
         } else if (intent.type === 'portfolio') {
             intentGuidance = `\n\n🎯 USER INTENT: Portfolio Management
 - Review their current holdings
@@ -3713,49 +3712,79 @@ SamCrypto AI remembers your preferences and conversation history to provide pers
 
     async addHolding() {
         const coinId = document.getElementById('coinSelect').value;
-        const amount = parseFloat(document.getElementById('amountInput').value);
-        const buyPrice = parseFloat(document.getElementById('priceInput').value);
+        const usdtAmount = parseFloat(document.getElementById('usdtAmountInput').value);
         
-        if (!coinId || !amount || !buyPrice) {
-            alert('Please fill in all fields');
+        if (!coinId || !usdtAmount) {
+            alert('Please select a coin and enter USDT amount');
             return;
         }
         
-        // Calculate cost
-        const cost = amount * buyPrice;
+        if (usdtAmount <= 0) {
+            alert('Please enter a valid USDT amount greater than 0');
+            return;
+        }
         
         // Check if enough USDT balance
         const usdtBalance = this.portfolio.usdtBalance || 0;
-        if (cost > usdtBalance) {
-            alert(`Insufficient USDT balance!\n\nCost: $${cost.toFixed(2)}\nAvailable: $${usdtBalance.toFixed(2)}\n\nPlease add more USDT or reduce the amount.`);
+        if (usdtAmount > usdtBalance) {
+            alert(`Insufficient USDT balance!\n\nRequested: $${usdtAmount.toFixed(2)}\nAvailable: $${usdtBalance.toFixed(2)}\n\nPlease add more USDT or reduce the amount.`);
             return;
         }
         
-        // Deduct from USDT balance
-        this.portfolio.usdtBalance -= cost;
-        
-        // Add holding
-        this.portfolio.holdings.push({
-            coinId,
-            amount,
-            buyPrice,
-            cost: cost,  // Store original cost
-            currentValue: 0,
-            currentPrice: 0,
-            pnl: 0,
-            pnlPercent: 0
-        });
-        
-        this.savePortfolio();
-        await this.updatePortfolioDisplay();
-        
-        // Show success message
-        alert(`✅ Purchase successful!\n\n${amount} ${coinId.toUpperCase()} bought for $${cost.toFixed(2)}\n\nRemaining USDT: $${this.portfolio.usdtBalance.toFixed(2)}`);
-        
-        // Clear form
-        document.getElementById('coinSelect').value = '';
-        document.getElementById('amountInput').value = '';
-        document.getElementById('priceInput').value = '';
+        try {
+            // Fetch current market price
+            console.log(`Fetching current price for ${coinId}...`);
+            const marketData = await this.fetchMarketData(coinId);
+            const currentPrice = marketData.price_usd;
+            
+            if (!currentPrice || currentPrice <= 0) {
+                alert('Could not fetch current price. Please try again.');
+                return;
+            }
+            
+            // Calculate how many coins we can buy
+            const coinAmount = usdtAmount / currentPrice;
+            
+            // Confirm purchase
+            const confirmMsg = `Buy ${coinId.toUpperCase()}?\n\n` +
+                `USDT to spend: $${usdtAmount.toFixed(2)}\n` +
+                `Current price: $${currentPrice.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 8})}\n` +
+                `You will get: ${coinAmount.toFixed(8)} ${coinId.toUpperCase()}\n\n` +
+                `Remaining USDT: $${(usdtBalance - usdtAmount).toFixed(2)}`;
+            
+            if (!confirm(confirmMsg)) {
+                return;
+            }
+            
+            // Deduct from USDT balance
+            this.portfolio.usdtBalance -= usdtAmount;
+            
+            // Add holding
+            this.portfolio.holdings.push({
+                coinId,
+                amount: coinAmount,
+                buyPrice: currentPrice,
+                cost: usdtAmount,  // Store original cost in USDT
+                currentValue: 0,
+                currentPrice: 0,
+                pnl: 0,
+                pnlPercent: 0
+            });
+            
+            this.savePortfolio();
+            await this.updatePortfolioDisplay();
+            
+            // Show success message
+            alert(`✅ Purchase successful!\n\n${coinAmount.toFixed(8)} ${coinId.toUpperCase()} bought for $${usdtAmount.toFixed(2)}\n\nRemaining USDT: $${this.portfolio.usdtBalance.toFixed(2)}`);
+            
+            // Clear form
+            document.getElementById('coinSelect').value = '';
+            document.getElementById('usdtAmountInput').value = '';
+            
+        } catch (error) {
+            console.error('Error adding holding:', error);
+            alert('Failed to buy crypto. Please try again.');
+        }
     }
 
     addAlert() {
