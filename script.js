@@ -48,10 +48,6 @@ class SamCryptoAI {
         // Message sending flag to prevent duplicates
         this.isSending = false;
         
-        // Voice input state
-        this.isRecording = false;
-        this.recognition = null;
-        
         // Professional greeting messages
         this.greetingMessages = [
             "Welcome to SamCrypto AI! Ready to analyze the markets and find profitable opportunities? 📈💰",
@@ -332,10 +328,6 @@ class SamCryptoAI {
                 }
             }
         });
-        
-        // Voice Input Button
-        const voiceInputButton = document.getElementById('voiceInputButton');
-        voiceInputButton?.addEventListener('click', () => this.toggleVoiceInput());
 
         // Initialize action buttons
         this.initializeActionButtons();
