@@ -92,8 +92,16 @@ class SamCryptoAI {
     loadUserData() {
         const currentUser = this.userManager.getCurrentUser();
         if (currentUser) {
-            // Load user's portfolio
-            this.portfolio = currentUser.portfolio || { totalValue: 0, totalPnL: 0, totalPnLPercent: 0, holdings: [] };
+            // Load user's portfolio with all fields
+            this.portfolio = currentUser.portfolio || { 
+                totalValue: 0, 
+                totalPnL: 0, 
+                totalPnLPercent: 0, 
+                holdings: [],
+                usdtBalance: 0 
+            };
+            
+            console.log('📊 Portfolio loaded:', this.portfolio);
             
             // Load user's alerts
             this.alerts = currentUser.alerts || [];
@@ -2481,7 +2489,15 @@ Bitcoin, Ethereum, Solana, Cardano, Ripple, Dogecoin, Polkadot, Avalanche, Polyg
     saveUserMemory() {
         try {
             this.userMemory.lastUpdated = new Date().toISOString();
-            localStorage.setItem('crypto_ai_memory', JSON.stringify(this.userMemory));
+            
+            // Save to user's data if logged in
+            if (this.userManager && this.userManager.isLoggedIn()) {
+                this.userManager.updateConversationMemory('full', this.userMemory);
+                console.log('✅ Memory saved to user account');
+            } else {
+                // Fallback to localStorage for non-logged-in users
+                localStorage.setItem('crypto_ai_memory', JSON.stringify(this.userMemory));
+            }
         } catch (error) {
             console.log('Error saving user memory:', error);
         }
@@ -2511,7 +2527,14 @@ Bitcoin, Ethereum, Solana, Cardano, Ripple, Dogecoin, Polkadot, Avalanche, Polyg
 
     saveUserPreferences() {
         try {
-            localStorage.setItem('crypto_ai_preferences', JSON.stringify(this.userPreferences));
+            // Save to user's data if logged in
+            if (this.userManager && this.userManager.isLoggedIn()) {
+                this.userManager.saveUserPreferences(this.userPreferences);
+                console.log('✅ Preferences saved to user account');
+            } else {
+                // Fallback to localStorage for non-logged-in users
+                localStorage.setItem('crypto_ai_preferences', JSON.stringify(this.userPreferences));
+            }
         } catch (error) {
             console.log('Error saving preferences:', error);
         }
@@ -3097,19 +3120,52 @@ SamCrypto AI remembers your preferences and conversation history to provide pers
     // Portfolio Management
     loadPortfolio() {
         try {
-            const stored = localStorage.getItem('crypto_portfolio');
-            return stored ? JSON.parse(stored) : { holdings: [], totalValue: 0, totalPnL: 0 };
+            // Load from user's data if logged in
+            if (this.userManager && this.userManager.isLoggedIn()) {
+                const currentUser = this.userManager.getCurrentUser();
+                return currentUser.portfolio || { 
+                    holdings: [], 
+                    totalValue: 0, 
+                    totalPnL: 0, 
+                    totalPnLPercent: 0,
+                    usdtBalance: 0 
+                };
+            } else {
+                // Fallback to localStorage for non-logged-in users
+                const stored = localStorage.getItem('crypto_portfolio');
+                return stored ? JSON.parse(stored) : { 
+                    holdings: [], 
+                    totalValue: 0, 
+                    totalPnL: 0, 
+                    totalPnLPercent: 0,
+                    usdtBalance: 0 
+                };
+            }
         } catch (error) {
             console.error('Error loading portfolio:', error);
-            return { holdings: [], totalValue: 0, totalPnL: 0 };
+            return { 
+                holdings: [], 
+                totalValue: 0, 
+                totalPnL: 0, 
+                totalPnLPercent: 0,
+                usdtBalance: 0 
+            };
         }
     }
 
     savePortfolio() {
         try {
-            localStorage.setItem('crypto_portfolio', JSON.stringify(this.portfolio));
+            // Save to user's data if logged in
+            if (this.userManager && this.userManager.isLoggedIn()) {
+                this.userManager.saveUserPortfolio(this.portfolio);
+                console.log('✅ Portfolio saved to user account');
+            } else {
+                // Fallback to localStorage for non-logged-in users
+                localStorage.setItem('crypto_portfolio', JSON.stringify(this.portfolio));
+                console.log('✅ Portfolio saved to localStorage');
+            }
         } catch (error) {
-            console.error('Error saving portfolio:', error);
+            console.error('❌ Error saving portfolio:', error);
         }
     }
 
@@ -3365,8 +3421,15 @@ SamCrypto AI remembers your preferences and conversation history to provide pers
     // Alerts Management
     loadAlerts() {
         try {
-            const stored = localStorage.getItem('crypto_alerts');
-            return stored ? JSON.parse(stored) : [];
+            // Load from user's data if logged in
+            if (this.userManager && this.userManager.isLoggedIn()) {
+                const currentUser = this.userManager.getCurrentUser();
+                return currentUser.alerts || [];
+            } else {
+                // Fallback to localStorage for non-logged-in users
+                const stored = localStorage.getItem('crypto_alerts');
+                return stored ? JSON.parse(stored) : [];
+            }
         } catch (error) {
             console.error('Error loading alerts:', error);
             return [];
@@ -3375,9 +3438,17 @@ SamCrypto AI remembers your preferences and conversation history to provide pers
 
     saveAlerts() {
         try {
-            localStorage.setItem('crypto_alerts', JSON.stringify(this.alerts));
+            // Save to user's data if logged in
+            if (this.userManager && this.userManager.isLoggedIn()) {
+                this.userManager.saveUserAlerts(this.alerts);
+                console.log('✅ Alerts saved to user account');
+            } else {
+                // Fallback to localStorage for non-logged-in users
+                localStorage.setItem('crypto_alerts', JSON.stringify(this.alerts));
+                console.log('✅ Alerts saved to localStorage');
+            }
         } catch (error) {
-            console.error('Error saving alerts:', error);
+            console.error('❌ Error saving alerts:', error);
         }
     }
 

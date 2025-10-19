@@ -474,6 +474,18 @@ class UserManager {
         this.saveUsers();
     }
 
+    // Save user preferences
+    saveUserPreferences(preferences) {
+        if (!this.currentUser) return;
+        
+        this.currentUser.preferences = {
+            ...this.currentUser.preferences,
+            ...preferences
+        };
+        this.users[this.currentUser.id] = this.currentUser;
+        this.saveUsers();
+    }
+
     // Update conversation memory (like ChatGPT memory)
     updateConversationMemory(type, data) {
         if (!this.currentUser) return;
