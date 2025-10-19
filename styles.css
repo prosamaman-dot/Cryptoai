@@ -856,6 +856,19 @@ body {
 
 /* Responsive design */
 @media (max-width: 768px) {
+    .portfolio-summary {
+        grid-template-columns: 1fr;
+        gap: 12px;
+    }
+    
+    .usdt-capital {
+        padding: 16px;
+    }
+    
+    .usdt-balance .value {
+        font-size: 24px;
+    }
+    
     .chat-messages {
         padding: 16px;
     }
@@ -1218,10 +1231,67 @@ body {
     padding: 20px;
 }
 
+/* USDT Capital Section */
+.usdt-capital {
+    margin-bottom: 20px;
+    padding: 20px;
+    background: linear-gradient(135deg, rgba(38, 166, 154, 0.15) 0%, rgba(0, 150, 136, 0.1) 100%);
+    border: 2px solid rgba(38, 166, 154, 0.3);
+    border-radius: 12px;
+}
+
+.usdt-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.usdt-balance {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.usdt-balance .label {
+    font-size: 14px;
+    color: #26a69a;
+    font-weight: 500;
+}
+
+.usdt-balance .value {
+    font-size: 28px;
+    font-weight: 700;
+    color: #26a69a;
+    text-shadow: 0 0 20px rgba(38, 166, 154, 0.3);
+}
+
+.add-usdt-btn {
+    background: linear-gradient(135deg, #26a69a 0%, #00897b 100%);
+    border: none;
+    border-radius: 8px;
+    color: white;
+    padding: 10px 20px;
+    font-weight: 600;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 12px rgba(38, 166, 154, 0.3);
+}
+
+.add-usdt-btn:hover {
+    background: linear-gradient(135deg, #2ebfb0 0%, #00a68c 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(38, 166, 154, 0.5);
+}
+
+.add-usdt-btn:active {
+    transform: translateY(0);
+}
+
 /* Portfolio Panel Styles */
 .portfolio-summary {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: 1fr 1fr 1fr;
     gap: 16px;
     margin-bottom: 24px;
     padding: 16px;
@@ -1230,29 +1300,30 @@ body {
     border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-.total-value, .total-pnl {
+.total-value, .total-capital, .total-pnl {
     text-align: center;
 }
 
-.total-value .label, .total-pnl .label {
+.total-value .label, .total-capital .label, .total-pnl .label {
     display: block;
     font-size: 12px;
     color: #888;
     margin-bottom: 4px;
 }
 
-.total-value .value, .total-pnl .value {
+.total-value .value, .total-capital .value, .total-pnl .value {
     display: block;
     font-size: 18px;
     font-weight: 600;
     color: #ffffff;
 }
 
-.total-pnl .value.positive {
-    color: #00ff88;
+.total-capital .value {
+    color: #ffd700;
+    text-shadow: 0 0 10px rgba(255, 215, 0, 0.3);
 }
 
-.total-pnl .value.negative {
+.total-pnl .value.positive {
     color: #ff4444;
 }
 

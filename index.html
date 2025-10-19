@@ -338,16 +338,32 @@
             </div>
         </div>
         <div class="panel-content">
-            <div class="portfolio-summary">
-                <div class="total-value">
-                    <span class="label">Total Value</span>
-                    <span id="totalPortfolioValue" class="value">$0.00</span>
-                </div>
-                <div class="total-pnl">
-                    <span class="label">24h P&L</span>
-                    <span id="totalPnL" class="value positive">+$0.00 (0.00%)</span>
+            <!-- USDT Capital Section -->
+            <div class="usdt-capital">
+                <div class="usdt-header">
+                    <div class="usdt-balance">
+                        <span class="label">💰 USDT Balance</span>
+                        <span id="usdtBalance" class="value">$0.00</span>
+                    </div>
+                    <button id="addUsdtBtn" class="add-usdt-btn" title="Add USDT Capital">+ Add</button>
                 </div>
             </div>
+
+            <div class="portfolio-summary">
+                <div class="total-value">
+                    <span class="label">Holdings Value</span>
+                    <span id="totalPortfolioValue" class="value">$0.00</span>
+                </div>
+                <div class="total-capital">
+                    <span class="label">Total Capital</span>
+                    <span id="totalCapital" class="value">$0.00</span>
+                </div>
+                <div class="total-pnl">
+                    <span class="label">Total P&L</span>
+                    <span id="totalPnL" class="value">+$0.00 (0%)</span>
+                </div>
+            </div>
+            
             <div class="add-holding">
                 <h4>Add Holding</h4>
                 <div class="form-group">
@@ -355,8 +371,8 @@
                         <option value="">Select Coin</option>
                     </select>
                     <input type="number" id="amountInput" placeholder="Amount" step="0.00000001">
-                    <input type="number" id="priceInput" placeholder="Buy Price" step="0.01">
-                    <button id="addHoldingBtn">Add</button>
+                    <input type="number" id="priceInput" placeholder="Buy Price (USDT)" step="0.01">
+                    <button id="addHoldingBtn">Buy with USDT</button>
                 </div>
             </div>
             <div class="holdings-list" id="holdingsList">

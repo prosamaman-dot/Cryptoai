@@ -30,7 +30,13 @@ class SamCryptoAI {
         this.isNearBottom = true;
         
         // Professional features (user-specific data)
-        this.portfolio = { totalValue: 0, totalPnL: 0, totalPnLPercent: 0, holdings: [] };
+        this.portfolio = { 
+            totalValue: 0, 
+            totalPnL: 0, 
+            totalPnLPercent: 0, 
+            holdings: [],
+            usdtBalance: 0  // USDT capital for buying coins
+        };
         this.alerts = [];
         this.charts = {};
         this.voiceRecognition = null;
@@ -120,7 +126,13 @@ class SamCryptoAI {
         } else {
             // Ensure defaults are set even when no user is logged in
             console.log('No user logged in, using default values');
-            this.portfolio = { totalValue: 0, totalPnL: 0, totalPnLPercent: 0, holdings: [] };
+            this.portfolio = { 
+                totalValue: 0, 
+                totalPnL: 0, 
+                totalPnLPercent: 0, 
+                holdings: [],
+                usdtBalance: 0
+            };
             this.alerts = [];
             this.conversationHistory = [];
             this.userMemory = {
@@ -1748,6 +1760,10 @@ Bitcoin, Ethereum, Solana, Cardano, Ripple, Dogecoin, Polkadot, Avalanche, Polyg
         });
         
         // Form submissions
+        document.getElementById('addUsdtBtn')?.addEventListener('click', () => {
+            this.addUsdtCapital();
+        });
+        
         document.getElementById('addHoldingBtn')?.addEventListener('click', () => {
             this.addHolding();
         });
@@ -2875,10 +2891,24 @@ SamCrypto AI remembers your preferences and conversation history to provide pers
 
     async updatePortfolioDisplay() {
         await this.calculatePortfolioValue();
-        document.getElementById('totalPortfolioValue').textContent = `$${this.portfolio.totalValue.toLocaleString()}`;
-        document.getElementById('totalPnL').textContent = `${this.portfolio.totalPnL >= 0 ? '+' : ''}$${this.portfolio.totalPnL.toLocaleString()} (${this.portfolio.totalPnLPercent.toFixed(2)}%)`;
+        
+        // Update USDT balance
+        const usdtBalance = this.portfolio.usdtBalance || 0;
+        document.getElementById('usdtBalance').textContent = `$${usdtBalance.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+        
+        // Update holdings value
+        document.getElementById('totalPortfolioValue').textContent = `$${this.portfolio.totalValue.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+        
+        // Calculate and update total capital (USDT + Holdings)
+        const totalCapital = usdtBalance + this.portfolio.totalValue;
+        document.getElementById('totalCapital').textContent = `$${totalCapital.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+        
+        // Update total P&L
+        document.getElementById('totalPnL').textContent = `${this.portfolio.totalPnL >= 0 ? '+' : ''}$${this.portfolio.totalPnL.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})} (${this.portfolio.totalPnLPercent.toFixed(2)}%)`;
         document.getElementById('totalPnL').className = `value ${this.portfolio.totalPnL >= 0 ? 'positive' : 'negative'}`;
-        document.getElementById('portfolioValue').textContent = `$${this.portfolio.totalValue.toLocaleString()}`;
+        
+        // Update feature card value
+        document.getElementById('portfolioValue').textContent = `$${totalCapital.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
         
         this.renderHoldings();
     }
@@ -2982,11 +3012,41 @@ SamCrypto AI remembers your preferences and conversation history to provide pers
         });
     }
 
-    removeHolding(index) {
+    async removeHolding(index) {
         if (index >= 0 && index < this.portfolio.holdings.length) {
+            const holding = this.portfolio.holdings[index];
+            
+            // Calculate current value to add back to USDT
+            const currentValue = holding.currentValue || 0;
+            const cost = holding.cost || (holding.amount * holding.buyPrice);
+            const profit = currentValue - cost;
+            
+            // Confirm removal with user
+            const coinName = holding.coinId.toUpperCase();
+            const confirmMsg = `Sell ${holding.amount} ${coinName}?\n\n` +
+                `Buy Price: $${holding.buyPrice.toFixed(2)}\n` +
+                `Current Price: $${holding.currentPrice ? holding.currentPrice.toFixed(2) : '0.00'}\n` +
+                `Current Value: $${currentValue.toFixed(2)}\n` +
+                `Profit/Loss: ${profit >= 0 ? '+' : ''}$${profit.toFixed(2)}\n\n` +
+                `$${currentValue.toFixed(2)} will be added to your USDT balance.`;
+            
+            if (!confirm(confirmMsg)) {
+                return;
+            }
+            
+            // Add current value back to USDT balance
+            this.portfolio.usdtBalance = (this.portfolio.usdtBalance || 0) + currentValue;
+            
+            // Remove the holding
             this.portfolio.holdings.splice(index, 1);
+            
             this.savePortfolio();
-            this.updatePortfolioDisplay();
+            await this.updatePortfolioDisplay();
+            
+            // Show success message
+            alert(`✅ Sold successfully!\n\n${holding.amount} ${coinName} sold for $${currentValue.toFixed(2)}\n` +
+                `${profit >= 0 ? 'Profit' : 'Loss'}: ${profit >= 0 ? '+' : ''}$${profit.toFixed(2)}\n\n` +
+                `New USDT Balance: $${this.portfolio.usdtBalance.toFixed(2)}`);
         }
     }
 
@@ -3628,6 +3688,29 @@ SamCrypto AI remembers your preferences and conversation history to provide pers
         });
     }
 
+    addUsdtCapital() {
+        const amount = prompt('💰 Add USDT Capital\n\nEnter the amount of USDT you want to add to your portfolio:', '1000');
+        
+        if (amount === null) {
+            return; // User cancelled
+        }
+        
+        const usdtAmount = parseFloat(amount);
+        
+        if (isNaN(usdtAmount) || usdtAmount <= 0) {
+            alert('Please enter a valid positive number');
+            return;
+        }
+        
+        // Add to USDT balance
+        this.portfolio.usdtBalance = (this.portfolio.usdtBalance || 0) + usdtAmount;
+        
+        this.savePortfolio();
+        this.updatePortfolioDisplay();
+        
+        alert(`✅ USDT added successfully!\n\nAdded: $${usdtAmount.toFixed(2)}\nNew Balance: $${this.portfolio.usdtBalance.toFixed(2)}`);
+    }
+
     async addHolding() {
         const coinId = document.getElementById('coinSelect').value;
         const amount = parseFloat(document.getElementById('amountInput').value);
@@ -3638,10 +3721,25 @@ SamCrypto AI remembers your preferences and conversation history to provide pers
             return;
         }
         
+        // Calculate cost
+        const cost = amount * buyPrice;
+        
+        // Check if enough USDT balance
+        const usdtBalance = this.portfolio.usdtBalance || 0;
+        if (cost > usdtBalance) {
+            alert(`Insufficient USDT balance!\n\nCost: $${cost.toFixed(2)}\nAvailable: $${usdtBalance.toFixed(2)}\n\nPlease add more USDT or reduce the amount.`);
+            return;
+        }
+        
+        // Deduct from USDT balance
+        this.portfolio.usdtBalance -= cost;
+        
+        // Add holding
         this.portfolio.holdings.push({
             coinId,
             amount,
             buyPrice,
+            cost: cost,  // Store original cost
             currentValue: 0,
             currentPrice: 0,
             pnl: 0,
@@ -3650,6 +3748,9 @@ SamCrypto AI remembers your preferences and conversation history to provide pers
         
         this.savePortfolio();
         await this.updatePortfolioDisplay();
+        
+        // Show success message
+        alert(`✅ Purchase successful!\n\n${amount} ${coinId.toUpperCase()} bought for $${cost.toFixed(2)}\n\nRemaining USDT: $${this.portfolio.usdtBalance.toFixed(2)}`);
         
         // Clear form
         document.getElementById('coinSelect').value = '';
