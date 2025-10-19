@@ -137,16 +137,18 @@
                     <p>Toggle between dark and light modes</p>
                 </div>
                 
-                <!-- Memory Status -->
-                <div class="feature-card" id="memoryStatus">
+                <!-- Crypto News Feed -->
+                <div class="feature-card" id="newsToggle">
                     <div class="feature-icon">
                         <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M9 12l2 2 4-4"></path>
-                            <circle cx="12" cy="12" r="10"></circle>
+                            <path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2z"></path>
+                            <path d="M6 12h8"></path>
+                            <path d="M6 8h8"></path>
+                            <path d="M6 16h5"></path>
                         </svg>
                     </div>
-                    <h3>Memory Status</h3>
-                    <p>View your conversation history</p>
+                    <h3>📰 Crypto News</h3>
+                    <p>Latest crypto news and market updates</p>
                 </div>
                 
                 <!-- Backtesting -->
@@ -374,6 +376,47 @@
                 <div class="total-pnl">
                     <span class="label">Total P&L</span>
                     <span id="totalPnL" class="value">+$0.00 (0%)</span>
+                </div>
+            </div>
+
+            <!-- Portfolio Performance Chart -->
+            <div class="portfolio-chart-section">
+                <div class="chart-header">
+                    <h4>📈 Portfolio Performance</h4>
+                    <div class="chart-timeframe">
+                        <button class="timeframe-btn active" data-period="7d">7D</button>
+                        <button class="timeframe-btn" data-period="30d">30D</button>
+                        <button class="timeframe-btn" data-period="90d">90D</button>
+                        <button class="timeframe-btn" data-period="1y">1Y</button>
+                    </div>
+                </div>
+                <div class="portfolio-chart-container">
+                    <canvas id="portfolioChart" width="300" height="150"></canvas>
+                </div>
+                <div class="portfolio-stats">
+                    <div class="stat-item">
+                        <span class="stat-label">Best Day</span>
+                        <span id="bestDay" class="stat-value positive">+$0</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Worst Day</span>
+                        <span id="worstDay" class="stat-value negative">-$0</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Avg. Daily</span>
+                        <span id="avgDaily" class="stat-value">+$0</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Asset Allocation Chart -->
+            <div class="allocation-chart-section">
+                <h4>🥧 Asset Allocation</h4>
+                <div class="allocation-chart-container">
+                    <canvas id="allocationChart" width="200" height="200"></canvas>
+                </div>
+                <div class="allocation-legend" id="allocationLegend">
+                    <!-- Legend items will be generated here -->
                 </div>
             </div>
             

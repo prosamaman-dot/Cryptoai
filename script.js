@@ -373,6 +373,9 @@ class SamCryptoAI {
         
         // Initialize advanced features
         this.initializeAdvancedFeatures();
+
+        // Initialize portfolio charts
+        this.initializePortfolioCharts();
     }
 
     checkApiKey() {
@@ -3182,38 +3185,6 @@ SamCrypto AI remembers your preferences and conversation history to provide pers
         
         if (!panel.classList.contains('hidden')) {
             console.log('Opening portfolio panel...');
-            await this.updatePortfolioDisplay();
-            this.populateCoinSelects();
-        }
-    }
-
-    async updatePortfolioDisplay() {
-        await this.calculatePortfolioValue();
-        
-        // Update USDT balance
-        const usdtBalance = this.portfolio.usdtBalance || 0;
-        document.getElementById('usdtBalance').textContent = `$${usdtBalance.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
-        
-        // Update holdings value
-        document.getElementById('totalPortfolioValue').textContent = `$${this.portfolio.totalValue.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
-        
-        // Calculate and update total capital (USDT + Holdings)
-        const totalCapital = usdtBalance + this.portfolio.totalValue;
-        document.getElementById('totalCapital').textContent = `$${totalCapital.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
-        
-        // Update total P&L
-        document.getElementById('totalPnL').textContent = `${this.portfolio.totalPnL >= 0 ? '+' : ''}$${this.portfolio.totalPnL.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})} (${this.portfolio.totalPnLPercent.toFixed(2)}%)`;
-        document.getElementById('totalPnL').className = `value ${this.portfolio.totalPnL >= 0 ? 'positive' : 'negative'}`;
-        
-        // Update feature card value
-        document.getElementById('portfolioValue').textContent = `$${totalCapital.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
-        
-        this.renderHoldings();
-    }
-
-    async calculatePortfolioValue() {
-        let totalValue = 0;
-        let totalCost = 0;
         
         console.log('Calculating portfolio value for holdings:', this.portfolio.holdings);
         
@@ -4095,42 +4066,355 @@ SamCrypto AI remembers your preferences and conversation history to provide pers
             document.getElementById('coinSelect').value = '';
             document.getElementById('usdtAmountInput').value = '';
             
+            // Record portfolio snapshot for charts
+            this.recordPortfolioSnapshot();
+            
         } catch (error) {
             console.error('Error adding holding:', error);
-            alert('Failed to buy crypto. Please try again.');
+            alert('Error adding holding: ' + error.message);
         }
     }
 
-    addAlert() {
-        const coinId = document.getElementById('alertCoinSelect').value;
-        const condition = document.getElementById('alertCondition').value;
-        const value = parseFloat(document.getElementById('alertValue').value);
+    // ===== PORTFOLIO CHARTS =====
+
+    initializePortfolioCharts() {
+        // Initialize portfolio performance tracking
+        this.portfolioHistory = this.loadPortfolioHistory();
         
-        if (!coinId || !value) {
-            alert('Please fill in all fields');
-            return;
+        // Add event listeners for timeframe buttons
+        document.querySelectorAll('.timeframe-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                // Remove active class from all buttons
+                document.querySelectorAll('.timeframe-btn').forEach(b => b.classList.remove('active'));
+                // Add active class to clicked button
+                e.target.classList.add('active');
+                
+                // Update chart with selected timeframe
+                const period = e.target.dataset.period;
+                this.updatePortfolioChart(period);
+            });
+        });
+
+        // Initial chart render
+        this.updatePortfolioChart('7d');
+        this.updateAllocationChart();
+    }
+
+    loadPortfolioHistory() {
+        try {
+            if (this.userManager && this.userManager.isLoggedIn()) {
+                const currentUser = this.userManager.getCurrentUser();
+                return currentUser.portfolioHistory || [];
+            } else {
+                const stored = localStorage.getItem('crypto_portfolio_history');
+                return stored ? JSON.parse(stored) : [];
+            }
+        } catch (error) {
+            console.error('Error loading portfolio history:', error);
+            return [];
         }
+    }
+
+    savePortfolioHistory() {
+        try {
+            if (this.userManager && this.userManager.isLoggedIn()) {
+                const currentUser = this.userManager.getCurrentUser();
+                currentUser.portfolioHistory = this.portfolioHistory;
+                this.userManager.saveUsers();
+            } else {
+                localStorage.setItem('crypto_portfolio_history', JSON.stringify(this.portfolioHistory));
+            }
+        } catch (error) {
+            console.error('Error saving portfolio history:', error);
+        }
+    }
+
+    recordPortfolioSnapshot() {
+        const now = new Date();
+        const totalValue = (this.portfolio.usdtBalance || 0) + (this.portfolio.totalValue || 0);
         
-        this.alerts.push({
-            coinId,
-            condition,
-            value,
-            active: true,
-            createdAt: new Date().toISOString()
+        // Remove old snapshots (keep last 365 days)
+        const oneYearAgo = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
+        this.portfolioHistory = this.portfolioHistory.filter(snapshot => 
+            new Date(snapshot.timestamp) > oneYearAgo
+        );
+
+        // Add new snapshot
+        this.portfolioHistory.push({
+            timestamp: now.toISOString(),
+            totalValue: totalValue,
+            usdtBalance: this.portfolio.usdtBalance || 0,
+            holdingsValue: this.portfolio.totalValue || 0,
+            holdingsCount: this.portfolio.holdings ? this.portfolio.holdings.length : 0
+        });
+
+        // Keep only the most recent snapshot per day
+        const dailySnapshots = {};
+        this.portfolioHistory.forEach(snapshot => {
+            const date = new Date(snapshot.timestamp).toDateString();
+            if (!dailySnapshots[date] || new Date(snapshot.timestamp) > new Date(dailySnapshots[date].timestamp)) {
+                dailySnapshots[date] = snapshot;
+            }
         });
         
-        this.saveAlerts();
-        this.updateAlertsDisplay();
-        
-        // Clear form
-        document.getElementById('alertCoinSelect').value = '';
-        document.getElementById('alertValue').value = '';
+        this.portfolioHistory = Object.values(dailySnapshots);
+        this.savePortfolioHistory();
     }
 
-    removeAlert(index) {
-        this.alerts.splice(index, 1);
-        this.saveAlerts();
-        this.updateAlertsDisplay();
+    updatePortfolioChart(period = '7d') {
+        const canvas = document.getElementById('portfolioChart');
+        if (!canvas) return;
+
+        const ctx = canvas.getContext('2d');
+        const data = this.getChartData(period);
+
+        // Clear canvas
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        if (data.length === 0) {
+            // Show "No data" message
+            ctx.fillStyle = '#888';
+            ctx.font = '14px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText('Add holdings to see chart', canvas.width / 2, canvas.height / 2);
+            return;
+        }
+
+        // Calculate chart dimensions
+        const padding = 20;
+        const chartWidth = canvas.width - 2 * padding;
+        const chartHeight = canvas.height - 2 * padding;
+
+        // Find min/max values
+        const values = data.map(d => d.value);
+        const minValue = Math.min(...values);
+        const maxValue = Math.max(...values);
+        const valueRange = maxValue - minValue || 1;
+
+        // Draw grid lines
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+        ctx.lineWidth = 1;
+        for (let i = 0; i <= 4; i++) {
+            const y = padding + (i * chartHeight / 4);
+            ctx.beginPath();
+            ctx.moveTo(padding, y);
+            ctx.lineTo(padding + chartWidth, y);
+            ctx.stroke();
+        }
+
+        // Draw chart line
+        ctx.strokeStyle = '#00d4ff';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+
+        data.forEach((point, index) => {
+            const x = padding + (index * chartWidth / (data.length - 1));
+            const y = padding + chartHeight - ((point.value - minValue) / valueRange * chartHeight);
+            
+            if (index === 0) {
+                ctx.moveTo(x, y);
+            } else {
+                ctx.lineTo(x, y);
+            }
+        });
+
+        ctx.stroke();
+
+        // Draw area under curve
+        ctx.fillStyle = 'rgba(0, 212, 255, 0.1)';
+        ctx.beginPath();
+        ctx.moveTo(padding, padding + chartHeight);
+        
+        data.forEach((point, index) => {
+            const x = padding + (index * chartWidth / (data.length - 1));
+            const y = padding + chartHeight - ((point.value - minValue) / valueRange * chartHeight);
+            ctx.lineTo(x, y);
+        });
+        
+        ctx.lineTo(padding + chartWidth, padding + chartHeight);
+        ctx.closePath();
+        ctx.fill();
+
+        // Update stats
+        this.updatePortfolioStats(data);
+    }
+
+    getChartData(period) {
+        if (this.portfolioHistory.length === 0) {
+            // Generate sample data if no history exists
+            const currentValue = (this.portfolio.usdtBalance || 0) + (this.portfolio.totalValue || 0);
+            if (currentValue > 0) {
+                return [{
+                    timestamp: new Date().toISOString(),
+                    value: currentValue
+                }];
+            }
+            return [];
+        }
+
+        const now = new Date();
+        let startDate;
+
+        switch (period) {
+            case '7d':
+                startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+                break;
+            case '30d':
+                startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+                break;
+            case '90d':
+                startDate = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+                break;
+            case '1y':
+                startDate = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
+                break;
+            default:
+                startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+        }
+
+        return this.portfolioHistory
+            .filter(snapshot => new Date(snapshot.timestamp) >= startDate)
+            .map(snapshot => ({
+                timestamp: snapshot.timestamp,
+                value: snapshot.totalValue
+            }))
+            .sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+    }
+
+    updatePortfolioStats(data) {
+        if (data.length === 0) {
+            document.getElementById('bestDay').textContent = '+$0';
+            document.getElementById('worstDay').textContent = '-$0';
+            document.getElementById('avgDaily').textContent = '+$0';
+            return;
+        }
+
+        // Calculate daily changes
+        const dailyChanges = [];
+        for (let i = 1; i < data.length; i++) {
+            const change = data[i].value - data[i - 1].value;
+            dailyChanges.push(change);
+        }
+
+        if (dailyChanges.length === 0) {
+            document.getElementById('bestDay').textContent = '+$0';
+            document.getElementById('worstDay').textContent = '-$0';
+            document.getElementById('avgDaily').textContent = '+$0';
+            return;
+        }
+
+        const bestDay = Math.max(...dailyChanges);
+        const worstDay = Math.min(...dailyChanges);
+        const avgDaily = dailyChanges.reduce((sum, change) => sum + change, 0) / dailyChanges.length;
+
+        // Update DOM
+        const bestDayEl = document.getElementById('bestDay');
+        const worstDayEl = document.getElementById('worstDay');
+        const avgDailyEl = document.getElementById('avgDaily');
+
+        bestDayEl.textContent = `${bestDay >= 0 ? '+' : ''}$${bestDay.toFixed(2)}`;
+        bestDayEl.className = `stat-value ${bestDay >= 0 ? 'positive' : 'negative'}`;
+
+        worstDayEl.textContent = `${worstDay >= 0 ? '+' : ''}$${worstDay.toFixed(2)}`;
+        worstDayEl.className = `stat-value ${worstDay >= 0 ? 'positive' : 'negative'}`;
+
+        avgDailyEl.textContent = `${avgDaily >= 0 ? '+' : ''}$${avgDaily.toFixed(2)}`;
+        avgDailyEl.className = `stat-value ${avgDaily >= 0 ? 'positive' : 'negative'}`;
+    }
+
+    updateAllocationChart() {
+        const canvas = document.getElementById('allocationChart');
+        if (!canvas) return;
+
+        const ctx = canvas.getContext('2d');
+        const holdings = this.portfolio.holdings || [];
+
+        // Clear canvas
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        if (holdings.length === 0) {
+            // Show USDT only
+            this.drawPieChart(ctx, [{ label: 'USDT', value: 100, color: '#26a69a' }]);
+            this.updateAllocationLegend([{ label: 'USDT', value: this.portfolio.usdtBalance || 0, percentage: 100, color: '#26a69a' }]);
+            return;
+        }
+
+        // Calculate allocations
+        const totalValue = (this.portfolio.usdtBalance || 0) + (this.portfolio.totalValue || 0);
+        const allocations = [];
+
+        // Add USDT if exists
+        if (this.portfolio.usdtBalance > 0) {
+            allocations.push({
+                label: 'USDT',
+                value: this.portfolio.usdtBalance,
+                percentage: (this.portfolio.usdtBalance / totalValue) * 100,
+                color: '#26a69a'
+            });
+        }
+
+        // Add holdings
+        const colors = ['#00d4ff', '#ff6b6b', '#4ecdc4', '#45b7d1', '#f9ca24', '#6c5ce7', '#a29bfe', '#fd79a8'];
+        holdings.forEach((holding, index) => {
+            if (holding.currentValue > 0) {
+                allocations.push({
+                    label: holding.coinId.toUpperCase(),
+                    value: holding.currentValue,
+                    percentage: (holding.currentValue / totalValue) * 100,
+                    color: colors[index % colors.length]
+                });
+            }
+        });
+
+        this.drawPieChart(ctx, allocations);
+        this.updateAllocationLegend(allocations);
+    }
+
+    drawPieChart(ctx, data) {
+        const centerX = ctx.canvas.width / 2;
+        const centerY = ctx.canvas.height / 2;
+        const radius = Math.min(centerX, centerY) - 10;
+
+        let startAngle = -Math.PI / 2; // Start at top
+
+        data.forEach(slice => {
+            const sliceAngle = (slice.percentage / 100) * 2 * Math.PI;
+
+            // Draw slice
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, radius, startAngle, startAngle + sliceAngle);
+            ctx.lineTo(centerX, centerY);
+            ctx.fillStyle = slice.color;
+            ctx.fill();
+
+            // Draw border
+            ctx.strokeStyle = '#1a1a1a';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+
+            startAngle += sliceAngle;
+        });
+    }
+
+    updateAllocationLegend(allocations) {
+        const legendContainer = document.getElementById('allocationLegend');
+        if (!legendContainer) return;
+
+        legendContainer.innerHTML = '';
+
+        allocations.forEach(allocation => {
+            const legendItem = document.createElement('div');
+            legendItem.className = 'legend-item';
+
+            legendItem.innerHTML = `
+                <div class="legend-color" style="background-color: ${allocation.color}"></div>
+                <span class="legend-label">${allocation.label}</span>
+                <span class="legend-value">$${allocation.value.toFixed(2)}</span>
+                <span class="legend-percentage">${allocation.percentage.toFixed(1)}%</span>
+            `;
+
+            legendContainer.appendChild(legendItem);
+        });
     }
 
     // Cache management methods
