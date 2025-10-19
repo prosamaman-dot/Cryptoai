@@ -330,6 +330,19 @@ class SamCryptoAI {
             }
         });
         
+        // Import Data in Features Page
+        const openDataImport = document.getElementById('openDataImport');
+        openDataImport?.addEventListener('click', () => {
+            this.closeFeaturesPage();
+            // Check if user is logged in
+            if (this.userManager.isLoggedIn()) {
+                this.userManager.importUserData();
+            } else {
+                this.userManager.showMessage('Please login to import your data', 'info');
+                setTimeout(() => this.userManager.showLoginModal(), 1000);
+            }
+        });
+        
         // Logout in Features Page
         const openLogout = document.getElementById('openLogout');
         openLogout?.addEventListener('click', () => {

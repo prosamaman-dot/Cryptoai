@@ -532,7 +532,102 @@ class UserManager {
         link.download = `samcrypto_data_${this.currentUser.name.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.json`;
         link.click();
 
-        this.showMessage('Data exported successfully!', 'success');
+        this.showMessage('Data exported successfully! 📥', 'success');
+    }
+
+    // Import user data
+    importUserData() {
+        if (!this.currentUser) {
+            this.showMessage('Please login first', 'error');
+            return;
+        }
+
+        // Create hidden file input
+        const fileInput = document.createElement('input');
+        fileInput.type = 'file';
+        fileInput.accept = '.json';
+        fileInput.style.display = 'none';
+        
+        fileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            
+            reader.onload = (event) => {
+                try {
+                    const importData = JSON.parse(event.target.result);
+                    
+                    // Validate data structure
+                    if (!importData.user || !importData.version) {
+                        throw new Error('Invalid data format');
+                    }
+
+                    // Confirm import
+                    const confirmMsg = `Import data from ${importData.exportDate ? new Date(importData.exportDate).toLocaleDateString() : 'unknown date'}?\n\n` +
+                        `This will replace your current data:\n` +
+                        `- Portfolio: ${importData.user.portfolio?.holdings?.length || 0} holdings\n` +
+                        `- USDT Balance: $${(importData.user.portfolio?.usdtBalance || 0).toFixed(2)}\n` +
+                        `- Alerts: ${importData.user.alerts?.length || 0} active\n` +
+                        `- Conversations: ${importData.user.conversationHistory?.length || 0} saved\n\n` +
+                        `Current data will be backed up first.`;
+
+                    if (!confirm(confirmMsg)) {
+                        this.showMessage('Import cancelled', 'info');
+                        return;
+                    }
+
+                    // Backup current data first
+                    const backupData = {
+                        user: this.currentUser,
+                        backupDate: new Date().toISOString(),
+                        version: '1.0'
+                    };
+                    localStorage.setItem(`samcrypto_backup_${this.currentUser.email}`, JSON.stringify(backupData));
+
+                    // Import data (keep current email and password)
+                    const currentEmail = this.currentUser.email;
+                    const currentPassword = this.currentUser.password;
+                    
+                    this.currentUser = {
+                        ...importData.user,
+                        email: currentEmail,  // Keep current email
+                        password: currentPassword,  // Keep current password
+                        lastLogin: new Date().toISOString()
+                    };
+
+                    // Save to localStorage
+                    this.saveUser(this.currentUser);
+
+                    // Reload app with imported data
+                    if (window.samCrypto) {
+                        window.samCrypto.loadUserData();
+                    }
+
+                    this.showMessage('Data imported successfully! 📤\n\nYour previous data was backed up.', 'success');
+                    
+                    // Reload page to apply all changes
+                    setTimeout(() => {
+                        location.reload();
+                    }, 2000);
+
+                } catch (error) {
+                    console.error('Import error:', error);
+                    this.showMessage('Failed to import data. Please check the file format.', 'error');
+                }
+            };
+
+            reader.onerror = () => {
+                this.showMessage('Failed to read file', 'error');
+            };
+
+            reader.readAsText(file);
+        });
+
+        // Trigger file selection
+        document.body.appendChild(fileInput);
+        fileInput.click();
+        document.body.removeChild(fileInput);
     }
 
     // Update UI for logged in user
