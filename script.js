@@ -379,29 +379,29 @@ class SamCryptoAI {
     }
 
     checkApiKey() {
-        const savedApiKey = localStorage.getItem('gemini_api_key');
-        if (savedApiKey) {
-            this.apiKey = savedApiKey;
+        // Skip API key modal completely - using built-in API key
+        const apiModal = document.getElementById('apiModal');
+        if (apiModal) {
+            apiModal.classList.add('hidden');
         }
-        // Always hide modal since we have default API key
-        this.hideApiModal();
+        console.log('✅ Using built-in API key');
     }
 
     showApiModal() {
-        document.getElementById('apiModal').classList.remove('hidden');
+        // Disabled - using built-in API key
+        console.log('API modal disabled - using built-in key');
     }
 
     hideApiModal() {
-        document.getElementById('apiModal').classList.add('hidden');
+        const apiModal = document.getElementById('apiModal');
+        if (apiModal) {
+            apiModal.classList.add('hidden');
+        }
     }
 
     saveApiKey() {
-        const apiKey = document.getElementById('apiKeyInput').value.trim();
-        if (apiKey) {
-            this.apiKey = apiKey;
-            localStorage.setItem('gemini_api_key', apiKey);
-            this.hideApiModal();
-        }
+        // Disabled - using built-in API key
+        console.log('Save API key disabled - using built-in key');
     }
 
     skipApiKey() {
@@ -3185,45 +3185,8 @@ SamCrypto AI remembers your preferences and conversation history to provide pers
         
         if (!panel.classList.contains('hidden')) {
             console.log('Opening portfolio panel...');
-        
-        console.log('Calculating portfolio value for holdings:', this.portfolio.holdings);
-        
-        for (const holding of this.portfolio.holdings) {
-            try {
-                console.log(`Fetching market data for ${holding.coinId}...`);
-                const marketData = await this.fetchMarketData(holding.coinId);
-                console.log(`Market data for ${holding.coinId}:`, marketData);
-                
-                const currentValue = holding.amount * marketData.price_usd;
-                const cost = holding.amount * holding.buyPrice;
-                
-                console.log(`Holding: ${holding.amount} ${holding.coinId}`);
-                console.log(`Buy Price: $${holding.buyPrice}`);
-                console.log(`Current Price: $${marketData.price_usd}`);
-                console.log(`Current Value: $${currentValue.toFixed(2)}`);
-                console.log(`Cost: $${cost.toFixed(2)}`);
-                console.log(`P&L: $${(currentValue - cost).toFixed(2)}`);
-                
-                totalValue += currentValue;
-                totalCost += cost;
-                
-                holding.currentValue = currentValue;
-                holding.currentPrice = marketData.price_usd;
-                holding.pnl = currentValue - cost;
-                holding.pnlPercent = ((currentValue - cost) / cost) * 100;
-            } catch (error) {
-                console.error(`Error calculating value for ${holding.coinId}:`, error);
-            }
+            await this.updatePortfolioDisplay();
         }
-        
-        this.portfolio.totalValue = totalValue;
-        this.portfolio.totalPnL = totalValue - totalCost;
-        this.portfolio.totalPnLPercent = totalCost > 0 ? ((totalValue - totalCost) / totalCost) * 100 : 0;
-        
-        console.log('Portfolio calculation complete:');
-        console.log(`Total Value: $${totalValue.toFixed(2)}`);
-        console.log(`Total Cost: $${totalCost.toFixed(2)}`);
-        console.log(`Total P&L: $${(totalValue - totalCost).toFixed(2)}`);
     }
 
     renderHoldings() {
@@ -3279,6 +3242,53 @@ SamCrypto AI remembers your preferences and conversation history to provide pers
             `;
             holdingsList.appendChild(holdingDiv);
         });
+    }
+
+    async calculatePortfolioValue() {
+        let totalValue = 0;
+        let totalCost = 0;
+
+        for (const holding of this.portfolio.holdings) {
+            try {
+                const marketData = await this.fetchMarketData(holding.coinId);
+                const currentValue = holding.amount * marketData.price_usd;
+                const cost = holding.amount * holding.buyPrice;
+                
+                totalValue += currentValue;
+                totalCost += cost;
+                
+                holding.currentValue = currentValue;
+                holding.currentPrice = marketData.price_usd;
+                holding.pnl = currentValue - cost;
+                holding.pnlPercent = ((currentValue - cost) / cost) * 100;
+            } catch (error) {
+                console.error(`Error calculating value for ${holding.coinId}:`, error);
+            }
+        }
+        
+        this.portfolio.totalValue = totalValue;
+        this.portfolio.totalPnL = totalValue - totalCost;
+        this.portfolio.totalPnLPercent = totalCost > 0 ? ((totalValue - totalCost) / totalCost) * 100 : 0;
+    }
+
+    async updatePortfolioDisplay() {
+        await this.calculatePortfolioValue();
+        const usdtBalance = this.portfolio.usdtBalance || 0;
+        document.getElementById('usdtBalance').textContent = `$${usdtBalance.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+        document.getElementById('totalPortfolioValue').textContent = `$${this.portfolio.totalValue.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+        const totalCapital = usdtBalance + this.portfolio.totalValue;
+        document.getElementById('totalCapital').textContent = `$${totalCapital.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+        document.getElementById('totalPnL').textContent = `${this.portfolio.totalPnL >= 0 ? '+' : ''}$${this.portfolio.totalPnL.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})} (${this.portfolio.totalPnLPercent.toFixed(2)}%)`;
+        document.getElementById('totalPnL').className = `value ${this.portfolio.totalPnL >= 0 ? 'positive' : 'negative'}`;
+        document.getElementById('portfolioValue').textContent = `$${totalCapital.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+        this.renderHoldings();
+        
+        // Update charts
+        if (this.portfolioHistory) {
+            const activeTimeframe = document.querySelector('.timeframe-btn.active')?.dataset.period || '7d';
+            this.updatePortfolioChart(activeTimeframe);
+            this.updateAllocationChart();
+        }
     }
 
     async removeHolding(index) {
