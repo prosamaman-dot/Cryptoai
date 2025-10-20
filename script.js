@@ -8,10 +8,22 @@ class SamCryptoAI {
         // Core API configuration
         this.apiKey = 'AIzaSyBAgDmA7Uak6FIGh9MsN2582ouRaqpQ_Cg'; // Default API key
         this.conversationHistory = [];
+        
+        // Enhanced Multi-Source Crypto Price APIs
         this.coinGeckoAPI = 'https://api.coingecko.com/api/v3';
+        this.binanceAPI = 'https://api.binance.com/api/v3';
+        this.coinbaseAPI = 'https://api.coinbase.com/v2';
+        this.cryptoCompareAPI = 'https://min-api.cryptocompare.com/data';
+        this.coinCapAPI = 'https://api.coincap.io/v2';
+        
+        // AI and other APIs
         this.geminiAPI = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent';
         this.coinDeskAPI = 'https://api.coindesk.com/v1';
         this.tradingStrategies = this.initializeTradingStrategies();
+        
+        // Price update configuration
+        this.priceUpdateInterval = 30000; // 30 seconds
+        this.maxPriceAge = 60000; // 1 minute max age for cached prices
         
         // Professional memory system (user-specific)
         this.userMemory = {};
@@ -707,31 +719,46 @@ class SamCryptoAI {
             return await this.pendingRequests.get(cacheKey);
         }
         
-        // Create new request
+        // Create new request with multiple real-time APIs
         const requestPromise = (async () => {
             try {
-                // Try multiple APIs for more accurate data
-                const [coinGeckoData, binanceData] = await Promise.allSettled([
+                console.log(`🔄 Fetching real-time data for ${coinId} from multiple sources...`);
+                
+                const [coinGeckoData, binanceData, coinCapData] = await Promise.allSettled([
                     this.fetchFromCoinGecko(coinId),
-                    this.fetchFromBinance(coinId)
+                    this.fetchFromBinance(coinId),
+                    this.fetchFromCoinCap(coinId)
                 ]);
                 
                 let result;
-                // Use CoinGecko as primary source, Binance as backup
+                let primarySource = null;
+                
+                // Use the best available source with preference order
                 if (coinGeckoData.status === 'fulfilled' && coinGeckoData.value) {
                     result = coinGeckoData.value;
+                    primarySource = 'CoinGecko';
                 } else if (binanceData.status === 'fulfilled' && binanceData.value) {
                     result = binanceData.value;
+                    primarySource = 'Binance';
+                } else if (coinCapData.status === 'fulfilled' && coinCapData.value) {
+                    result = coinCapData.value;
+                    primarySource = 'CoinCap';
                 } else {
-                    throw new Error('All API sources failed');
+                    throw new Error('All real-time API sources failed');
                 }
+                
+                console.log(`✅ Real-time data from ${primarySource}: $${result.price_usd.toFixed(2)} (${result.change_24h > 0 ? '+' : ''}${result.change_24h.toFixed(2)}%)`);
+                
+                // Add timestamp for freshness tracking
+                result.fetchTime = Date.now();
+                result.primarySource = primarySource;
                 
                 // Cache the result
                 this.setCache(cacheKey, result);
                 return result;
                 
             } catch (error) {
-                console.error('Market data fetch error:', error);
+                console.error('Real-time market data fetch error:', error);
                 // Return mock data for demo purposes
                 return this.getMockMarketData(coinId);
             } finally {
@@ -814,6 +841,55 @@ class SamCryptoAI {
             };
         } catch (error) {
             console.error('Binance fetch error:', error);
+            throw error;
+        }
+    }
+
+    async fetchFromCoinCap(coinId) {
+        try {
+            // Map coin IDs to CoinCap IDs
+            const coinCapMap = {
+                'bitcoin': 'bitcoin',
+                'ethereum': 'ethereum',
+                'binancecoin': 'binance-coin',
+                'cardano': 'cardano',
+                'solana': 'solana',
+                'polkadot': 'polkadot',
+                'chainlink': 'chainlink',
+                'litecoin': 'litecoin',
+                'bitcoin-cash': 'bitcoin-cash',
+                'stellar': 'stellar',
+                'ripple': 'xrp',
+                'dogecoin': 'dogecoin',
+                'avalanche-2': 'avalanche',
+                'matic-network': 'polygon',
+                'uniswap': 'uniswap'
+            };
+            
+            const coinCapId = coinCapMap[coinId];
+            if (!coinCapId) {
+                throw new Error('Coin not found in CoinCap');
+            }
+            
+            const response = await fetch(`${this.coinCapAPI}/assets/${coinCapId}`);
+            
+            if (!response.ok) {
+                throw new Error('CoinCap API failed');
+            }
+            
+            const data = await response.json();
+            const asset = data.data;
+            
+            return {
+                price_usd: parseFloat(asset.priceUsd),
+                change_24h: parseFloat(asset.changePercent24Hr),
+                volume_24h: parseFloat(asset.volumeUsd24Hr),
+                market_cap: parseFloat(asset.marketCapUsd),
+                last_updated: Date.now(),
+                source: 'CoinCap'
+            };
+        } catch (error) {
+            console.error('CoinCap fetch error:', error);
             throw error;
         }
     }
