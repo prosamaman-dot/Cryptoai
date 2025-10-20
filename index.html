@@ -580,6 +580,37 @@
         </div>
     </div>
 
+    <!-- Crypto News Panel -->
+    <div id="newsPanel" class="side-panel hidden">
+        <div class="panel-header">
+            <h3>📰 Crypto News Feed</h3>
+            <button id="closeNews" class="close-btn">×</button>
+        </div>
+        <div class="panel-content">
+            <div class="news-controls">
+                <div class="news-filters">
+                    <button class="filter-btn active" data-category="all">All News</button>
+                    <button class="filter-btn" data-category="bitcoin">Bitcoin</button>
+                    <button class="filter-btn" data-category="ethereum">Ethereum</button>
+                    <button class="filter-btn" data-category="market">Market</button>
+                    <button class="filter-btn" data-category="regulation">Regulation</button>
+                </div>
+                <button id="refreshNews" class="btn-primary" style="margin-top: 10px;">
+                    🔄 Refresh News
+                </button>
+            </div>
+            
+            <div id="newsLoading" class="loading-state hidden">
+                <div class="loading-spinner"></div>
+                <p>Loading latest crypto news...</p>
+            </div>
+            
+            <div id="newsFeed" class="news-feed">
+                <!-- News articles will be populated here -->
+            </div>
+        </div>
+    </div>
+
     <!-- Backtesting Panel -->
     <div id="backtestingPanel" class="side-panel hidden">
         <div class="panel-header">
