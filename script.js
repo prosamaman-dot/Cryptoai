@@ -16,8 +16,8 @@ class SamCryptoAI {
         this.cryptoCompareAPI = 'https://min-api.cryptocompare.com/data';
         this.coinCapAPI = 'https://api.coincap.io/v2';
         
-        // AI and other APIs
-        this.geminiAPI = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent';
+        // AI and other APIs - Upgraded to Gemini 2.5 Pro for superior crypto analysis
+        this.geminiAPI = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent';
         this.coinDeskAPI = 'https://api.coindesk.com/v1';
         this.tradingStrategies = this.initializeTradingStrategies();
         
