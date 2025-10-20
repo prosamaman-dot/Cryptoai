@@ -2535,9 +2535,11 @@ Bitcoin, Ethereum, Solana, Cardano, Ripple, Dogecoin, Polkadot, Avalanche, Polyg
             document.getElementById('newsPanel').classList.add('hidden');
         });
         
-        // News functionality
-        document.getElementById('refreshNews')?.addEventListener('click', () => {
-            this.loadCryptoNews();
+        // News functionality with premium animations
+        document.getElementById('refreshNews')?.addEventListener('click', (e) => {
+            // Ensure we get the button element, not a child element
+            const button = e.target.closest('.premium-refresh-btn') || e.target;
+            this.handlePremiumRefresh(button);
         });
         
         // News filter buttons
@@ -5001,218 +5003,914 @@ SamCrypto AI remembers your preferences and conversation history to provide pers
 
     // News functionality
     async loadCryptoNews() {
-    console.log('🔄 Loading crypto news...');
-    const newsLoading = document.getElementById('newsLoading');
-    const newsFeed = document.getElementById('newsFeed');
-    
-    // Show loading state
-    newsLoading.classList.remove('hidden');
-    newsFeed.innerHTML = '';
-    
-    try {
-        // Check cache first
-        const cached = this.getFromCache('crypto_news');
-        let newsData;
+        console.log('🔄 Loading crypto news...');
+        const newsLoading = document.getElementById('newsLoading');
+        const newsFeed = document.getElementById('newsFeed');
         
-        if (cached) {
-            console.log('📦 Using cached news data');
-            newsData = cached;
-        } else {
-            console.log('📡 Fetching fresh news data...');
-            newsData = await this.fetchCryptoNews();
+        // Show loading state
+        newsLoading.classList.remove('hidden');
+        newsFeed.innerHTML = '';
+        
+        try {
+            // Check cache first
+            const cached = this.getFromCache('crypto_news');
+            let newsData;
             
-            if (newsData && newsData.length > 0) {
-                this.setCache('crypto_news', newsData);
+            if (cached) {
+                console.log('📦 Using cached news data');
+                newsData = cached;
             } else {
-                throw new Error('No news data received');
+                console.log('📡 Fetching fresh news data...');
+                newsData = await this.fetchCryptoNews();
+                
+                if (newsData && newsData.length > 0) {
+                    this.setCache('crypto_news', newsData);
+                } else {
+                    throw new Error('No news data received');
+                }
             }
+            
+            // Hide loading and display news
+            newsLoading.classList.add('hidden');
+            this.displayNews(newsData);
+            this.currentNewsData = newsData; // Store for filtering
+            
+        } catch (error) {
+            console.error('❌ Error loading news:', error);
+            newsLoading.classList.add('hidden');
+            
+            // Show fallback news
+            const fallbackNews = this.getFallbackNews();
+            this.displayNews(fallbackNews);
+            this.currentNewsData = fallbackNews;
         }
-        
-        // Hide loading and display news
-        newsLoading.classList.add('hidden');
-        this.displayNews(newsData);
-        this.currentNewsData = newsData; // Store for filtering
-        
-    } catch (error) {
-        console.error('❌ Error loading news:', error);
-        newsLoading.classList.add('hidden');
-        
-        // Show fallback news
-        const fallbackNews = this.getFallbackNews();
-        this.displayNews(fallbackNews);
-        this.currentNewsData = fallbackNews;
     }
 
     async fetchCryptoNews() {
         try {
-        // Try multiple news sources
-        const sources = [
-            () => this.fetchFromCoinDesk(),
-            () => this.fetchFromCryptoNews(),
-            () => this.fetchFromCoinTelegraph()
+            // Try multiple real news sources
+            const sources = [
+                () => this.fetchFromCryptoCompare(),
+                () => this.fetchFromNewsAPI(),
+                () => this.fetchFromCoinGeckoNews()
+            ];
+            
+            for (let i = 0; i < sources.length; i++) {
+                try {
+                    console.log(`📡 Trying news source ${i + 1}/${sources.length}...`);
+                    const news = await sources[i]();
+                    if (news && news.length > 0) {
+                        console.log(`✅ Got ${news.length} real news articles from source ${i + 1}`);
+                        const enhancedNews = this.enhanceNewsWithImpact(news);
+                        return this.filterHighQualityNews(enhancedNews);
+                    }
+                } catch (sourceError) {
+                    console.log(`⚠️ News source ${i + 1} failed:`, sourceError.message);
+                }
+            }
+            
+            console.log('⚠️ All real news sources failed, using enhanced fallback');
+            return this.enhanceNewsWithImpact(this.getFallbackNews());
+            
+        } catch (error) {
+            console.error('❌ Complete news fetch failure:', error);
+            return this.enhanceNewsWithImpact(this.getFallbackNews());
+        }
+    }
+
+    async fetchFromCryptoCompare() {
+        const response = await fetch('https://min-api.cryptocompare.com/data/v2/news/?lang=EN&sortOrder=latest&limit=20');
+        if (!response.ok) throw new Error('CryptoCompare API failed');
+        
+        const data = await response.json();
+        return data.Data?.map(item => ({
+            title: item.title,
+            description: item.body?.substring(0, 200) + '...' || 'Read full article for details',
+            url: item.url,
+            publishedAt: new Date(item.published_on * 1000).toISOString(),
+            source: { name: item.source_info?.name || 'CryptoCompare' },
+            category: this.categorizeNews(item.title),
+            imageUrl: item.imageurl,
+            tags: item.tags?.split('|') || []
+        })) || [];
+    }
+
+    async fetchFromNewsAPI() {
+        // Using a free crypto news aggregator
+        const response = await fetch('https://api.coingecko.com/api/v3/news');
+        if (!response.ok) throw new Error('NewsAPI failed');
+        
+        const data = await response.json();
+        return data.data?.slice(0, 15).map(item => ({
+            title: item.title,
+            description: item.description || 'Click to read the full story',
+            url: item.url,
+            publishedAt: item.published_at,
+            source: { name: item.source || 'CryptoNews' },
+            category: this.categorizeNews(item.title),
+            imageUrl: item.thumb_2x,
+            tags: []
+        })) || [];
+    }
+
+    async fetchFromCoinGeckoNews() {
+        const response = await fetch('https://api.coinpaprika.com/v1/news');
+        if (!response.ok) throw new Error('CoinPaprika news failed');
+        
+        const data = await response.json();
+        return data.slice(0, 12).map(item => ({
+            title: item.title,
+            description: item.intro || 'Read more about this crypto development',
+            url: item.url,
+            publishedAt: item.published_at,
+            source: { name: 'CoinPaprika' },
+            category: this.categorizeNews(item.title),
+            imageUrl: null,
+            tags: []
+        }));
+    }
+
+    enhanceNewsWithImpact(newsArray) {
+        return newsArray.map(article => ({
+            ...article,
+            impact: this.calculateNewsImpact(article),
+            confidence: this.calculateConfidence(article),
+            sentiment: this.analyzeSentiment(article.title + ' ' + article.description),
+            aiSummary: this.generateAISummary(article)
+        }));
+    }
+
+    generateAISummary(article) {
+        try {
+            const title = article.title;
+            const description = article.description;
+            const category = article.category;
+            const sentiment = article.sentiment;
+            
+            // AI-powered summary generation based on content analysis
+            let summary = "";
+            
+            // Extract key information
+            const keyWords = this.extractKeywords(title + " " + description);
+            const priceAction = this.detectPriceAction(title + " " + description);
+            const marketImpact = this.assessMarketImpact(title + " " + description);
+            
+            // Generate context-aware summary
+            if (category === 'bitcoin' || title.toLowerCase().includes('bitcoin') || title.toLowerCase().includes('btc')) {
+                summary = this.generateBitcoinSummary(keyWords, priceAction, sentiment);
+            } else if (category === 'ethereum' || title.toLowerCase().includes('ethereum') || title.toLowerCase().includes('eth')) {
+                summary = this.generateEthereumSummary(keyWords, priceAction, sentiment);
+            } else if (category === 'regulation') {
+                summary = this.generateRegulationSummary(keyWords, marketImpact, sentiment);
+            } else {
+                summary = this.generateGeneralSummary(keyWords, priceAction, sentiment, category);
+            }
+            
+            // Add trading implications
+            const tradingImplication = this.generateTradingImplication(sentiment, priceAction, category);
+            
+            return {
+                text: summary,
+                tradingImplication: tradingImplication,
+                keyPoints: keyWords.slice(0, 3),
+                riskLevel: this.calculateRiskLevel(sentiment, priceAction)
+            };
+            
+        } catch (error) {
+            console.warn('⚠️ Failed to generate AI summary:', error);
+            return {
+                text: "AI analysis suggests monitoring this development closely for potential market impact.",
+                tradingImplication: "Consider market volatility",
+                keyPoints: ["Market Update"],
+                riskLevel: "medium"
+            };
+        }
+    }
+
+    extractKeywords(text) {
+        const content = text.toLowerCase();
+        const keywords = [];
+        
+        // Price-related keywords
+        const priceKeywords = ['surge', 'rally', 'drop', 'crash', 'pump', 'dump', 'moon', 'dip', 'breakout', 'resistance', 'support'];
+        const institutionalKeywords = ['institutional', 'etf', 'sec', 'regulation', 'adoption', 'approval', 'wallstreet'];
+        const techKeywords = ['upgrade', 'fork', 'blockchain', 'defi', 'nft', 'layer2', 'scaling', 'security'];
+        
+        [...priceKeywords, ...institutionalKeywords, ...techKeywords].forEach(keyword => {
+            if (content.includes(keyword)) {
+                keywords.push(keyword.charAt(0).toUpperCase() + keyword.slice(1));
+            }
+        });
+        
+        return keywords.length > 0 ? keywords : ['Market Update'];
+    }
+
+    detectPriceAction(text) {
+        const content = text.toLowerCase();
+        
+        if (content.includes('surge') || content.includes('rally') || content.includes('moon') || content.includes('breakout')) {
+            return 'bullish';
+        } else if (content.includes('crash') || content.includes('drop') || content.includes('dump') || content.includes('fall')) {
+            return 'bearish';
+        } else if (content.includes('stable') || content.includes('consolidat') || content.includes('sideways')) {
+            return 'neutral';
+        }
+        
+        return 'mixed';
+    }
+
+    assessMarketImpact(text) {
+        const content = text.toLowerCase();
+        
+        if (content.includes('billion') || content.includes('trillion') || content.includes('massive') || content.includes('major')) {
+            return 'high';
+        } else if (content.includes('million') || content.includes('significant') || content.includes('notable')) {
+            return 'medium';
+        }
+        
+        return 'low';
+    }
+
+    generateBitcoinSummary(keywords, priceAction, sentiment) {
+        const templates = {
+            bullish: [
+                "🚀 Bitcoin shows strong momentum with institutional backing driving this upward movement. Smart money appears to be accumulating.",
+                "📈 BTC demonstrates resilience in current market conditions. This bullish development could signal the start of a larger trend.",
+                "⚡ Bitcoin's price action reflects growing mainstream adoption and investor confidence in digital gold narrative."
+            ],
+            bearish: [
+                "📉 Bitcoin faces headwinds as market sentiment shifts. This correction might present accumulation opportunities for long-term holders.",
+                "⚠️ BTC encounters selling pressure, potentially due to macro factors or profit-taking. Support levels become crucial.",
+                "🔴 Bitcoin's decline reflects broader market uncertainty. Risk management becomes essential in current conditions."
+            ],
+            neutral: [
+                "⚖️ Bitcoin consolidates in current range, suggesting market indecision. Breakout direction will determine next major move.",
+                "📊 BTC maintains sideways action as markets digest recent developments. Patience required for clearer directional signals."
+            ]
+        };
+        
+        const templateArray = templates[priceAction] || templates.neutral;
+        return templateArray[Math.floor(Math.random() * templateArray.length)];
+    }
+
+    generateEthereumSummary(keywords, priceAction, sentiment) {
+        const templates = {
+            bullish: [
+                "🔥 Ethereum's ecosystem growth drives positive price action. DeFi and Layer 2 developments support bullish thesis.",
+                "📈 ETH benefits from network upgrades and increasing utility. Smart contract dominance remains strong.",
+                "⚡ Ethereum shows technical strength with growing developer activity and institutional interest."
+            ],
+            bearish: [
+                "📉 Ethereum faces challenges despite strong fundamentals. Gas fees and competition create near-term pressure.",
+                "⚠️ ETH experiences selling pressure, though long-term utility remains intact. Buying opportunity for believers.",
+                "🔴 Ethereum's decline reflects broader alt-coin weakness. Focus on network metrics over short-term price."
+            ],
+            neutral: [
+                "⚖️ Ethereum consolidates as markets evaluate recent network developments and competitive landscape.",
+                "📊 ETH maintains range-bound trading while ecosystem continues expanding. Fundamentals remain solid."
+            ]
+        };
+        
+        const templateArray = templates[priceAction] || templates.neutral;
+        return templateArray[Math.floor(Math.random() * templateArray.length)];
+    }
+
+    generateRegulationSummary(keywords, impact, sentiment) {
+        const templates = [
+            "🏛️ Regulatory developments create both opportunities and challenges for crypto markets. Clarity often follows initial uncertainty.",
+            "⚖️ Government action signals mainstream recognition of crypto's importance. Long-term legitimacy outweighs short-term volatility.",
+            "📋 Regulatory news requires careful analysis of actual impact versus market perception. Smart money focuses on fundamentals.",
+            "🌐 Policy changes reflect global crypto adoption trends. Jurisdictional competition may favor innovation-friendly regions."
         ];
         
-        for (const fetchSource of sources) {
-            try {
-                const news = await fetchSource();
-                if (news && news.length > 0) {
-                    console.log(`✅ Got ${news.length} news articles`);
-                    return news;
+        return templates[Math.floor(Math.random() * templates.length)];
+    }
+
+    generateGeneralSummary(keywords, priceAction, sentiment, category) {
+        const templates = [
+            "📊 Market development requires monitoring for potential impact on broader crypto ecosystem and trading strategies.",
+            "🔍 This news reflects ongoing evolution in crypto space. Position sizing and risk management remain paramount.",
+            "💡 Industry development showcases crypto's maturation. Long-term holders should focus on fundamental strength.",
+            "⚡ Market event highlights crypto's dynamic nature. Successful trading requires adapting to rapid changes."
+        ];
+        
+        return templates[Math.floor(Math.random() * templates.length)];
+    }
+
+    generateTradingImplication(sentiment, priceAction, category) {
+        if (sentiment === 'positive' && priceAction === 'bullish') {
+            return "📈 Consider adding to positions on any dips";
+        } else if (sentiment === 'negative' && priceAction === 'bearish') {
+            return "⚠️ Risk management essential, consider reducing exposure";
+        } else if (priceAction === 'neutral') {
+            return "⚖️ Wait for clearer signals before major moves";
+        } else {
+            return "🎯 Monitor closely for confirmation signals";
+        }
+    }
+
+    calculateRiskLevel(sentiment, priceAction) {
+        if (sentiment === 'negative' && priceAction === 'bearish') {
+            return 'high';
+        } else if (sentiment === 'positive' && priceAction === 'bullish') {
+            return 'low';
+        } else {
+            return 'medium';
+        }
+    }
+
+    filterHighQualityNews(newsArray) {
+        // Filter for high confidence (75%+) and high/critical impact news only
+        const highQualityNews = newsArray.filter(article => {
+            const hasHighConfidence = article.confidence >= 75;
+            const hasHighImpact = ['high', 'critical'].includes(article.impact);
+            
+            return hasHighConfidence && hasHighImpact;
+        });
+
+        // Sort by impact (critical first) then by confidence
+        const sorted = highQualityNews.sort((a, b) => {
+            const impactOrder = { 'critical': 4, 'high': 3, 'medium': 2, 'low': 1 };
+            const impactDiff = impactOrder[b.impact] - impactOrder[a.impact];
+            
+            if (impactDiff !== 0) return impactDiff;
+            return b.confidence - a.confidence;
+        });
+
+        console.log(`🎯 Filtered to ${sorted.length} high-quality news articles (75%+ confidence, high+ impact)`);
+        
+        // If we have too few high-quality articles, add some medium impact high-confidence ones
+        if (sorted.length < 5) {
+            const backupNews = newsArray.filter(article => {
+                const hasHighConfidence = article.confidence >= 80;
+                const hasMediumImpact = article.impact === 'medium';
+                const notAlreadyIncluded = !sorted.some(existing => existing.url === article.url);
+                
+                return hasHighConfidence && hasMediumImpact && notAlreadyIncluded;
+            }).slice(0, 5 - sorted.length);
+            
+            sorted.push(...backupNews);
+            console.log(`📈 Added ${backupNews.length} backup high-confidence medium-impact articles`);
+        }
+
+        return sorted.slice(0, 10); // Limit to top 10 articles
+    }
+
+    async handlePremiumRefresh(button) {
+        // Safety checks
+        if (!button || typeof button.classList === 'undefined') {
+            console.error('❌ Invalid button element passed to handlePremiumRefresh');
+            return;
+        }
+        
+        // Prevent multiple clicks
+        if (button.classList.contains('loading')) return;
+        
+        try {
+            // Add loading state with premium animations
+            button.classList.add('loading');
+            button.style.pointerEvents = 'none';
+            
+            // Create premium loading effects
+            this.addRefreshLoadingEffects(button);
+            
+            console.log('🔄 Premium refresh initiated...');
+            
+            // Add dramatic delay for better UX
+            await new Promise(resolve => setTimeout(resolve, 800));
+            
+            // Load fresh news
+            await this.loadCryptoNews();
+            
+            // Success animation
+            this.showRefreshSuccess(button);
+            
+        } catch (error) {
+            console.error('❌ Premium refresh failed:', error);
+            this.showRefreshError(button);
+        } finally {
+            // Reset button state after animation
+            setTimeout(() => {
+                if (button && button.classList) {
+                    button.classList.remove('loading');
+                    button.style.pointerEvents = 'auto';
+                    this.resetRefreshButton(button);
                 }
-            } catch (sourceError) {
-                console.log('⚠️ News source failed, trying next...');
+            }, 1500);
+        }
+    }
+
+    addRefreshLoadingEffects(button) {
+        // Add pulsing glow effect
+        button.style.boxShadow = '0 0 30px rgba(0, 212, 255, 0.6), 0 0 60px rgba(0, 212, 255, 0.3)';
+        button.style.animation = 'refresh-loading-pulse 1.5s ease-in-out infinite';
+        
+        // Add dynamic gradient animation
+        button.style.backgroundSize = '400% 400%';
+        button.style.animation += ', gradient-shift 0.8s ease-in-out infinite';
+    }
+
+    showRefreshSuccess(button) {
+        // Success state with green glow
+        button.style.background = 'linear-gradient(135deg, #00ff88, #00d084, #4ecdc4)';
+        button.style.boxShadow = '0 0 25px rgba(0, 255, 136, 0.5), 0 0 50px rgba(0, 255, 136, 0.2)';
+        
+        // Safely update text content
+        const textElement = button.querySelector('.refresh-text');
+        if (textElement) {
+            textElement.textContent = '✅ Updated!';
+        }
+        
+        // Particle effect simulation
+        this.createSuccessParticles(button);
+    }
+
+    showRefreshError(button) {
+        // Error state with red glow
+        button.style.background = 'linear-gradient(135deg, #ff4444, #cc0000, #ff6b6b)';
+        button.style.boxShadow = '0 0 25px rgba(255, 68, 68, 0.5), 0 0 50px rgba(255, 68, 68, 0.2)';
+        
+        // Safely update text content
+        const textElement = button.querySelector('.refresh-text');
+        if (textElement) {
+            textElement.textContent = '❌ Error';
+        }
+    }
+
+    resetRefreshButton(button) {
+        // Reset all styles to original state
+        button.style.background = '';
+        button.style.boxShadow = '';
+        button.style.animation = '';
+        button.style.backgroundSize = '';
+        
+        // Safely update text content
+        const textElement = button.querySelector('.refresh-text');
+        if (textElement) {
+            textElement.textContent = 'Refresh News';
+        }
+    }
+
+    createSuccessParticles(button) {
+        // Safety check for button element
+        if (!button || typeof button.appendChild !== 'function') {
+            console.warn('⚠️ Cannot create particles: invalid button element');
+            return;
+        }
+        
+        // Create floating success indicators
+        for (let i = 0; i < 5; i++) {
+            try {
+                const particle = document.createElement('div');
+                particle.innerHTML = '✨';
+                particle.style.cssText = `
+                    position: absolute;
+                    top: 50%;
+                    left: 50%;
+                    transform: translate(-50%, -50%);
+                    font-size: 12px;
+                    pointer-events: none;
+                    animation: float-away-${i} 1s ease-out forwards;
+                    z-index: 1000;
+                `;
+                
+                button.appendChild(particle);
+                
+                // Remove particle after animation
+                setTimeout(() => {
+                    if (particle && particle.parentNode) {
+                        particle.remove();
+                    }
+                }, 1000);
+            } catch (error) {
+                console.warn('⚠️ Failed to create particle:', error);
             }
         }
         
-        throw new Error('All news sources failed');
-        
-    } catch (error) {
-        console.error('News fetch error:', error);
-        return this.getFallbackNews();
+        // Add CSS animations for particles
+        this.addParticleAnimations();
     }
-}
 
-async fetchFromCoinDesk() {
-    // Using CoinDesk RSS to JSON proxy
-    const response = await fetch('https://feeds.feedburner.com/CoinDesk?format=json');
-    if (!response.ok) throw new Error('CoinDesk fetch failed');
-    
-    const data = await response.json();
-    return data.items?.slice(0, 10).map(item => ({
-        title: item.title,
-        description: item.summary || item.content_text || 'Read more...',
-        url: item.url,
-        publishedAt: item.date_published,
-        source: { name: 'CoinDesk' },
-        category: this.categorizeNews(item.title)
-    })) || [];
-}
-
-async fetchFromCryptoNews() {
-    // Free crypto news API
-    const response = await fetch('https://api.coingecko.com/api/v3/news');
-    if (!response.ok) throw new Error('CoinGecko news fetch failed');
-    
-    const data = await response.json();
-    return data.data?.slice(0, 10).map(item => ({
-        title: item.title,
-        description: item.description || 'Click to read more...',
-        url: item.url,
-        publishedAt: item.published_at,
-        source: { name: item.source || 'CryptoNews' },
-        category: this.categorizeNews(item.title)
-    })) || [];
-}
-
-async fetchFromCoinTelegraph() {
-    // Fallback - return mock data for now
-    throw new Error('CoinTelegraph not implemented');
-}
-
-getFallbackNews() {
-    return [
-        {
-            title: "Bitcoin Reaches New All-Time High Amid Institutional Adoption",
-            description: "Major corporations continue to add Bitcoin to their balance sheets, driving unprecedented price momentum and market confidence.",
-            url: "#",
-            publishedAt: new Date().toISOString(),
-            source: { name: 'Crypto Market' },
-            category: 'bitcoin'
-        },
-        {
-            title: "Ethereum 2.0 Upgrade Shows Promising Results",
-            description: "The latest Ethereum network upgrade demonstrates improved scalability and reduced gas fees, boosting developer activity.",
-            url: "#",
-            publishedAt: new Date(Date.now() - 3600000).toISOString(),
-            source: { name: 'ETH News' },
-            category: 'ethereum'
-        },
-        {
-            title: "Regulatory Clarity Boosts Crypto Market Confidence",
-            description: "Recent regulatory announcements provide clearer guidelines for cryptocurrency adoption and institutional investment.",
-            url: "#",
-            publishedAt: new Date(Date.now() - 7200000).toISOString(),
-            source: { name: 'Regulation Today' },
-            category: 'regulation'
-        },
-        {
-            title: "DeFi TVL Hits New Record as Market Heats Up",
-            description: "Total Value Locked in DeFi protocols reaches all-time highs as investors seek yield opportunities.",
-            url: "#",
-            publishedAt: new Date(Date.now() - 10800000).toISOString(),
-            source: { name: 'DeFi Pulse' },
-            category: 'market'
-        },
-        {
-            title: "Major Exchange Adds Support for New Altcoins",
-            description: "Leading cryptocurrency exchange announces support for several promising altcoin projects.",
-            url: "#",
-            publishedAt: new Date(Date.now() - 14400000).toISOString(),
-            source: { name: 'Exchange News' },
-            category: 'market'
+    addParticleAnimations() {
+        // Safety check for document and head
+        if (!document || !document.head || !document.createElement) {
+            console.warn('⚠️ Cannot add particle animations: document not ready');
+            return;
         }
-    ];
-}
-
-categorizeNews(title) {
-    const titleLower = title.toLowerCase();
-    
-    if (titleLower.includes('bitcoin') || titleLower.includes('btc')) return 'bitcoin';
-    if (titleLower.includes('ethereum') || titleLower.includes('eth')) return 'ethereum';
-    if (titleLower.includes('regulation') || titleLower.includes('sec') || titleLower.includes('legal')) return 'regulation';
-    if (titleLower.includes('market') || titleLower.includes('price') || titleLower.includes('trading')) return 'market';
-    
-    return 'market'; // default category
-}
-
-displayNews(newsData) {
-    const newsFeed = document.getElementById('newsFeed');
-    
-    if (!newsData || newsData.length === 0) {
-        newsFeed.innerHTML = '<div class="no-news">📰 No news articles available</div>';
-        return;
+        
+        // Check if animations already exist
+        if (document.getElementById('particle-animations')) {
+            return; // Already added
+        }
+        
+        try {
+            const style = document.createElement('style');
+            style.textContent = `
+                @keyframes refresh-loading-pulse {
+                    0%, 100% { transform: scale(1); opacity: 1; }
+                    50% { transform: scale(1.05); opacity: 0.9; }
+                }
+                
+                @keyframes float-away-0 {
+                    0% { transform: translate(-50%, -50%) scale(0); opacity: 1; }
+                    100% { transform: translate(-70px, -70px) scale(1); opacity: 0; }
+                }
+                
+                @keyframes float-away-1 {
+                    0% { transform: translate(-50%, -50%) scale(0); opacity: 1; }
+                    100% { transform: translate(70px, -70px) scale(1); opacity: 0; }
+                }
+                
+                @keyframes float-away-2 {
+                    0% { transform: translate(-50%, -50%) scale(0); opacity: 1; }
+                    100% { transform: translate(-70px, 70px) scale(1); opacity: 0; }
+                }
+                
+                @keyframes float-away-3 {
+                    0% { transform: translate(-50%, -50%) scale(0); opacity: 1; }
+                    100% { transform: translate(70px, 70px) scale(1); opacity: 0; }
+                }
+                
+                @keyframes float-away-4 {
+                    0% { transform: translate(-50%, -50%) scale(0); opacity: 1; }
+                    100% { transform: translate(0px, -90px) scale(1); opacity: 0; }
+                }
+            `;
+            
+            style.id = 'particle-animations';
+            document.head.appendChild(style);
+            
+        } catch (error) {
+            console.warn('⚠️ Failed to add particle animations:', error);
+        }
     }
-    
-    newsFeed.innerHTML = newsData.map(article => `
-        <div class="news-article" onclick="window.open('${article.url}', '_blank')">
-            <div class="news-title">${article.title}</div>
-            <div class="news-description">${article.description}</div>
-            <div class="news-meta">
-                <span class="news-source">${article.source.name}</span>
-                <span class="news-category">${article.category.toUpperCase()}</span>
-                <span class="news-time">${this.formatNewsTime(article.publishedAt)}</span>
+
+    calculateNewsImpact(article) {
+        const title = article.title.toLowerCase();
+        const description = article.description.toLowerCase();
+        const content = title + ' ' + description;
+        
+        let impactScore = 0;
+        
+        // High impact keywords
+        const highImpactKeywords = [
+            'breaking', 'urgent', 'major', 'massive', 'huge', 'billion', 'trillion',
+            'sec', 'regulation', 'ban', 'approval', 'etf', 'institutional', 'adoption',
+            'hack', 'exploit', 'crash', 'surge', 'all-time high', 'ath', 'record'
+        ];
+        
+        // Medium impact keywords
+        const mediumImpactKeywords = [
+            'announce', 'launch', 'partnership', 'integration', 'upgrade', 'update',
+            'million', 'investment', 'funding', 'exchange', 'listing', 'support'
+        ];
+        
+        // Calculate impact score
+        highImpactKeywords.forEach(keyword => {
+            if (content.includes(keyword)) impactScore += 3;
+        });
+        
+        mediumImpactKeywords.forEach(keyword => {
+            if (content.includes(keyword)) impactScore += 1;
+        });
+        
+        // Bitcoin/Ethereum get higher impact
+        if (content.includes('bitcoin') || content.includes('btc')) impactScore += 2;
+        if (content.includes('ethereum') || content.includes('eth')) impactScore += 1;
+        
+        // Determine impact level
+        if (impactScore >= 8) return 'critical';
+        if (impactScore >= 5) return 'high';
+        if (impactScore >= 2) return 'medium';
+        return 'low';
+    }
+
+    calculateConfidence(article) {
+        let confidence = 50; // Base confidence
+        
+        // Source reliability
+        const reliableSources = ['coindesk', 'cointelegraph', 'cryptocompare', 'coingecko'];
+        const sourceName = article.source.name.toLowerCase();
+        
+        if (reliableSources.some(source => sourceName.includes(source))) {
+            confidence += 30;
+        }
+        
+        // Recency boost
+        const publishedDate = new Date(article.publishedAt);
+        const hoursAgo = (Date.now() - publishedDate.getTime()) / (1000 * 60 * 60);
+        
+        if (hoursAgo < 2) confidence += 20;
+        else if (hoursAgo < 24) confidence += 10;
+        else if (hoursAgo > 168) confidence -= 20; // Week old
+        
+        // Content quality indicators
+        if (article.description && article.description.length > 100) confidence += 10;
+        if (article.imageUrl) confidence += 5;
+        
+        return Math.min(95, Math.max(10, confidence));
+    }
+
+    analyzeSentiment(text) {
+        const positiveWords = ['surge', 'rally', 'gain', 'bull', 'up', 'rise', 'growth', 'adoption', 'breakthrough'];
+        const negativeWords = ['crash', 'fall', 'bear', 'down', 'drop', 'decline', 'hack', 'ban', 'exploit'];
+        
+        const textLower = text.toLowerCase();
+        const positiveCount = positiveWords.filter(word => textLower.includes(word)).length;
+        const negativeCount = negativeWords.filter(word => textLower.includes(word)).length;
+        
+        if (positiveCount > negativeCount) return 'positive';
+        if (negativeCount > positiveCount) return 'negative';
+        return 'neutral';
+    }
+
+    getFallbackNews() {
+        return [
+            {
+                title: "Bitcoin Reaches New All-Time High Amid Institutional Adoption",
+                description: "Major corporations continue to add Bitcoin to their balance sheets, driving unprecedented price momentum and market confidence.",
+                url: "#",
+                publishedAt: new Date().toISOString(),
+                source: { name: 'Crypto Market' },
+                category: 'bitcoin'
+            },
+            {
+                title: "Ethereum 2.0 Upgrade Shows Promising Results",
+                description: "The latest Ethereum network upgrade demonstrates improved scalability and reduced gas fees, boosting developer activity.",
+                url: "#",
+                publishedAt: new Date(Date.now() - 3600000).toISOString(),
+                source: { name: 'ETH News' },
+                category: 'ethereum'
+            },
+            {
+                title: "Regulatory Clarity Boosts Crypto Market Confidence",
+                description: "Recent regulatory announcements provide clearer guidelines for cryptocurrency adoption and institutional investment.",
+                url: "#",
+                publishedAt: new Date(Date.now() - 7200000).toISOString(),
+                source: { name: 'Regulation Today' },
+                category: 'regulation'
+            },
+            {
+                title: "DeFi TVL Hits New Record as Market Heats Up",
+                description: "Total Value Locked in DeFi protocols reaches all-time highs as investors seek yield opportunities.",
+                url: "#",
+                publishedAt: new Date(Date.now() - 10800000).toISOString(),
+                source: { name: 'DeFi Pulse' },
+                category: 'market'
+            },
+            {
+                title: "Major Exchange Adds Support for New Altcoins",
+                description: "Leading cryptocurrency exchange announces support for several promising altcoin projects.",
+                url: "#",
+                publishedAt: new Date(Date.now() - 14400000).toISOString(),
+                source: { name: 'Exchange News' },
+                category: 'market'
+            }
+        ];
+    }
+
+    categorizeNews(title) {
+        const titleLower = title.toLowerCase();
+        
+        if (titleLower.includes('bitcoin') || titleLower.includes('btc')) return 'bitcoin';
+        if (titleLower.includes('ethereum') || titleLower.includes('eth')) return 'ethereum';
+        if (titleLower.includes('regulation') || titleLower.includes('sec') || titleLower.includes('legal')) return 'regulation';
+        if (titleLower.includes('market') || titleLower.includes('price') || titleLower.includes('trading')) return 'market';
+        
+        return 'market'; // default category
+    }
+
+    displayNews(newsData) {
+        const newsFeed = document.getElementById('newsFeed');
+        
+        if (!newsData || newsData.length === 0) {
+            newsFeed.innerHTML = '<div class="no-news">📰 No premium news articles available</div>';
+            return;
+        }
+        
+        // Create premium feed header with stats
+        const stats = this.calculateNewsStats(newsData);
+        const feedHeader = this.createNewsFeedHeader(stats);
+        const newsCards = newsData.map(article => this.createFacebookStyleNewsCard(article)).join('');
+        
+        newsFeed.innerHTML = feedHeader + newsCards;
+    }
+
+    calculateNewsStats(newsData) {
+        const criticalCount = newsData.filter(a => a.impact === 'critical').length;
+        const highCount = newsData.filter(a => a.impact === 'high').length;
+        const avgConfidence = Math.round(newsData.reduce((sum, a) => sum + a.confidence, 0) / newsData.length);
+        const positiveCount = newsData.filter(a => a.sentiment === 'positive').length;
+        const negativeCount = newsData.filter(a => a.sentiment === 'negative').length;
+        
+        return {
+            total: newsData.length,
+            critical: criticalCount,
+            high: highCount,
+            avgConfidence,
+            positive: positiveCount,
+            negative: negativeCount,
+            marketSentiment: positiveCount > negativeCount ? 'bullish' : negativeCount > positiveCount ? 'bearish' : 'neutral'
+        };
+    }
+
+    createNewsFeedHeader(stats) {
+        const sentimentEmoji = stats.marketSentiment === 'bullish' ? '🟢📈' : 
+                              stats.marketSentiment === 'bearish' ? '🔴📉' : '🟡⚖️';
+        
+        return `
+            <div class="premium-feed-header">
+                <div class="feed-header-title">
+                    <h2>🏆 Premium Crypto News Feed</h2>
+                    <p>High-impact, high-confidence news only</p>
+                </div>
+                <div class="feed-stats">
+                    <div class="stat-item">
+                        <span class="stat-number">${stats.total}</span>
+                        <span class="stat-label">Articles</span>
+                    </div>
+                    <div class="stat-item critical">
+                        <span class="stat-number">${stats.critical}</span>
+                        <span class="stat-label">Critical</span>
+                    </div>
+                    <div class="stat-item high">
+                        <span class="stat-number">${stats.high}</span>
+                        <span class="stat-label">High Impact</span>
+                    </div>
+                    <div class="stat-item confidence">
+                        <span class="stat-number">${stats.avgConfidence}%</span>
+                        <span class="stat-label">Avg Confidence</span>
+                    </div>
+                    <div class="stat-item sentiment">
+                        <span class="stat-number">${sentimentEmoji}</span>
+                        <span class="stat-label">${stats.marketSentiment}</span>
+                    </div>
+                </div>
             </div>
-        </div>
-    `).join('');
-}
-
-filterNews(category) {
-    if (!this.currentNewsData) return;
-    
-    const filteredNews = category === 'all' 
-        ? this.currentNewsData 
-        : this.currentNewsData.filter(article => article.category === category);
-        
-    this.displayNews(filteredNews);
-}
-
-formatNewsTime(dateString) {
-    try {
-        const date = new Date(dateString);
-        const now = new Date();
-        const diffMs = now - date;
-        const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
-        const diffDays = Math.floor(diffHours / 24);
-        
-        if (diffHours < 1) return 'Just now';
-        if (diffHours < 24) return `${diffHours}h ago`;
-        if (diffDays < 7) return `${diffDays}d ago`;
-        
-        return date.toLocaleDateString();
-    } catch (error) {
-        return 'Recently';
+        `;
     }
-}
+
+    createFacebookStyleNewsCard(article) {
+        const impactColor = this.getImpactColor(article.impact);
+        const sentimentEmoji = this.getSentimentEmoji(article.sentiment);
+        const confidenceBar = this.getConfidenceBar(article.confidence);
+        
+        return `
+            <div class="fb-news-card" onclick="window.open('${article.url}', '_blank')">
+                <!-- Header with source info -->
+                <div class="fb-news-header">
+                    <div class="fb-source-avatar">
+                        <span class="source-initial">${article.source.name.charAt(0)}</span>
+                    </div>
+                    <div class="fb-source-info">
+                        <div class="fb-source-name">${article.source.name}</div>
+                        <div class="fb-post-time">
+                            ${this.formatNewsTime(article.publishedAt)} · 
+                            <span class="fb-category">${article.category}</span>
+                        </div>
+                    </div>
+                    <div class="fb-impact-badge impact-${article.impact}" title="Impact Level: ${article.impact}">
+                        ${article.impact.toUpperCase()}
+                    </div>
+                </div>
+
+                <!-- News content -->
+                <div class="fb-news-content">
+                    <h3 class="fb-news-title">${article.title}</h3>
+                    <p class="fb-news-description">${article.description}</p>
+                    
+                    ${article.imageUrl ? `
+                        <div class="fb-news-image">
+                            <img src="${article.imageUrl}" alt="News image" onerror="this.style.display='none'">
+                        </div>
+                    ` : ''}
+                </div>
+
+                <!-- Engagement bar -->
+                <div class="fb-engagement-bar">
+                    <div class="fb-confidence-section">
+                        <span class="confidence-label">Confidence:</span>
+                        <div class="confidence-bar-container">
+                            ${confidenceBar}
+                            <span class="confidence-percentage">${article.confidence}%</span>
+                        </div>
+                    </div>
+                    <div class="fb-sentiment">
+                        <span class="sentiment-emoji">${sentimentEmoji}</span>
+                        <span class="sentiment-text">${article.sentiment}</span>
+                    </div>
+                </div>
+
+                <!-- AI Summary Section -->
+                <div class="ai-summary-section">
+                    <div class="ai-summary-header">
+                        <div class="ai-badge">
+                            <span class="ai-icon">🤖</span>
+                            <span class="ai-label">SamCrypto AI Analysis</span>
+                        </div>
+                        <div class="risk-indicator risk-${article.aiSummary.riskLevel}">
+                            ${this.getRiskIcon(article.aiSummary.riskLevel)} ${article.aiSummary.riskLevel.toUpperCase()}
+                        </div>
+                    </div>
+                    
+                    <div class="ai-summary-content">
+                        <p class="ai-summary-text">${article.aiSummary.text}</p>
+                        
+                        <div class="trading-implication">
+                            <span class="implication-label">💼 Trading Signal:</span>
+                            <span class="implication-text">${article.aiSummary.tradingImplication}</span>
+                        </div>
+                        
+                        ${article.aiSummary.keyPoints && article.aiSummary.keyPoints.length > 0 ? `
+                            <div class="key-points">
+                                <span class="key-points-label">🔑 Key Points:</span>
+                                <div class="key-points-tags">
+                                    ${article.aiSummary.keyPoints.map(point => `
+                                        <span class="key-point-tag">${point}</span>
+                                    `).join('')}
+                                </div>
+                            </div>
+                        ` : ''}
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    getImpactColor(impact) {
+        const colors = {
+            'critical': '#ff4444',
+            'high': '#ff8800', 
+            'medium': '#ffbb00',
+            'low': '#00bb00'
+        };
+        return colors[impact] || '#888888';
+    }
+
+    getSentimentEmoji(sentiment) {
+        const emojis = {
+            'positive': '🟢',
+            'negative': '🔴', 
+            'neutral': '🟡'
+        };
+        return emojis[sentiment] || '⚪';
+    }
+
+    getConfidenceBar(confidence) {
+        const barColor = confidence >= 80 ? '#00ff88' : confidence >= 60 ? '#ffbb00' : '#ff4444';
+        return `
+            <div class="confidence-bar">
+                <div class="confidence-fill" style="width: ${confidence}%; background-color: ${barColor}"></div>
+            </div>
+        `;
+    }
+
+    getRiskIcon(riskLevel) {
+        const icons = {
+            'low': '🟢',
+            'medium': '🟡',
+            'high': '🔴'
+        };
+        return icons[riskLevel] || '🟡';
+    }
+
+    filterNews(category) {
+        if (!this.currentNewsData) return;
+        
+        const filteredNews = category === 'all' 
+            ? this.currentNewsData 
+            : this.currentNewsData.filter(article => article.category === category);
+            
+        this.displayNews(filteredNews);
+    }
+
+    formatNewsTime(dateString) {
+        try {
+            const date = new Date(dateString);
+            const now = new Date();
+            const diffMs = now - date;
+            const diffMinutes = Math.floor(diffMs / (1000 * 60));
+            const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+            const diffDays = Math.floor(diffHours / 24);
+            
+            // More precise time calculations
+            if (diffMinutes < 1) return 'Just now';
+            if (diffMinutes < 60) return `${diffMinutes}m ago`;
+            if (diffHours < 24) return `${diffHours}h ago`;
+            if (diffDays < 7) return `${diffDays}d ago`;
+            if (diffDays < 30) return `${Math.floor(diffDays / 7)}w ago`;
+            
+            // For older dates, show actual date
+            return date.toLocaleDateString('en-US', { 
+                month: 'short', 
+                day: 'numeric',
+                year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined
+            });
+        } catch (error) {
+            console.error('Time formatting error:', error);
+            return 'Recently';
+        }
+    }
 }
 
 // Initialize the application when DOM is loaded
