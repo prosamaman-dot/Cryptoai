@@ -15,6 +15,7 @@
 /* Hardware Acceleration for smooth animations */
 .message,
 .typing-indicator,
+.search-indicator,
 .quick-btn,
 .auth-btn,
 .user-dropdown-menu,
@@ -519,6 +520,79 @@ body {
     animation: blink 1s infinite;
     color: #00d4ff;
     font-weight: bold;
+}
+
+/* Search Indicator */
+.search-indicator {
+    margin-bottom: 24px;
+}
+
+.search-indicator .message {
+    display: block;
+}
+
+.search-status {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.search-text {
+    color: #00d4ff;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.search-text::before {
+    content: '';
+    width: 12px;
+    height: 12px;
+    border: 2px solid #00d4ff;
+    border-top: 2px solid transparent;
+    border-radius: 50%;
+    animation: searchSpin 1s linear infinite;
+}
+
+.search-sources {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.source-indicator {
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 500;
+    background: #1a1a1a;
+    color: #888;
+    border: 1px solid #333;
+    transition: all 0.3s ease;
+}
+
+.source-indicator.loading {
+    color: #00d4ff;
+    border-color: #00d4ff;
+    background: rgba(0, 212, 255, 0.1);
+}
+
+.source-indicator.success {
+    color: #4ade80;
+    border-color: #4ade80;
+    background: rgba(74, 222, 128, 0.1);
+}
+
+.source-indicator.error {
+    color: #f87171;
+    border-color: #f87171;
+    background: rgba(248, 113, 113, 0.1);
+}
+
+@keyframes searchSpin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
 }
 
 @keyframes blink {

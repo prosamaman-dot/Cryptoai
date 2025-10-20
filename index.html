@@ -11,8 +11,8 @@
     <link rel="manifest" href="manifest.json">
     
     <!-- Icons -->
-    <link rel="icon" type="image/png" href="icon-192.png">
-    <link rel="apple-touch-icon" href="icon-192.png">
+    <!-- <link rel="icon" type="image/png" href="icon-192.png"> -->
+    <!-- <link rel="apple-touch-icon" href="icon-192.png"> -->
     
     <link rel="stylesheet" href="css/styles.css">
     <link rel="stylesheet" href="css/auth-styles.css">
@@ -316,6 +316,27 @@
                         <span></span>
                         <span></span>
                         <span></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Search Indicator -->
+        <div id="searchIndicator" class="search-indicator hidden">
+            <div class="message ai-message">
+                <div class="message-avatar">
+                    <span class="crypto-icon">🔍</span>
+                </div>
+                <div class="message-content">
+                    <div class="search-status">
+                        <div class="search-text">
+                            <span id="searchText">Searching real-time market data...</span>
+                        </div>
+                        <div class="search-sources">
+                            <span class="source-indicator" id="coinGeckoStatus">CoinGecko</span>
+                            <span class="source-indicator" id="binanceStatus">Binance</span>
+                            <span class="source-indicator" id="coinCapStatus">CoinCap</span>
+                        </div>
                     </div>
                 </div>
             </div>
