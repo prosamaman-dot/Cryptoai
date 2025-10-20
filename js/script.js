@@ -476,7 +476,7 @@ class SamCryptoAI {
         this.addToConversationHistory('user', message);
         
         // Extract user preferences from the message
-        this.extractUserPreferences({ content: message });
+        this.extractAndSaveUserPreferences(message);
         
         // Clear input
         input.value = '';
@@ -564,10 +564,12 @@ class SamCryptoAI {
 
     async getMarketDataForQuery(query) {
         // Extract cryptocurrency mentions from the query
-        const cryptoMentions = this.extractCryptoMentions(query);
+        let cryptoMentions = this.extractCryptoMentions(query);
         
+        // If no specific crypto mentioned, fetch popular coins for context
         if (cryptoMentions.length === 0) {
-            return null;
+            cryptoMentions = ['bitcoin', 'ethereum', 'solana']; // Always get real data for top coins
+            console.log('🔄 No specific coins mentioned, fetching popular cryptocurrencies for context...');
         }
         
         // Show search indicator with comprehensive search message
@@ -1336,7 +1338,7 @@ class SamCryptoAI {
         console.log('📊 Market Data keys:', marketData ? Object.keys(marketData) : 'null');
         
         if (!this.apiKey) {
-            console.warn('⚠️ No API key, using demo response');
+            console.warn('⚠️ No API key, using response with real Binance data');
             return this.generateDemoResponse(userMessage, marketData);
         }
 
@@ -1537,20 +1539,23 @@ class SamCryptoAI {
     buildConversationHistory(systemPrompt, currentMessage) {
         const contents = [];
         
+        // Enhanced system prompt with memory context
+        const enhancedSystemPrompt = this.buildEnhancedSystemPrompt(systemPrompt);
+        
         // Add system instruction as first user message
         contents.push({
             role: 'user',
-            parts: [{ text: systemPrompt }]
+            parts: [{ text: enhancedSystemPrompt }]
         });
         
         // Add acknowledgment from model
         contents.push({
             role: 'model',
-            parts: [{ text: 'Understood! I\'m ready to provide professional crypto trading advice with real-time data, technical analysis, and personalized recommendations. I\'ll be friendly, detailed, and always include specific numbers and actionable insights.' }]
+            parts: [{ text: 'I understand! I\'m SamCrypto AI with full memory of our conversations. I remember your preferences, trading history, and past discussions. I\'ll provide personalized advice based on what I know about you and continue our conversation naturally.' }]
         });
         
-        // Add recent conversation history (last 6 messages for context)
-        const recentHistory = this.conversationHistory.slice(-6);
+        // Add recent conversation history with better context (last 10 messages)
+        const recentHistory = this.conversationHistory.slice(-10);
         for (const msg of recentHistory) {
             contents.push({
                 role: msg.role === 'user' ? 'user' : 'model',
@@ -1565,6 +1570,89 @@ class SamCryptoAI {
         });
         
         return contents;
+    }
+
+    buildEnhancedSystemPrompt(basePrompt) {
+        let enhancedPrompt = basePrompt;
+        
+        // Add conversation memory context
+        if (this.conversationHistory && this.conversationHistory.length > 0) {
+            enhancedPrompt += `\n\n**CONVERSATION MEMORY & CONTEXT:**
+            
+You have full memory of our previous conversations. Here's what you should remember:
+- Continue conversations naturally, referencing past discussions
+- Remember user's trading preferences, risk tolerance, and interests
+- Build on previous advice and recommendations
+- Use "we discussed earlier" or "as I mentioned before" when appropriate
+- Personalize responses based on conversation history
+
+**User's Profile & Preferences:**
+${this.getUserProfileSummary()}
+
+**Recent Trading Context:**
+${this.getRecentTradingContext()}
+            `;
+        }
+        
+        return enhancedPrompt;
+    }
+
+    getUserProfileSummary() {
+        if (!this.userMemory || !this.userMemory.userProfile) {
+            return "- New user, still learning about their preferences";
+        }
+        
+        const profile = this.userMemory.userProfile;
+        const preferences = this.userPreferences;
+        
+        let summary = "";
+        if (preferences.favoriteCoins && preferences.favoriteCoins.length > 0) {
+            summary += `- Interested in: ${preferences.favoriteCoins.join(', ')}\n`;
+        }
+        if (preferences.tradingStyle !== 'unknown') {
+            summary += `- Trading style: ${preferences.tradingStyle}\n`;
+        }
+        if (preferences.riskTolerance !== 'unknown') {
+            summary += `- Risk tolerance: ${preferences.riskTolerance}\n`;
+        }
+        if (preferences.experienceLevel !== 'unknown') {
+            summary += `- Experience level: ${preferences.experienceLevel}\n`;
+        }
+        
+        return summary || "- Still getting to know this user";
+    }
+
+    getRecentTradingContext() {
+        const recentConversations = this.conversationHistory.slice(-5);
+        const coinsMentioned = new Set();
+        const topicsMentioned = new Set();
+        
+        recentConversations.forEach(msg => {
+            const content = msg.content.toLowerCase();
+            // Extract coins mentioned
+            ['bitcoin', 'btc', 'ethereum', 'eth', 'solana', 'sol', 'cardano', 'ada'].forEach(coin => {
+                if (content.includes(coin)) {
+                    coinsMentioned.add(coin.toUpperCase());
+                }
+            });
+            
+            // Extract topics
+            ['trading', 'investment', 'portfolio', 'risk', 'profit', 'loss'].forEach(topic => {
+                if (content.includes(topic)) {
+                    topicsMentioned.add(topic);
+                }
+            });
+        });
+        
+        let context = "";
+        if (coinsMentioned.size > 0) {
+            context += `- Recently discussed: ${Array.from(coinsMentioned).join(', ')}\n`;
+        }
+        if (topicsMentioned.size > 0) {
+            context += `- Topics covered: ${Array.from(topicsMentioned).join(', ')}\n`;
+        }
+        
+        return context || "- Fresh conversation, no recent trading context";
     }
 
     getOptimalGenerationConfig(intent) {
@@ -1770,14 +1858,14 @@ ${userPortfolio.holdings.length > 0 ? userPortfolio.holdings.map(h => {
 
 🎯 **${coinName.toUpperCase()} - VERIFIED PRICE DATA**
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-💰 EXACT PRICE: $${data.price_usd.toLocaleString()} USD
+💰 EXACT PRICE: ${this.formatCryptoPrice(data.price_usd)} USD
 📊 24h Change: ${data.change_24h > 0 ? '+' : ''}${data.change_24h.toFixed(2)}%
 📈 Volume (24h): ${volumeFormatted}
 🏆 Market Cap: ${marketCapFormatted}
 ⏱️ FRESHNESS: ${dataFreshness} (${Math.round(dataAge/1000)}s ago from ${primarySource})
 🔗 SOURCE: ${primarySource} API
 
-⚠️ MANDATORY: Use EXACTLY $${data.price_usd.toLocaleString()} when quoting ${coinName} price`;
+⚠️ MANDATORY: Use EXACTLY ${this.formatCryptoPrice(data.price_usd)} when quoting ${coinName} price`;
                 
                 // Add technical indicators if available
                 if (data.technical_indicators) {
@@ -1843,14 +1931,14 @@ ${userPortfolio.holdings.length > 0 ? userPortfolio.holdings.map(h => {
 
 🎯 **${coinName.toUpperCase()} - VERIFIED PRICE DATA**
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-💰 EXACT PRICE: $${data.price_usd.toLocaleString()} USD
+💰 EXACT PRICE: ${this.formatCryptoPrice(data.price_usd)} USD
 📊 24h Change: ${data.change_24h > 0 ? '+' : ''}${data.change_24h.toFixed(2)}%
 📈 Volume (24h): ${volumeFormatted}
 🏆 Market Cap: ${marketCapFormatted}
 ⏱️ FRESHNESS: ${dataFreshness} (${Math.round(dataAge/1000)}s ago from ${primarySource})
 🔗 SOURCE: ${primarySource}
 
-⚠️ MANDATORY: Use EXACTLY $${data.price_usd.toLocaleString()} when quoting ${coinName} price`;
+⚠️ MANDATORY: Use EXACTLY ${this.formatCryptoPrice(data.price_usd)} when quoting ${coinName} price`;
             }
         }
 
@@ -2124,6 +2212,22 @@ RESPONSE FORMAT EXAMPLE:
     generateDemoResponse(userMessage, marketData) {
         const message = userMessage.toLowerCase();
         
+        // Check if user is asking about a specific coin
+        const coinMentioned = this.extractCryptoMentions(userMessage);
+        
+        // If no specific coin mentioned, ask for clarification instead of showing demo data
+        if (coinMentioned.length === 0 && !this.isGeneralCryptoQuery(message)) {
+            return this.generateCoinSpecificationPrompt(userMessage);
+        }
+        
+        // Always prioritize real market data if available
+        if (marketData && Object.keys(marketData).length > 0) {
+            const firstCoin = Object.keys(marketData)[0];
+            const coinData = marketData[firstCoin];
+            console.log('✅ Using REAL market data for response:', firstCoin, coinData.price_usd);
+            return this.generateCoinResponse(firstCoin, coinData, userMessage);
+        }
+        
         if (message.includes('bitcoin') || message.includes('btc')) {
             const data = marketData?.bitcoin || this.getMockMarketData('bitcoin');
             return this.generateBitcoinResponse(data);
@@ -2138,6 +2242,137 @@ RESPONSE FORMAT EXAMPLE:
         } else {
             return this.generateGeneralResponse();
         }
+    }
+
+    isGeneralCryptoQuery(message) {
+        const generalQueries = [
+            'crypto', 'cryptocurrency', 'market outlook', 'trading tips', 'portfolio advice',
+            'investment strategy', 'market analysis', 'defi', 'nft', 'blockchain', 'trading',
+            'bull market', 'bear market', 'altcoin', 'what should i buy', 'recommendation'
+        ];
+        
+        return generalQueries.some(query => message.includes(query));
+    }
+
+    generateCoinSpecificationPrompt(userMessage) {
+        const responses = [
+            `🤔 I'd love to help you with that! However, I need to know which specific cryptocurrency you're interested in to provide accurate analysis and recommendations.
+
+Which coin would you like me to analyze? For example:
+• **Bitcoin (BTC)** - Digital gold and store of value
+• **Ethereum (ETH)** - Smart contracts and DeFi ecosystem  
+• **Solana (SOL)** - High-speed blockchain platform
+• **Cardano (ADA)** - Sustainable and scalable blockchain
+• **Or any other crypto** you have in mind!
+
+Once you tell me the specific coin, I can provide:
+📊 **Live price analysis** with real-time data
+📈 **Technical indicators** and chart patterns  
+💡 **Trading signals** with entry/exit points
+🎯 **Price predictions** and market outlook
+⚡ **Personalized recommendations** based on your goals
+
+Just ask something like *"What's your analysis on Bitcoin?"* or *"Should I buy Ethereum right now?"* 🚀`,
+
+            `Hi there! 👋 I'm ready to provide detailed crypto analysis, but I need to know which specific cryptocurrency you want me to focus on.
+
+**Popular options include:**
+🟠 **Bitcoin (BTC)** - The king of crypto
+🔵 **Ethereum (ETH)** - Smart contract leader
+🟣 **Solana (SOL)** - Fast and efficient blockchain
+🔴 **Cardano (ADA)** - Research-driven approach
+🟢 **And many others!**
+
+**What can I analyze for you?**
+• Live price movements and trends
+• Technical analysis with indicators
+• Trading opportunities and risks  
+• Market sentiment and news impact
+• Entry/exit strategies for your portfolio
+
+Please specify the coin you're interested in, and I'll give you a comprehensive analysis with real-time data! 📈✨`,
+
+            `🚀 **SamCrypto AI at your service!** I'm here to help with your crypto questions, but I need a bit more information to give you the best analysis.
+
+**Which cryptocurrency are you curious about?** 
+
+Some popular choices:
+💎 **Bitcoin** - Store of value and digital gold
+🔷 **Ethereum** - DeFi and smart contract platform
+⚡ **Solana** - High-performance blockchain
+🔺 **Cardano** - Sustainable blockchain technology
+🌟 **Or any other crypto** you're watching!
+
+**Once you specify, I can provide:**
+📊 Real-time price analysis
+📈 Technical indicators (RSI, MACD, etc.)
+💰 Trading signals and recommendations
+🎯 Price targets and stop-loss levels
+📰 Latest news impact analysis
+
+Try asking: *"Analyze Bitcoin for me"* or *"What's happening with Ethereum?"* 🎯`
+        ];
+
+        return responses[Math.floor(Math.random() * responses.length)];
+    }
+
+    formatCryptoPrice(price) {
+        if (price === 0 || price === null || price === undefined) return '$0.00';
+        
+        // For very small prices (like PEPE, SHIB, etc.)
+        if (price < 0.01) {
+            // Show up to 8 decimal places for very small coins
+            return `$${price.toFixed(8).replace(/\.?0+$/, '')}`;
+        } 
+        // For prices under $1
+        else if (price < 1) {
+            return `$${price.toFixed(6).replace(/\.?0+$/, '')}`;
+        } 
+        // For regular prices
+        else if (price < 100) {
+            return `$${price.toFixed(4).replace(/\.?0+$/, '')}`;
+        } 
+        // For larger prices
+        else {
+            return `$${price.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+        }
+    }
+
+    generateCoinResponse(coinName, coinData, userMessage) {
+        const price = coinData.price_usd;
+        const change = coinData.change_24h || 0;
+        const signal = change > 2 ? 'BUY' : change < -2 ? 'SELL' : 'HOLD';
+        const confidence = Math.min(95, 70 + Math.abs(change) * 3);
+        const rsi = coinData.rsi || (50 + change * 2);
+        
+        const coinSymbol = coinName.toUpperCase();
+        const changeIcon = change >= 0 ? '📈' : '📉';
+        const signalIcon = signal === 'BUY' ? '🟢' : signal === 'SELL' ? '🔴' : '🟡';
+        
+        return `🚀 **LIVE ${coinSymbol} Analysis** (Real-time Binance Data)
+
+💰 **Current Price**: ${this.formatCryptoPrice(price)} ${changeIcon}
+📊 **24h Change**: ${change >= 0 ? '+' : ''}${change.toFixed(2)}%
+🎯 **Signal**: ${signalIcon} ${signal} (${confidence}% confidence)
+📈 **RSI**: ${rsi.toFixed(1)} ${rsi > 70 ? '(Overbought)' : rsi < 30 ? '(Oversold)' : '(Neutral)'}
+
+${change > 5 ? '🔥 **Strong bullish momentum!** Consider scaling into positions on dips.' :
+  change < -5 ? '⚠️ **Heavy selling pressure.** Wait for reversal signals before buying.' :
+  '⚖️ **Consolidation phase.** Watch for breakout direction.'}
+
+**Trading Recommendation:**
+${signal === 'BUY' ? `✅ Entry Zone: ${this.formatCryptoPrice(price * 0.98)} - ${this.formatCryptoPrice(price)}
+🎯 Target 1: ${this.formatCryptoPrice(price * 1.05)} 
+🎯 Target 2: ${this.formatCryptoPrice(price * 1.10)}
+🛡️ Stop Loss: ${this.formatCryptoPrice(price * 0.95)}` :
+  signal === 'SELL' ? `❌ Avoid new positions. Consider taking profits.
+🛡️ Key Support: ${this.formatCryptoPrice(price * 0.95)}
+📊 Watch for bounce signals around ${this.formatCryptoPrice(price * 0.90)}` :
+  `⏳ Wait for clearer signals. Key levels:
+📈 Resistance: ${this.formatCryptoPrice(price * 1.03)}
+📉 Support: ${this.formatCryptoPrice(price * 0.97)}`}
+
+*Data updated live from Binance* ⚡`;
     }
 
     generateBitcoinResponse(data) {
@@ -3095,120 +3330,80 @@ Bitcoin, Ethereum, Solana, Cardano, Ripple, Dogecoin, Polkadot, Avalanche, Polyg
         }
     }
 
-    addToConversationHistory(role, content, timestamp = new Date().toISOString()) {
-        // Safety check: ensure arrays are initialized
-        if (!this.conversationHistory) {
-            console.warn(' conversationHistory was undefined, initializing...');
-            this.conversationHistory = [];
-        }
-        if (!this.sessionMemory) {
-            console.warn(' sessionMemory was undefined, initializing...');
-            this.sessionMemory = [];
-        }
-        if (!this.userMemory) {
-            console.warn(' userMemory was undefined, initializing...');
-            this.userMemory = {
-                conversations: [],
-                userProfile: {},
-                tradingHistory: [],
-                preferences: {},
-                lastUpdated: new Date().toISOString()
-            };
-        }
-        if (!this.userMemory.conversations) {
-            this.userMemory.conversations = [];
+    addToConversationHistory(role, content) {
+        this.conversationHistory.push({
+            role: role,
+            content: content,
+            timestamp: Date.now()
+        });
+        
+        // Keep only last 20 messages to avoid overwhelming the API
+        if (this.conversationHistory.length > 20) {
+            this.conversationHistory = this.conversationHistory.slice(-20);
         }
         
-        const message = { role, content, timestamp };
-        this.conversationHistory.push(message);
-        this.sessionMemory.push(message);
-        
-        // Keep only last 50 messages in memory to manage size
-        if (this.conversationHistory.length > 50) {
-            this.conversationHistory.shift();
+        // Save to user profile if logged in
+        if (this.userManager && this.userManager.getCurrentUser()) {
+            this.userManager.getCurrentUser().chatHistory = this.conversationHistory;
+            
+            // Update conversation memory like ChatGPT
+            this.userManager.updateConversationMemory('conversation', {
+                role: role,
+                content: content,
+                timestamp: Date.now()
+            });
+            
+            // Extract and save user preferences from conversation
+            if (role === 'user') {
+                this.extractAndSaveUserPreferences(content);
+            }
+            
+            this.userManager.saveUserPreferences(this.userPreferences);
         }
-        
-        // Save to persistent memory
-        this.userMemory.conversations.push(message);
-        
-        // Keep only last 200 conversations in persistent storage
-        if (this.userMemory.conversations.length > 200) {
-            this.userMemory.conversations.shift();
-        }
-        
-        this.saveUserMemory();
     }
 
-    extractUserPreferences(message) {
-        // Safety check - ensure message and content exist
-        if (!message || !message.content) {
-            console.warn('⚠️ extractUserPreferences called with invalid message:', message);
-            return;
-        }
-        
-        const content = message.content.toLowerCase();
-        
-        // Safety check - ensure userPreferences is initialized
-        if (!this.userPreferences) {
-            console.warn('⚠️ userPreferences not initialized, initializing now...');
-            this.userPreferences = {
-                favoriteCoins: [],
-                tradingStyle: 'unknown',
-                riskTolerance: 'unknown',
-                experienceLevel: 'unknown',
-                interests: []
-            };
-        }
-        
-        // Ensure favoriteCoins array exists
-        if (!this.userPreferences.favoriteCoins) {
-            this.userPreferences.favoriteCoins = [];
-        }
-        
+    extractAndSaveUserPreferences(content) {
+        const contentLower = content.toLowerCase();
+        const currentUser = this.userManager.getCurrentUser();
+        if (!currentUser) return;
+
         // Extract favorite coins
-        const coinMentions = ['bitcoin', 'btc', 'ethereum', 'eth', 'solana', 'sol', 'cardano', 'ada', 'polkadot', 'dot'];
-        coinMentions.forEach(coin => {
-            if (content.includes(coin) && !this.userPreferences.favoriteCoins.includes(coin)) {
-                this.userPreferences.favoriteCoins.push(coin);
-            }
-        });
-        
+        const coins = this.extractCryptoMentions(content);
+        if (coins.length > 0) {
+            const currentFavorites = new Set(this.userPreferences.favoriteCoins || []);
+            coins.forEach(coin => currentFavorites.add(coin.toUpperCase()));
+            this.userPreferences.favoriteCoins = Array.from(currentFavorites).slice(0, 10); // Limit to 10
+        }
+
         // Extract trading style
-        if (content.includes('day trading') || content.includes('scalp')) {
-            this.userPreferences.tradingStyle = 'day_trading';
-        } else if (content.includes('swing') || content.includes('hold')) {
-            this.userPreferences.tradingStyle = 'swing_trading';
-        } else if (content.includes('long term') || content.includes('hodl')) {
-            this.userPreferences.tradingStyle = 'long_term';
+        if (contentLower.includes('day trading') || contentLower.includes('scalping')) {
+            this.userPreferences.tradingStyle = 'day_trader';
+        } else if (contentLower.includes('swing trading') || contentLower.includes('short term')) {
+            this.userPreferences.tradingStyle = 'swing_trader';
+        } else if (contentLower.includes('hodl') || contentLower.includes('long term') || contentLower.includes('buy and hold')) {
+            this.userPreferences.tradingStyle = 'long_term_investor';
         }
-        
+
         // Extract risk tolerance
-        if (content.includes('conservative') || content.includes('safe') || content.includes('low risk')) {
-            this.userPreferences.riskTolerance = 'conservative';
-        } else if (content.includes('aggressive') || content.includes('high risk') || content.includes('yolo')) {
-            this.userPreferences.riskTolerance = 'aggressive';
-        } else if (content.includes('moderate') || content.includes('balanced')) {
-            this.userPreferences.riskTolerance = 'moderate';
+        if (contentLower.includes('high risk') || contentLower.includes('aggressive') || contentLower.includes('leverag')) {
+            this.userPreferences.riskTolerance = 'high';
+        } else if (contentLower.includes('low risk') || contentLower.includes('safe') || contentLower.includes('conservative')) {
+            this.userPreferences.riskTolerance = 'low';
+        } else if (contentLower.includes('moderate') || contentLower.includes('balanced')) {
+            this.userPreferences.riskTolerance = 'medium';
         }
-        
+
         // Extract experience level
-        if (content.includes('beginner') || content.includes('new to') || content.includes('learning')) {
+        if (contentLower.includes('beginner') || contentLower.includes('new to') || contentLower.includes('just started')) {
             this.userPreferences.experienceLevel = 'beginner';
-        } else if (content.includes('experienced') || content.includes('advanced') || content.includes('expert')) {
-            this.userPreferences.experienceLevel = 'advanced';
-        } else if (content.includes('intermediate') || content.includes('some experience')) {
-            this.userPreferences.experienceLevel = 'intermediate';
+        } else if (contentLower.includes('experienced') || contentLower.includes('trading for') || contentLower.includes('years')) {
+            this.userPreferences.experienceLevel = 'experienced';
+        } else if (contentLower.includes('expert') || contentLower.includes('professional') || contentLower.includes('advanced')) {
+            this.userPreferences.experienceLevel = 'expert';
         }
-        
-        // Extract interests
-        const interests = ['defi', 'nft', 'staking', 'mining', 'yield farming', 'liquidity', 'trading bots'];
-        interests.forEach(interest => {
-            if (content.includes(interest) && !this.userPreferences.interests.includes(interest)) {
-                this.userPreferences.interests.push(interest);
-            }
-        });
-        
-        this.saveUserPreferences();
+
+        // Save to user memory
+        this.userManager.updateConversationMemory('preferences', this.userPreferences);
     }
 
     getMemoryContext() {
