@@ -1465,11 +1465,12 @@ class SamCryptoAI {
                 simplePrompt += ` Current ${firstCoin} price: $${data.price_usd}`;
             }
             
+            const contents = this.buildConversationHistory(simplePrompt, userMessage);
             const response = await fetch(`${this.geminiAPI}?key=${this.apiKey}`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    contents: [{ role: 'user', parts: [{ text: simplePrompt }] }],
+                    contents: contents,
                     generationConfig: { temperature: 0.7, maxOutputTokens: 1024 }
                 })
             });
@@ -1563,11 +1564,15 @@ class SamCryptoAI {
             });
         }
         
-        // Add current user message
-        contents.push({
-            role: 'user',
-            parts: [{ text: currentMessage }]
-        });
+        // Add current user message only if it's not already the last entry in history
+        const lastInHistory = recentHistory[recentHistory.length - 1];
+        const isDuplicateCurrent = lastInHistory && lastInHistory.role === 'user' && lastInHistory.content === currentMessage;
+        if (!isDuplicateCurrent) {
+            contents.push({
+                role: 'user',
+                parts: [{ text: currentMessage }]
+            });
+        }
         
         return contents;
     }
@@ -2208,16 +2213,32 @@ RESPONSE FORMAT EXAMPLE:
 
         return prompt;
     }
+    getDemoMemoryPrefix() {
+        const hist = this.conversationHistory || [];
+        const recent = hist.slice(-4);
+        const lastUser = [...recent].reverse().find(m => m.role === 'user');
+        const lastAssistant = [...recent].reverse().find(m => m.role !== 'user');
+        let prefix = '';
+        if (lastUser && lastUser.content) {
+            prefix += `Continuing from your last message: "${lastUser.content}". `;
+        }
+        if (lastAssistant && lastAssistant.content) {
+            const prev = lastAssistant.content.length > 140 ? lastAssistant.content.slice(0, 140) + '...' : lastAssistant.content;
+            prefix += `Previously I said: "${prev}"\n\n`;
+        }
+        return prefix;
+    }
 
     generateDemoResponse(userMessage, marketData) {
         const message = userMessage.toLowerCase();
+        const prefix = this.getDemoMemoryPrefix();
         
         // Check if user is asking about a specific coin
         const coinMentioned = this.extractCryptoMentions(userMessage);
         
         // If no specific coin mentioned, ask for clarification instead of showing demo data
         if (coinMentioned.length === 0 && !this.isGeneralCryptoQuery(message)) {
-            return this.generateCoinSpecificationPrompt(userMessage);
+            return prefix + this.generateCoinSpecificationPrompt(userMessage);
         }
         
         // Always prioritize real market data if available
@@ -2225,22 +2246,22 @@ RESPONSE FORMAT EXAMPLE:
             const firstCoin = Object.keys(marketData)[0];
             const coinData = marketData[firstCoin];
             console.log('✅ Using REAL market data for response:', firstCoin, coinData.price_usd);
-            return this.generateCoinResponse(firstCoin, coinData, userMessage);
+            return prefix + this.generateCoinResponse(firstCoin, coinData, userMessage);
         }
         
         if (message.includes('bitcoin') || message.includes('btc')) {
             const data = marketData?.bitcoin || this.getMockMarketData('bitcoin');
-            return this.generateBitcoinResponse(data);
+            return prefix + this.generateBitcoinResponse(data);
         } else if (message.includes('ethereum') || message.includes('eth')) {
             const data = marketData?.ethereum || this.getMockMarketData('ethereum');
-            return this.generateEthereumResponse(data);
+            return prefix + this.generateEthereumResponse(data);
         } else if (message.includes('solana') || message.includes('sol')) {
             const data = marketData?.solana || this.getMockMarketData('solana');
-            return this.generateSolanaResponse(data);
+            return prefix + this.generateSolanaResponse(data);
         } else if (message.includes('rap') || message.includes('rhyme')) {
-            return this.generateRapResponse();
+            return prefix + this.generateRapResponse();
         } else {
-            return this.generateGeneralResponse();
+            return prefix + this.generateGeneralResponse();
         }
     }
 
@@ -2613,9 +2634,12 @@ Bitcoin, Ethereum, Solana, Cardano, Ripple, Dogecoin, Polkadot, Avalanche, Polyg
         type();
     }
 
-    scrollToBottom() {
+    scrollToBottom(force = false) {
         const chatMessages = document.getElementById('chatMessages');
         if (chatMessages) {
+            if (!force && (!this.isNearBottom || this.isUserScrolling)) {
+                return;
+            }
             requestAnimationFrame(() => {
                 chatMessages.scrollTop = chatMessages.scrollHeight;
             });
@@ -2628,18 +2652,21 @@ Bitcoin, Ethereum, Solana, Cardano, Ripple, Dogecoin, Polkadot, Avalanche, Polyg
             return;
         }
         
-        const targetScroll = container.scrollHeight - container.clientHeight;
-        const scrollStep = Math.max(1, (targetScroll - container.scrollTop) / 10);
-        
         const scroll = () => {
-            container.scrollTop += scrollStep;
-            
-            if (container.scrollTop < targetScroll) {
-                requestAnimationFrame(scroll);
+            if (!this.isNearBottom || this.isUserScrolling) {
+                return;
             }
+            const targetScroll = container.scrollHeight - container.clientHeight;
+            const remaining = targetScroll - container.scrollTop;
+            if (remaining <= 1) {
+                return;
+            }
+            const step = Math.max(1, remaining / 10);
+            container.scrollTop += step;
+            requestAnimationFrame(scroll);
         };
         
-        scroll();
+        requestAnimationFrame(scroll);
     }
 
     formatMessage(content) {
