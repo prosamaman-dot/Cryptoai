@@ -563,17 +563,35 @@ class SamCryptoAI {
     }
 
     async getMarketDataForQuery(query) {
+        const intent = this.detectIntent(query);
         // Extract cryptocurrency mentions from the query
         let cryptoMentions = this.extractCryptoMentions(query);
         
-        // If no specific crypto mentioned, fetch popular coins for context
-        if (cryptoMentions.length === 0) {
+        // If scanning the market, fetch a curated top-30 list for comprehensive coverage
+        if (intent.type === 'market_scan') {
+            cryptoMentions = [
+                // Top 10
+                'bitcoin', 'ethereum', 'solana', 'binancecoin', 'ripple', 
+                'cardano', 'dogecoin', 'chainlink', 'polkadot', 'litecoin',
+                // 11-20
+                'avalanche', 'polygon', 'uniswap', 'cosmos', 'stellar',
+                'vechain', 'fantom', 'hedera', 'algorand', 'apecoin',
+                // 21-30  
+                'near', 'arbitrum', 'optimism', 'injective', 'sei',
+                'sui', 'aptos', 'render', 'worldcoin', 'pepe'
+            ];
+            console.log('🚀 Market Scan: Analyzing 30 top cryptocurrencies for best trade signals...');
+        } else if (cryptoMentions.length === 0) {
+            // If no specific crypto mentioned, fetch popular coins for context
             cryptoMentions = ['bitcoin', 'ethereum', 'solana']; // Always get real data for top coins
             console.log('🔄 No specific coins mentioned, fetching popular cryptocurrencies for context...');
         }
         
-        // Show search indicator with comprehensive search message
-        this.showSearchIndicator(`Searching ${cryptoMentions.length} coin${cryptoMentions.length > 1 ? 's' : ''} across ${cryptoMentions.length > 3 ? 'thousands of' : 'all'} Binance trading pairs...`);
+        // Show search indicator message
+        const indicatorText = intent.type === 'market_scan'
+            ? `🔍 Scanning ${cryptoMentions.length} top coins across the market for the best trade setup...`
+            : `Searching ${cryptoMentions.length} coin${cryptoMentions.length > 1 ? 's' : ''} across ${cryptoMentions.length > 3 ? 'thousands of' : 'all'} Binance trading pairs...`;
+        this.showSearchIndicator(indicatorText);
         
         const marketData = {};
         
@@ -1496,6 +1514,7 @@ class SamCryptoAI {
         
         // Intent categories
         const intents = {
+            market_scan: ['scan', 'market scan', 'whole market', 'all market', 'all coins', 'across market', 'best trade', 'best setup', 'top pick', 'trade signal', 'signal for trade', 'find me a trade', 'find me a good trade', 'which coin has signal', 'which coin to trade', 'scan the market', 'scan market', 'analyze the market', 'analyze market'],
             trade_advice: ['buy', 'sell', 'trade', 'invest', 'should i', 'recommend', 'good time', 'entry', 'exit'],
             price_check: ['price', 'cost', 'worth', 'value', 'how much'],
             analysis: ['analyze', 'analysis', 'technical', 'chart', 'indicator', 'rsi', 'macd'],
@@ -2002,6 +2021,62 @@ STEP 4: IF NOT CONFIRMED → NO SIGNAL
 - NEVER force a trade when conditions aren't perfect
 
 CRITICAL: Only give BUY/SELL signals when you have HIGH confidence (3+ confirmations). Otherwise recommend WAIT/HOLD. Protecting capital is #1 priority!`;
+        } else if (intent.type === 'market_scan') {
+            const availableUSDT = userPortfolio.usdtBalance || 0;
+            const recommendedPosition = (availableUSDT * 0.03).toFixed(2);
+            intentGuidance = `\n\n🎯 USER INTENT: Market Scan - Find THE BEST Trade Setup from 30 Coins
+
+⚡ YOUR TASK:
+You have scanned 30 top coins. Analyze ALL the provided market data and identify the SINGLE BEST trading opportunity.
+
+🎯 MANDATORY RESPONSE FORMAT:
+
+"🚀 **I scanned 30 top coins and found the best setup!**
+
+🏆 **I got [COIN NAME] - it has the perfect setup to trade right now!**
+
+💎 **Why [COIN] is the TOP PICK:**
+✅ [Strong confirmation 1 - e.g., RSI oversold at 28, strong buy signal]
+✅ [Strong confirmation 2 - e.g., Bouncing off major support at $X,XXX]
+✅ [Strong confirmation 3 - e.g., Volume spike +150% confirming momentum]
+✅ [Strong confirmation 4 - e.g., Bullish trend on daily timeframe]
+
+💰 **THE TRADE SETUP:**
+📍 Entry: $X,XXX.XX
+🎯 Target 1: $X,XXX.XX (+X%)
+🎯 Target 2: $X,XXX.XX (+X%)
+🛡️ Stop Loss: $X,XXX.XX (-X%)
+💵 Position Size: $${recommendedPosition} (3% of your USDT)
+📊 Risk/Reward: 1:X
+⚡ Confidence: XX% (HIGH/MEDIUM)
+
+🔥 **Runner-ups worth watching:**
+2️⃣ [Coin 2] - [Brief reason, e.g., "Good setup but RSI at 45, wait for oversold"]
+3️⃣ [Coin 3] - [Brief reason, e.g., "Strong volume but needs support confirmation"]
+
+💡 **Market Overview:**
+[1-2 sentences about overall market conditions from scanning 30 coins]"
+
+IF NO GOOD SETUP EXISTS:
+"⚠️ **Market Scan Complete: No Strong Setups Right Now**
+
+I scanned all 30 top coins but none meet my strict 3+ confirmation criteria for a high-confidence trade.
+
+🔍 **What I'm watching:**
+- [Coin 1]: [What needs to happen, e.g., "Wait for RSI to drop below 30"]
+- [Coin 2]: [What needs to happen, e.g., "Need volume confirmation on breakout"]
+- [Coin 3]: [What needs to happen, e.g., "Watching for support test at $X,XXX"]
+
+⏰ **Best Action:** WAIT - Don't force trades! I'll keep scanning and alert you when a perfect setup appears."
+
+CRITICAL RULES:
+- ALWAYS mention you scanned 30 coins
+- Pick ONLY ONE coin as the best (or WAIT if none qualify)
+- Need 3+ confirmations for BUY/SELL signals
+- Use EXACT prices from the live data provided
+- Calculate precise entry, targets, and stop-loss levels
+- Show Risk/Reward ratio (minimum 1:2)
+- If no setup meets criteria, explicitly say WAIT`;
         } else if (intent.type === 'analysis') {
             intentGuidance = `\n\n🎯 USER INTENT: They want TECHNICAL ANALYSIS
 - Deep dive into RSI, MACD, support/resistance
