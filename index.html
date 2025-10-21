@@ -19,6 +19,7 @@
     <link rel="stylesheet" href="css/performance.css">
     <link rel="stylesheet" href="css/auth-fix.css">
     <link rel="stylesheet" href="css/features-page.css">
+    <link rel="stylesheet" href="css/new-features.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <!-- Chart.js for interactive charts -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -175,6 +176,61 @@
                     </div>
                     <h3>Sentiment Analysis</h3>
                     <p>Track market sentiment and trends</p>
+                </div>
+                
+                <!-- NEW: Paper Trading -->
+                <div class="feature-card" id="paperTradingToggle">
+                    <div class="feature-icon">
+                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                            <polyline points="14 2 14 8 20 8"></polyline>
+                            <line x1="12" y1="18" x2="12" y2="12"></line>
+                            <line x1="9" y1="15" x2="15" y2="15"></line>
+                        </svg>
+                    </div>
+                    <h3>🎮 Paper Trading</h3>
+                    <p>Practice trading with virtual $10,000</p>
+                    <span class="feature-badge">Demo</span>
+                </div>
+                
+                <!-- NEW: Whale Alerts -->
+                <div class="feature-card" id="whaleAlertsToggle">
+                    <div class="feature-icon">
+                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M3 12a9 9 0 0 0 9 9 9 9 0 0 0 9-9 9 9 0 0 0-9-9"></path>
+                            <path d="M3 12h9"></path>
+                            <circle cx="18" cy="7" r="1"></circle>
+                        </svg>
+                    </div>
+                    <h3>🐋 Whale Alerts</h3>
+                    <p>Track large transactions in real-time</p>
+                    <span class="feature-value" id="whaleCount">0</span>
+                </div>
+                
+                <!-- NEW: Chart Screenshot Analysis -->
+                <div class="feature-card" id="chartAnalysisToggle">
+                    <div class="feature-icon">
+                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                            <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                            <polyline points="21 15 16 10 5 21"></polyline>
+                        </svg>
+                    </div>
+                    <h3>📸 Chart Analysis</h3>
+                    <p>Upload chart screenshots for AI analysis</p>
+                </div>
+                
+                <!-- NEW: Performance Dashboard -->
+                <div class="feature-card" id="performanceDashToggle">
+                    <div class="feature-icon">
+                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M3 3v18h18"></path>
+                            <path d="M18.7 8l-5.1 5.2-2.8-2.7L7 14.3"></path>
+                        </svg>
+                    </div>
+                    <h3>🏆 Performance</h3>
+                    <p>Track AI signal accuracy & your stats</p>
+                    <span class="feature-value" id="winRate">0%</span>
                 </div>
                 
                 <!-- Profile Settings -->
@@ -800,8 +856,213 @@
 
     <!-- API Modal Removed - Using Built-in API Key -->
 
+    <!-- NEW: Paper Trading Modal -->
+    <div id="paperTradingModal" class="modal hidden">
+        <div class="modal-content large-modal">
+            <div class="modal-header">
+                <h2>🎮 Paper Trading Platform</h2>
+                <button class="modal-close" id="paperTradingClose">&times;</button>
+            </div>
+            <div class="paper-trading-content">
+                <div class="paper-trading-grid">
+                    <!-- Left: Order Form -->
+                    <div class="paper-order-section">
+                        <h3>📝 Place Order</h3>
+                        <div class="order-form">
+                            <div class="order-type-tabs">
+                                <button class="order-tab active" data-type="buy">BUY</button>
+                                <button class="order-tab" data-type="sell">SELL</button>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label>Select Coin</label>
+                                <select id="paperCoinSelect" class="paper-input">
+                                    <option value="">Loading coins...</option>
+                                </select>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label>Current Price</label>
+                                <div class="price-display">
+                                    <span id="paperCurrentPrice">$0.00</span>
+                                    <span id="paperPriceChange" class="price-change">-</span>
+                                </div>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label>Order Type</label>
+                                <select id="paperOrderType" class="paper-input">
+                                    <option value="market">Market Order (Instant)</option>
+                                    <option value="limit">Limit Order (Set Price)</option>
+                                </select>
+                            </div>
+                            
+                            <div class="form-group" id="limitPriceGroup" style="display: none;">
+                                <label>Limit Price ($)</label>
+                                <input type="number" id="paperLimitPrice" class="paper-input" placeholder="0.00" step="0.01">
+                            </div>
+                            
+                            <div class="form-group">
+                                <label>Amount (Coins)</label>
+                                <input type="number" id="paperAmount" class="paper-input" placeholder="0.00" step="0.0001">
+                                <div class="amount-helpers">
+                                    <button class="amount-btn" data-percent="25">25%</button>
+                                    <button class="amount-btn" data-percent="50">50%</button>
+                                    <button class="amount-btn" data-percent="75">75%</button>
+                                    <button class="amount-btn" data-percent="100">100%</button>
+                                </div>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label>Total Cost</label>
+                                <div class="total-display" id="paperTotalCost">$0.00</div>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label>Stop Loss (Optional)</label>
+                                <input type="number" id="paperStopLoss" class="paper-input" placeholder="0.00" step="0.01">
+                            </div>
+                            
+                            <div class="form-group">
+                                <label>Take Profit (Optional)</label>
+                                <input type="number" id="paperTakeProfit" class="paper-input" placeholder="0.00" step="0.01">
+                            </div>
+                            
+                            <button id="executePaperOrder" class="btn-primary btn-large">
+                                <span id="orderBtnText">BUY</span>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Right: Balance & Positions -->
+                    <div class="paper-portfolio-section">
+                        <div class="paper-balance">
+                            <h3>Virtual Balance</h3>
+                            <div class="balance-display">
+                                <span class="balance-amount" id="paperBalance">$10,000.00</span>
+                                <span class="balance-pnl" id="paperPnL">+$0.00 (0%)</span>
+                            </div>
+                        </div>
+                        
+                        <div class="paper-portfolio" id="paperPortfolio">
+                            <h3>Open Positions <span class="live-indicator">🔴 LIVE</span></h3>
+                            <div id="paperPositionsList"></div>
+                        </div>
+                        
+                        <div class="paper-actions">
+                            <button id="resetPaperAccount" class="btn-secondary">Reset Account</button>
+                            <button id="comparePaperLive" class="btn-primary">Compare to Live</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- NEW: Whale Alerts Modal -->
+    <div id="whaleAlertsModal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>🐋 Whale Alert - Large Transactions</h2>
+                <button class="modal-close" id="whaleAlertsClose">&times;</button>
+            </div>
+            <div class="whale-alerts-content">
+                <div class="whale-filters">
+                    <select id="whaleFilter">
+                        <option value="all">All Coins</option>
+                        <option value="bitcoin">Bitcoin</option>
+                        <option value="ethereum">Ethereum</option>
+                    </select>
+                    <select id="whaleSize">
+                        <option value="1000000">$1M+</option>
+                        <option value="5000000">$5M+</option>
+                        <option value="10000000">$10M+</option>
+                    </select>
+                </div>
+                <div id="whaleAlertsList" class="whale-list">
+                    <p class="loading-text">Loading whale transactions...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- NEW: Chart Screenshot Analysis Modal -->
+    <div id="chartAnalysisModal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>📸 Chart Screenshot Analysis</h2>
+                <button class="modal-close" id="chartAnalysisClose">&times;</button>
+            </div>
+            <div class="chart-analysis-content">
+                <div class="upload-section">
+                    <input type="file" id="chartImageInput" accept="image/*" style="display: none;">
+                    <button id="uploadChartBtn" class="upload-btn">
+                        📷 Upload Chart Screenshot
+                    </button>
+                    <p class="upload-hint">Upload any trading chart for AI analysis</p>
+                </div>
+                <div id="chartPreview" class="chart-preview hidden">
+                    <img id="chartPreviewImg" src="" alt="Chart Preview">
+                </div>
+                <div id="chartAnalysisResult" class="analysis-result hidden">
+                    <h3>AI Analysis</h3>
+                    <div id="chartAnalysisText"></div>
+                </div>
+                <button id="analyzeChartBtn" class="btn-primary hidden">🤖 Analyze Chart</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- NEW: Performance Dashboard Modal -->
+    <div id="performanceDashModal" class="modal hidden">
+        <div class="modal-content large-modal">
+            <div class="modal-header">
+                <h2>🏆 Performance Dashboard</h2>
+                <button class="modal-close" id="performanceDashClose">&times;</button>
+            </div>
+            <div class="performance-content">
+                <div class="performance-summary">
+                    <div class="perf-card">
+                        <h3>AI Signals</h3>
+                        <div class="perf-stat">
+                            <span class="stat-value" id="totalSignals">0</span>
+                            <span class="stat-label">Total Signals</span>
+                        </div>
+                    </div>
+                    <div class="perf-card">
+                        <h3>Win Rate</h3>
+                        <div class="perf-stat">
+                            <span class="stat-value" id="signalWinRate">0%</span>
+                            <span class="stat-label">Accuracy</span>
+                        </div>
+                    </div>
+                    <div class="perf-card">
+                        <h3>Total Return</h3>
+                        <div class="perf-stat">
+                            <span class="stat-value" id="totalReturn">+0%</span>
+                            <span class="stat-label">ROI</span>
+                        </div>
+                    </div>
+                    <div class="perf-card">
+                        <h3>Best Trade</h3>
+                        <div class="perf-stat">
+                            <span class="stat-value" id="bestTrade">-</span>
+                            <span class="stat-label">Coin</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="signals-history">
+                    <h3>Recent Signals History</h3>
+                    <div id="signalsHistoryList"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Load UserManager first -->
     <script src="js/user-manager.js"></script>
+    <!-- Load new features -->
+    <script src="js/new-features.js"></script>
     <!-- Then load main application -->
     <script src="js/script.js"></script>
 </body>

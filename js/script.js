@@ -100,7 +100,115 @@ class SamCryptoAI {
         // Preload Binance all-ticker data for faster responses
         this.preloadBinanceData();
         
+        // Initialize new features
+        this.initializeNewFeatures();
+        
         console.log('SamCrypto AI initialized successfully');
+    }
+
+    initializeNewFeatures() {
+        // Initialize NewFeatures class if available
+        if (typeof NewFeatures !== 'undefined') {
+            this.newFeatures = new NewFeatures(this);
+            console.log('✅ New features initialized: Paper Trading, Whale Alerts, Chart Analysis, Performance Dashboard');
+        }
+        
+        // Initialize TradingView charts feature
+        this.initializeTradingViewCharts();
+        
+        // Initialize news sentiment feature
+        this.initializeNewsSentiment();
+    }
+
+    initializeTradingViewCharts() {
+        // Add click handler to show chart in chat
+        const chartsToggle = document.getElementById('chartsToggle');
+        if (chartsToggle) {
+            chartsToggle.addEventListener('click', () => {
+                this.showTradingViewChart('BTCUSDT');
+            });
+        }
+    }
+
+    showTradingViewChart(symbol) {
+        const chartHTML = `
+            <div class="tradingview-widget-container" style="height:500px; margin: 20px 0;">
+                <div id="tradingview_chart_${Date.now()}"></div>
+            </div>
+        `;
+        
+        this.addMessage(chartHTML, 'ai');
+        
+        // Initialize TradingView widget
+        setTimeout(() => {
+            const chartId = document.querySelector('[id^="tradingview_chart_"]').id;
+            new TradingView.widget({
+                "autosize": true,
+                "symbol": `BINANCE:${symbol}`,
+                "interval": "240",
+                "timezone": "Etc/UTC",
+                "theme": "dark",
+                "style": "1",
+                "locale": "en",
+                "toolbar_bg": "#f1f3f6",
+                "enable_publishing": false,
+                "allow_symbol_change": true,
+                "container_id": chartId
+            });
+        }, 100);
+    }
+
+    initializeNewsSentiment() {
+        // Enhance existing fetchCryptoNews to include sentiment
+        const newsToggle = document.getElementById('newsToggle');
+        if (newsToggle) {
+            newsToggle.addEventListener('click', async () => {
+                await this.showNewsSentiment();
+            });
+        }
+    }
+
+    async showNewsSentiment() {
+        try {
+            this.app.addMessage('📰 Fetching latest crypto news with AI sentiment analysis...', 'ai');
+            
+            // Fetch news (using existing method)
+            const newsData = await this.fetchCryptoNews();
+            
+            if (!newsData || newsData.length === 0) {
+                this.addMessage('No news available at the moment.', 'ai');
+                return;
+            }
+
+            // Analyze sentiment with AI
+            const newsText = newsData.slice(0, 5).map((article, i) => 
+                `${i+1}. ${article.title || article.headline}`
+            ).join('\n');
+
+            const sentimentPrompt = `Analyze the overall crypto market sentiment from these recent news headlines:\n\n${newsText}\n\nProvide: 1) Overall sentiment (Bullish/Bearish/Neutral) with confidence %, 2) Key themes, 3) Which coins are mentioned most, 4) Trading implications. Be concise.`;
+
+            const response = await fetch(`${this.geminiAPI}?key=${this.apiKey}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    contents: [{
+                        role: 'user',
+                        parts: [{ text: sentimentPrompt }]
+                    }]
+                })
+            });
+
+            const data = await response.json();
+            const analysis = data.candidates?.[0]?.content?.parts?.[0]?.text || 'Could not analyze sentiment.';
+
+            const message = `📰 **Latest Crypto News Sentiment**\n\n${analysis}\n\n**Recent Headlines:**\n${newsData.slice(0, 5).map((article, i) => `${i+1}. ${article.title || article.headline}`).join('\n')}`;
+            
+            this.addMessage(message, 'ai');
+
+        } catch (error) {
+            console.error('News sentiment error:', error);
+            this.addMessage('❌ Could not fetch news sentiment. Please try again.', 'ai');
+        }
     }
 
     // Load user-specific data
