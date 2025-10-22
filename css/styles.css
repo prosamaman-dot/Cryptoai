@@ -392,6 +392,7 @@ body {
 .user-message {
     display: flex;
     justify-content: flex-end;
+    margin-bottom: 16px;
 }
 
 .ai-message {
@@ -418,7 +419,8 @@ body {
 }
 
 .user-message .message-content {
-    max-width: 80%;
+    max-width: 75%;
+    min-width: 100px;
 }
 
 .message-text {
@@ -426,23 +428,27 @@ body {
     padding: 12px 16px;
     word-wrap: break-word;
     overflow-wrap: break-word;
-    line-height: 1.4;
+    line-height: 1.6;
 }
 
 .user-message .message-text {
-    background: #2a2a2a;
+    background: linear-gradient(135deg, #00d4ff 0%, #0099cc 100%);
     border: none;
     color: #ffffff;
-    display: inline-block;
-    max-width: fit-content;
+    display: block;
+    width: 100%;
+    min-width: 80px;
+    padding: 14px 18px;
+    font-size: 15px;
     white-space: pre-wrap;
-    word-break: keep-all;
+    word-break: break-word;
     overflow-wrap: break-word;
-    hyphens: none;
+    border-radius: 20px 20px 4px 20px;
+    box-shadow: 0 2px 8px rgba(0, 212, 255, 0.3);
 }
 
 .user-message .message-text br {
-    display: none;
+    display: block;
 }
 
 .ai-message .message-text {
@@ -1018,7 +1024,7 @@ body {
         font-size: 0.9rem;
     }
     
-    .user-message .message-text {
+    .user-message .message-content {
         max-width: 85%;
     }
     
@@ -1144,7 +1150,7 @@ body {
         font-size: 0.85rem;
     }
     
-    .user-message .message-text {
+    .user-message .message-content {
         max-width: 90%;
     }
     
