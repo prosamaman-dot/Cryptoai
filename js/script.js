@@ -6,8 +6,21 @@ class SamCryptoAI {
         this.userManager = new UserManager();
         
         // Core API configuration
-        this.apiKey = 'AIzaSyBAgDmA7Uak6FIGh9MsN2582ouRaqpQ_Cg'; // Default API key
+        this.apiKey = 'AIzaSyALIN80HsSIYohOHgW-7rMokj2jtgD_5qI'; // Default API key
         this.conversationHistory = [];
+        
+        // Advanced Memory System (ChatGPT/Claude-level)
+        this.conversationContext = {
+            messages: [],
+            summary: '',
+            keyPoints: [],
+            userIntent: '',
+            lastTopic: '',
+            previousQuestions: [],
+            userProfile: {}
+        };
+        this.maxContextMessages = 20; // Keep last 20 messages
+        this.contextWindowSize = 15000; // Characters for context
         
         // Enhanced Multi-Source Crypto Price APIs
         this.coinGeckoAPI = 'https://api.coingecko.com/api/v3';
@@ -94,6 +107,9 @@ class SamCryptoAI {
         // Load chat history
         this.loadChatHistory();
         
+        // Load conversation context (advanced memory)
+        this.loadConversationContext();
+        
         // Initialize portfolio charts
         this.initializePortfolioCharts();
         
@@ -104,6 +120,7 @@ class SamCryptoAI {
         this.initializeNewFeatures();
         
         console.log('SamCrypto AI initialized successfully');
+        console.log('🧠 Advanced memory system active - ChatGPT/Claude-level context awareness');
     }
 
     initializeNewFeatures() {
@@ -583,6 +600,9 @@ class SamCryptoAI {
         this.addMessage(message, 'user');
         this.addToConversationHistory('user', message);
         
+        // Advanced context management
+        this.updateConversationContext(message, 'user');
+        
         // Extract user preferences from the message
         this.extractAndSaveUserPreferences(message);
         
@@ -612,6 +632,9 @@ class SamCryptoAI {
             this.hideSearchIndicator();
             this.addMessage(response, 'ai');
             this.addToConversationHistory('assistant', response);
+            
+            // Update context with AI response
+            this.updateConversationContext(response, 'assistant');
             
         } catch (error) {
             console.error('❌ Error generating response:', error);
@@ -1497,7 +1520,9 @@ class SamCryptoAI {
             const generationConfig = this.getOptimalGenerationConfig(intent);
             
             console.log('📡 Sending request to Gemini API...');
-            const response = await fetch(`${this.geminiAPI}?key=${this.apiKey}`, {
+            
+            // Smart retry with exponential backoff
+            const response = await this.fetchWithRetry(`${this.geminiAPI}?key=${this.apiKey}`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -1524,13 +1549,31 @@ class SamCryptoAI {
                         }
                     ]
                 })
-            });
+            }, 3); // 3 retries
 
             console.log('📡 Response status:', response.status);
 
             if (!response.ok) {
                 const errorText = await response.text();
                 console.error('❌ API error details:', errorText);
+                
+                // Parse error for better handling
+                let errorObj;
+                try {
+                    errorObj = JSON.parse(errorText);
+                } catch (e) {
+                    errorObj = { error: { message: errorText } };
+                }
+                
+                // Check for specific errors
+                if (response.status === 503 || errorObj.error?.status === 'UNAVAILABLE') {
+                    throw new Error('API_OVERLOADED');
+                } else if (response.status === 429) {
+                    throw new Error('RATE_LIMITED');
+                } else if (response.status === 400) {
+                    throw new Error('INVALID_REQUEST');
+                }
+                
                 throw new Error(`API request failed: ${response.status} - ${errorText}`);
             }
 
@@ -1569,9 +1612,18 @@ class SamCryptoAI {
             console.error('❌ Gemini API error:', error);
             
             // Handle specific error types
-            if (error.message.includes('503') || error.message.includes('overloaded')) {
-                console.log('🔄 API overloaded, trying with simpler prompt...');
+            if (error.message === 'API_OVERLOADED' || error.message.includes('503') || error.message.includes('overloaded')) {
+                console.log('🔄 API overloaded, using demo response with real data...');
+                this.showUserMessage('⚠️ API busy - Using real Binance data instead!', 3000);
                 return this.handleAPIOverload(userMessage, marketData);
+            } else if (error.message === 'RATE_LIMITED') {
+                console.log('⏰ Rate limited, using demo response...');
+                this.showUserMessage('⏰ API rate limited - Using real Binance data!', 3000);
+                return this.handleAPIOverload(userMessage, marketData);
+            } else if (error.message === 'INVALID_REQUEST') {
+                console.log('❌ Invalid request, using fallback...');
+                this.showUserMessage('💡 Using real market data for your question!', 2000);
+                return this.generateDemoResponse(userMessage, marketData);
             }
             
             console.log('🔄 Falling back to demo response');
@@ -1580,41 +1632,9 @@ class SamCryptoAI {
     }
 
     async handleAPIOverload(userMessage, marketData) {
-        try {
-            // Simplified request for overloaded API
-            console.log('📡 Sending simplified request due to API overload...');
-            
-            let simplePrompt = `You are SamCrypto AI. Answer briefly about: ${userMessage}`;
-            if (marketData && Object.keys(marketData).length > 0) {
-                const firstCoin = Object.keys(marketData)[0];
-                const data = marketData[firstCoin];
-                simplePrompt += ` Current ${firstCoin} price: $${data.price_usd}`;
-            }
-            
-            const contents = this.buildConversationHistory(simplePrompt, userMessage);
-            const response = await fetch(`${this.geminiAPI}?key=${this.apiKey}`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    contents: contents,
-                    generationConfig: { temperature: 0.7, maxOutputTokens: 1024 }
-                })
-            });
-
-            if (response.ok) {
-                const data = await response.json();
-                if (data.candidates?.[0]?.content?.parts?.[0]?.text) {
-                    console.log('✅ Simplified API request succeeded (API was overloaded but retry worked)');
-                    return data.candidates[0].content.parts[0].text;
-                }
-            }
-            
-            throw new Error('Simplified request also failed');
-            
-        } catch (error) {
-            console.log('❌ Simplified request failed, using demo response');
-            return this.generateDemoResponse(userMessage, marketData);
-        }
+        // Skip simplified request if API is completely down, go straight to demo
+        console.log('⚠️ API overloaded, using demo response with real data');
+        return this.generateDemoResponse(userMessage, marketData);
     }
 
     detectIntent(message) {
@@ -1726,6 +1746,9 @@ ${this.getRecentTradingContext()}
             `;
         }
         
+        // Add advanced contextual understanding
+        enhancedPrompt += this.getContextualPromptEnhancement();
+        
         return enhancedPrompt;
     }
 
@@ -1785,6 +1808,394 @@ ${this.getRecentTradingContext()}
         }
         
         return context || "- Fresh conversation, no recent trading context";
+    }
+
+    // ===== ADVANCED MEMORY SYSTEM (ChatGPT/Claude-level) =====
+    
+    updateConversationContext(message, role) {
+        // Add message to context
+        this.conversationContext.messages.push({
+            role: role,
+            content: message,
+            timestamp: Date.now()
+        });
+        
+        // Keep only recent messages (last 20)
+        if (this.conversationContext.messages.length > this.maxContextMessages) {
+            this.conversationContext.messages = this.conversationContext.messages.slice(-this.maxContextMessages);
+        }
+        
+        // Extract and track information from BOTH user and AI messages
+        if (role === 'user') {
+            this.trackUserIntent(message);
+            this.trackQuestions(message);
+            this.extractUserProfile(message);
+        }
+        
+        // Track topics from both user AND AI messages
+        this.trackTopics(message, role);
+        
+        // Track AI's coin mentions for better context
+        if (role === 'assistant') {
+            this.trackAIMentions(message);
+        }
+        
+        // Generate conversation summary periodically
+        if (this.conversationContext.messages.length % 10 === 0) {
+            this.generateConversationSummary();
+        }
+        
+        // Save context to localStorage
+        this.saveConversationContext();
+    }
+    
+    trackUserIntent(message) {
+        const lowerMsg = message.toLowerCase();
+        
+        // Detect various intents
+        if (lowerMsg.includes('?')) {
+            this.conversationContext.userIntent = 'asking_question';
+        } else if (lowerMsg.match(/buy|sell|trade/)) {
+            this.conversationContext.userIntent = 'trading_action';
+        } else if (lowerMsg.match(/how|why|what|when|where|explain/)) {
+            this.conversationContext.userIntent = 'seeking_explanation';
+        } else if (lowerMsg.match(/compare|vs|versus|difference/)) {
+            this.conversationContext.userIntent = 'comparison';
+        } else if (lowerMsg.match(/predict|forecast|future|will/)) {
+            this.conversationContext.userIntent = 'prediction';
+        } else {
+            this.conversationContext.userIntent = 'general_discussion';
+        }
+    }
+    
+    trackTopics(message, role = 'user') {
+        const lowerMsg = message.toLowerCase();
+        const topics = new Set(this.conversationContext.keyPoints);
+        
+        // Comprehensive crypto list
+        const cryptos = [
+            'bitcoin', 'btc', 'ethereum', 'eth', 'solana', 'sol', 'cardano', 'ada',
+            'ripple', 'xrp', 'dogecoin', 'doge', 'polkadot', 'dot', 'avalanche', 'avax',
+            'shiba', 'matic', 'polygon', 'link', 'chainlink', 'litecoin', 'ltc',
+            'uniswap', 'uni', 'cosmos', 'atom', 'stellar', 'xlm', 'monero', 'xmr',
+            'tron', 'trx', 'binance', 'bnb', 'near', 'arbitrum', 'arb', 'optimism', 'op',
+            'injective', 'inj', 'sei', 'sui', 'aptos', 'apt', 'render', 'pepe'
+        ];
+        
+        // Track ALL crypto mentions
+        cryptos.forEach(crypto => {
+            if (lowerMsg.includes(crypto)) {
+                const normalized = this.normalizeCoinName(crypto);
+                topics.add(normalized);
+            }
+        });
+        
+        // Track trading topics
+        const tradingTopics = ['price', 'trend', 'support', 'resistance', 'rsi', 'volume', 'bull', 'bear', 'breakout', 'analysis', 'trade', 'setup'];
+        tradingTopics.forEach(topic => {
+            if (lowerMsg.includes(topic)) {
+                topics.add(topic);
+            }
+        });
+        
+        this.conversationContext.keyPoints = Array.from(topics).slice(-15); // Keep more topics
+        this.conversationContext.lastTopic = Array.from(topics).pop() || 'general';
+    }
+    
+    normalizeCoinName(coin) {
+        const mapping = {
+            'btc': 'Bitcoin', 'bitcoin': 'Bitcoin',
+            'eth': 'Ethereum', 'ethereum': 'Ethereum',
+            'sol': 'Solana', 'solana': 'Solana',
+            'ada': 'Cardano', 'cardano': 'Cardano',
+            'xrp': 'Ripple', 'ripple': 'Ripple',
+            'doge': 'Dogecoin', 'dogecoin': 'Dogecoin',
+            'dot': 'Polkadot', 'polkadot': 'Polkadot',
+            'avax': 'Avalanche', 'avalanche': 'Avalanche',
+            'bnb': 'BNB', 'binance': 'BNB',
+            'matic': 'Polygon', 'polygon': 'Polygon',
+            'link': 'Chainlink', 'chainlink': 'Chainlink',
+            'ltc': 'Litecoin', 'litecoin': 'Litecoin',
+            'uni': 'Uniswap', 'uniswap': 'Uniswap',
+            'atom': 'Cosmos', 'cosmos': 'Cosmos',
+            'xlm': 'Stellar', 'stellar': 'Stellar',
+            'near': 'NEAR', 'arb': 'Arbitrum', 'arbitrum': 'Arbitrum',
+            'op': 'Optimism', 'optimism': 'Optimism',
+            'inj': 'Injective', 'injective': 'Injective',
+            'sei': 'SEI', 'sui': 'SUI', 'apt': 'Aptos', 'aptos': 'Aptos',
+            'render': 'Render', 'pepe': 'PEPE'
+        };
+        return mapping[coin.toLowerCase()] || coin.toUpperCase();
+    }
+    
+    trackAIMentions(message) {
+        // Extract coins that AI specifically discussed
+        if (!this.conversationContext.aiMentionedCoins) {
+            this.conversationContext.aiMentionedCoins = [];
+        }
+        
+        const lowerMsg = message.toLowerCase();
+        const coins = [];
+        
+        // Look for price patterns like "$105,064.21 USD" or "Bitcoin (BTC) is trading"
+        const patterns = [
+            /(\w+)\s+\((\w+)\)\s+is\s+trading/gi,
+            /(\w+)\s+is\s+(?:currently\s+)?(?:at|trading)/gi,
+            /price:\s+\$[\d,]+.*?(\w+)/gi
+        ];
+        
+        patterns.forEach(pattern => {
+            const matches = message.matchAll(pattern);
+            for (const match of matches) {
+                const coin = match[1] || match[2];
+                if (coin && coin.length > 2) {
+                    coins.push(this.normalizeCoinName(coin));
+                }
+            }
+        });
+        
+        // Also check for explicit mentions
+        ['BTC', 'ETH', 'SOL', 'Bitcoin', 'Ethereum', 'Solana'].forEach(coin => {
+            if (message.includes(coin)) {
+                coins.push(coin);
+            }
+        });
+        
+        // Store unique coins mentioned in last response
+        this.conversationContext.aiMentionedCoins = [...new Set(coins)].slice(-5);
+        
+        console.log('🤖 AI mentioned coins:', this.conversationContext.aiMentionedCoins);
+    }
+    
+    trackQuestions(message) {
+        if (message.includes('?')) {
+            this.conversationContext.previousQuestions.push({
+                question: message,
+                timestamp: Date.now()
+            });
+            
+            // Keep only last 10 questions
+            if (this.conversationContext.previousQuestions.length > 10) {
+                this.conversationContext.previousQuestions = this.conversationContext.previousQuestions.slice(-10);
+            }
+        }
+    }
+    
+    extractUserProfile(message) {
+        const lowerMsg = message.toLowerCase();
+        
+        // Track experience level
+        if (lowerMsg.match(/beginner|new to|just started|first time/)) {
+            this.conversationContext.userProfile.experienceLevel = 'beginner';
+        } else if (lowerMsg.match(/expert|professional|advanced|experienced/)) {
+            this.conversationContext.userProfile.experienceLevel = 'advanced';
+        }
+        
+        // Track risk tolerance
+        if (lowerMsg.match(/safe|conservative|low risk|careful/)) {
+            this.conversationContext.userProfile.riskTolerance = 'low';
+        } else if (lowerMsg.match(/aggressive|high risk|yolo|moon/)) {
+            this.conversationContext.userProfile.riskTolerance = 'high';
+        }
+        
+        // Track trading goals
+        if (lowerMsg.match(/long term|hold|hodl|invest/)) {
+            this.conversationContext.userProfile.tradingStyle = 'long-term';
+        } else if (lowerMsg.match(/day trad|short term|quick|scalp/)) {
+            this.conversationContext.userProfile.tradingStyle = 'short-term';
+        }
+        
+        // Track interests
+        if (lowerMsg.match(/defi|decentralized finance/)) {
+            if (!this.conversationContext.userProfile.interests) {
+                this.conversationContext.userProfile.interests = [];
+            }
+            if (!this.conversationContext.userProfile.interests.includes('DeFi')) {
+                this.conversationContext.userProfile.interests.push('DeFi');
+            }
+        }
+        if (lowerMsg.match(/nft|non fungible/)) {
+            if (!this.conversationContext.userProfile.interests) {
+                this.conversationContext.userProfile.interests = [];
+            }
+            if (!this.conversationContext.userProfile.interests.includes('NFTs')) {
+                this.conversationContext.userProfile.interests.push('NFTs');
+            }
+        }
+    }
+    
+    generateConversationSummary() {
+        const messages = this.conversationContext.messages.slice(-10);
+        const topics = this.conversationContext.keyPoints;
+        const intent = this.conversationContext.userIntent;
+        
+        this.conversationContext.summary = `Recent discussion about ${topics.join(', ')}. User is ${intent}. ${messages.length} messages in context.`;
+        
+        console.log('📝 Conversation summary generated:', this.conversationContext.summary);
+    }
+    
+    saveConversationContext() {
+        try {
+            localStorage.setItem('conversationContext', JSON.stringify(this.conversationContext));
+        } catch (error) {
+            console.error('Error saving conversation context:', error);
+        }
+    }
+    
+    loadConversationContext() {
+        try {
+            const saved = localStorage.getItem('conversationContext');
+            if (saved) {
+                this.conversationContext = JSON.parse(saved);
+                console.log('✅ Loaded conversation context:', this.conversationContext.messages.length, 'messages');
+            }
+        } catch (error) {
+            console.error('Error loading conversation context:', error);
+        }
+    }
+    
+    getContextualPromptEnhancement() {
+        const context = this.conversationContext;
+        let enhancement = '\n\n🧠 **CRITICAL CONVERSATION MEMORY & CONTEXT:**\n\n';
+        
+        // Get last few messages for immediate context
+        const recentMessages = context.messages.slice(-3); // Last 3 messages
+        if (recentMessages.length > 0) {
+            enhancement += `**IMMEDIATE CONTEXT (Last Exchange):**\n`;
+            recentMessages.forEach((msg, idx) => {
+                if (idx < recentMessages.length - 1) { // Don't include current message
+                    const role = msg.role === 'user' ? '👤 USER' : '🤖 YOU';
+                    const preview = msg.content.substring(0, 150);
+                    enhancement += `${role}: "${preview}${msg.content.length > 150 ? '...' : ''}"\n`;
+                }
+            });
+            enhancement += '\n';
+        }
+        
+        // Add coins YOU just mentioned
+        if (context.aiMentionedCoins && context.aiMentionedCoins.length > 0) {
+            enhancement += `**⚠️ COINS YOU JUST DISCUSSED:** ${context.aiMentionedCoins.join(', ')}\n`;
+            enhancement += `- When user says "other coins", they mean OTHER than these: ${context.aiMentionedCoins.join(', ')}\n`;
+            enhancement += `- When user says "what about it/that/them", they refer to: ${context.aiMentionedCoins.join(', ')}\n\n`;
+        }
+        
+        // Add summary
+        if (context.summary) {
+            enhancement += `**Summary:** ${context.summary}\n\n`;
+        }
+        
+        // Add user profile
+        if (Object.keys(context.userProfile).length > 0) {
+            enhancement += `**User Profile:**\n`;
+            if (context.userProfile.experienceLevel) {
+                enhancement += `- Experience: ${context.userProfile.experienceLevel}\n`;
+            }
+            if (context.userProfile.riskTolerance) {
+                enhancement += `- Risk tolerance: ${context.userProfile.riskTolerance}\n`;
+            }
+            if (context.userProfile.tradingStyle) {
+                enhancement += `- Trading style: ${context.userProfile.tradingStyle}\n`;
+            }
+            if (context.userProfile.interests && context.userProfile.interests.length > 0) {
+                enhancement += `- Interests: ${context.userProfile.interests.join(', ')}\n`;
+            }
+            enhancement += '\n';
+        }
+        
+        // Add recent topics
+        if (context.keyPoints.length > 0) {
+            enhancement += `**Topics Discussed:** ${context.keyPoints.join(', ')}\n\n`;
+        }
+        
+        // Add last user intent
+        if (context.userIntent) {
+            enhancement += `**Current Intent:** ${context.userIntent}\n\n`;
+        }
+        
+        // Add reference to previous questions
+        if (context.previousQuestions.length > 0) {
+            const lastQuestion = context.previousQuestions[context.previousQuestions.length - 1];
+            enhancement += `**Their Last Question:** "${lastQuestion.question}"\n\n`;
+        }
+        
+        enhancement += `**🚨 CRITICAL INSTRUCTIONS:**\n`;
+        enhancement += `1. **ALWAYS reference previous messages** - Don't act like this is the first conversation\n`;
+        enhancement += `2. **When user says "other coins"** - They mean coins OTHER than what you just mentioned\n`;
+        enhancement += `3. **When user says "what about it/that"** - They refer to topics/coins from previous message\n`;
+        enhancement += `4. **Continue the conversation naturally** - Build on what was just discussed\n`;
+        enhancement += `5. **Use phrases like:** "As I just mentioned...", "Regarding the ${context.aiMentionedCoins ? context.aiMentionedCoins[0] : 'coins'} we discussed..."\n`;
+        enhancement += `6. **NEVER analyze random coins** - Stay focused on the conversation context\n`;
+        enhancement += `7. **Remember what YOU said** - Don't contradict your previous response\n\n`;
+        
+        return enhancement;
+    }
+
+    // ===== SMART RETRY WITH EXPONENTIAL BACKOFF =====
+    
+    async fetchWithRetry(url, options, maxRetries = 3) {
+        for (let attempt = 1; attempt <= maxRetries; attempt++) {
+            try {
+                console.log(`🔄 API Request attempt ${attempt}/${maxRetries}...`);
+                
+                const response = await fetch(url, options);
+                
+                // If success or non-retryable error, return immediately
+                if (response.ok || (response.status !== 503 && response.status !== 429)) {
+                    return response;
+                }
+                
+                // If this is the last attempt, return the error response
+                if (attempt === maxRetries) {
+                    console.error(`❌ All ${maxRetries} attempts failed`);
+                    return response;
+                }
+                
+                // Calculate backoff delay (exponential: 1s, 2s, 4s)
+                const delay = Math.pow(2, attempt - 1) * 1000;
+                console.log(`⏰ API busy, waiting ${delay/1000}s before retry ${attempt + 1}...`);
+                this.showUserMessage(`⏰ API busy, retrying in ${delay/1000}s...`, delay);
+                
+                await this.delay(delay);
+                
+            } catch (error) {
+                if (attempt === maxRetries) {
+                    throw error;
+                }
+                console.error(`⚠️ Request attempt ${attempt} failed:`, error.message);
+                await this.delay(Math.pow(2, attempt - 1) * 1000);
+            }
+        }
+    }
+    
+    delay(ms) {
+        return new Promise(resolve => setTimeout(resolve, ms));
+    }
+    
+    showUserMessage(message, duration = 3000) {
+        // Create temporary message element
+        const messageEl = document.createElement('div');
+        messageEl.className = 'temp-user-message';
+        messageEl.textContent = message;
+        messageEl.style.cssText = `
+            position: fixed;
+            top: 80px;
+            right: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 12px 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+            z-index: 10000;
+            font-size: 14px;
+            animation: slideIn 0.3s ease-out;
+        `;
+        
+        document.body.appendChild(messageEl);
+        
+        setTimeout(() => {
+            messageEl.style.animation = 'slideOut 0.3s ease-out';
+            setTimeout(() => messageEl.remove(), 300);
+        }, duration);
     }
 
     getOptimalGenerationConfig(intent) {

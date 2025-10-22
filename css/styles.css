@@ -3175,6 +3175,33 @@ body.light-theme .header-btn {
     50% { transform: scale(1.1); }
 }
 
+/* Notification animations */
+@keyframes slideIn {
+    from {
+        transform: translateX(400px);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+@keyframes slideOut {
+    from {
+        transform: translateX(0);
+        opacity: 1;
+    }
+    to {
+        transform: translateX(400px);
+        opacity: 0;
+    }
+}
+
+.temp-user-message {
+    animation: slideIn 0.3s ease-out;
+}
+
 .ai-label {
     font-size: 11px;
     letter-spacing: 0.5px;
