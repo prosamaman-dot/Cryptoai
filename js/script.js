@@ -414,6 +414,10 @@ class SamCryptoAI {
         saveApiKey?.addEventListener('click', () => this.saveApiKey());
         skipApiKey?.addEventListener('click', () => this.skipApiKey());
         
+        // Voice input button
+        const voiceInputBtn = document.getElementById('voiceInputBtn');
+        voiceInputBtn?.addEventListener('click', () => this.toggleVoiceInput());
+        
         // Features Page event listeners
         openFeaturesPage?.addEventListener('click', () => this.openFeaturesPage());
         closeFeaturesPage?.addEventListener('click', () => this.closeFeaturesPage());
@@ -557,14 +561,30 @@ class SamCryptoAI {
         this.inputChangeFrame = requestAnimationFrame(() => {
             const input = document.getElementById('messageInput');
             const sendButton = document.getElementById('sendButton');
-            const charCount = document.querySelector('.char-count');
+            const charCountElement = document.getElementById('charCount');
+            const charCountContainer = document.querySelector('.char-count-inline');
             
-            // Auto-resize textarea
+            // Auto-resize textarea with smooth animation
             input.style.height = 'auto';
-            input.style.height = Math.min(input.scrollHeight, 120) + 'px';
+            const newHeight = Math.min(input.scrollHeight, 200); // Max 200px
+            input.style.height = newHeight + 'px';
             
             // Update character count
-            charCount.textContent = `${input.value.length}/1000`;
+            const currentLength = input.value.length;
+            const maxLength = 1000;
+            if (charCountElement) {
+                charCountElement.textContent = `${currentLength}/${maxLength}`;
+                
+                // Add warning colors
+                if (charCountContainer) {
+                    charCountContainer.classList.remove('warning', 'danger');
+                    if (currentLength > maxLength * 0.9) {
+                        charCountContainer.classList.add('danger');
+                    } else if (currentLength > maxLength * 0.8) {
+                        charCountContainer.classList.add('warning');
+                    }
+                }
+            }
             
             // Enable/disable send button
             sendButton.disabled = input.value.trim().length === 0;
@@ -580,6 +600,7 @@ class SamCryptoAI {
 
     async sendMessage() {
         const input = document.getElementById('messageInput');
+        const sendButton = document.getElementById('sendButton');
         const message = input.value.trim();
         
         if (!message) return;
@@ -592,6 +613,16 @@ class SamCryptoAI {
         
         this.isSending = true;
         console.log('📤 Sending message:', message);
+        
+        // Add loading animation to send button
+        sendButton.classList.add('sending');
+        const sendIcon = sendButton.querySelector('.send-icon');
+        const loadingIcon = sendButton.querySelector('.loading-icon');
+        if (sendIcon) sendIcon.style.opacity = '0';
+        if (loadingIcon) {
+            loadingIcon.classList.remove('hidden');
+            loadingIcon.style.opacity = '1';
+        }
         
         // Hide welcome message on first user message
         this.hideWelcomeMessage();
@@ -610,7 +641,15 @@ class SamCryptoAI {
         input.value = '';
         input.style.height = 'auto';
         document.getElementById('sendButton').disabled = true;
-        document.querySelector('.char-count').textContent = '0/1000';
+        const charCountElement = document.getElementById('charCount');
+        if (charCountElement) {
+            charCountElement.textContent = '0/1000';
+        }
+        // Also handle legacy char-count if exists
+        const legacyCharCount = document.querySelector('.char-count');
+        if (legacyCharCount) {
+            legacyCharCount.textContent = '0/1000';
+        }
         
         // Show typing indicator
         this.showTypingIndicator();
@@ -627,11 +666,13 @@ class SamCryptoAI {
                 throw new Error('Empty response received');
             }
             
-            // Hide indicators and add AI response
-            this.hideTypingIndicator();
-            this.hideSearchIndicator();
+            // Add AI response
             this.addMessage(response, 'ai');
             this.addToConversationHistory('assistant', response);
+            
+            // Hide indicators immediately after message is added
+            this.hideTypingIndicator();
+            this.hideSearchIndicator();
             
             // Update context with AI response
             this.updateConversationContext(response, 'assistant');
@@ -639,8 +680,6 @@ class SamCryptoAI {
         } catch (error) {
             console.error('❌ Error generating response:', error);
             console.error('❌ Error stack:', error.stack);
-            this.hideTypingIndicator();
-            this.hideSearchIndicator(); // Also hide search indicator on error
             
             // Generate a fallback response using demo
             try {
@@ -654,43 +693,48 @@ class SamCryptoAI {
                 console.error('❌ Fallback stack:', fallbackError.stack);
                 this.addMessage('Hey! I\'m having a bit of trouble right now, but I\'m still here to help! 🚀 Try asking me about Bitcoin, Ethereum, or any crypto you\'re interested in!', 'ai');
             }
+            
+            // Hide indicators after message is added
+            this.hideTypingIndicator();
+            this.hideSearchIndicator();
         } finally {
-            // Always reset sending flag
+            // Always reset sending flag and loading animation
             this.isSending = false;
+            
+            // Reset loading animation on send button
+            if (sendButton) {
+                sendButton.classList.remove('sending');
+                const sendIcon = sendButton.querySelector('.send-icon');
+                const loadingIcon = sendButton.querySelector('.loading-icon');
+                if (sendIcon) sendIcon.style.opacity = '1';
+                if (loadingIcon) {
+                    loadingIcon.classList.add('hidden');
+                    loadingIcon.style.opacity = '0';
+                }
+            }
+            
             console.log('✅ Message send complete');
         }
     }
 
-    // Search Indicator Methods
+    // Simple Loading Indicator Methods
     showSearchIndicator(text = 'Searching real-time market data...') {
-        const searchIndicator = document.getElementById('searchIndicator');
-        const searchText = document.getElementById('searchText');
-        if (searchIndicator && searchText) {
-            searchText.textContent = text;
-            searchIndicator.classList.remove('hidden');
-            this.resetSourceIndicators();
-            this.scrollToBottom();
-        }
+        // Just show the dots - same as typing
+        this.showTypingIndicator();
     }
 
     hideSearchIndicator() {
-        const searchIndicator = document.getElementById('searchIndicator');
-        if (searchIndicator) {
-            searchIndicator.classList.add('hidden');
-        }
+        // Hide the dots
+        this.hideTypingIndicator();
     }
 
+    // Legacy compatibility - these methods are no longer used
     updateSourceStatus(source, status) {
-        const element = document.getElementById(`${source}Status`);
-        if (element) {
-            element.className = `source-indicator ${status}`;
-        }
+        // Removed - no longer showing individual sources
     }
 
     resetSourceIndicators() {
-        ['coinGecko', 'binance', 'coinCap'].forEach(source => {
-            this.updateSourceStatus(source, '');
-        });
+        // Removed - no longer showing individual sources
     }
 
     async getMarketDataForQuery(query) {
@@ -720,8 +764,8 @@ class SamCryptoAI {
         
         // Show search indicator message
         const indicatorText = intent.type === 'market_scan'
-            ? `🔍 Scanning ${cryptoMentions.length} top coins across the market for the best trade setup...`
-            : `Searching ${cryptoMentions.length} coin${cryptoMentions.length > 1 ? 's' : ''} across ${cryptoMentions.length > 3 ? 'thousands of' : 'all'} Binance trading pairs...`;
+            ? `Analyzing ${cryptoMentions.length} coins for best opportunities...`
+            : `Fetching live market data for ${cryptoMentions.length} coin${cryptoMentions.length > 1 ? 's' : ''}...`;
         this.showSearchIndicator(indicatorText);
         
         const marketData = {};
@@ -3273,17 +3317,27 @@ Bitcoin, Ethereum, Solana, Cardano, Ripple, Dogecoin, Polkadot, Avalanche, Polyg
     }
 
     showTypingIndicator() {
-        document.getElementById('typingIndicator').classList.remove('hidden');
-        const messagesContainer = document.getElementById('chatMessages');
-        
-        // Only auto-scroll to bottom if user is near bottom and not actively scrolling
-        if (this.isNearBottom && !this.isUserScrolling) {
-            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        // Show shimmer text in chat
+        const chatIndicator = document.getElementById('chatTypingIndicator');
+        console.log('🔵 Showing typing indicator with shimmer animation');
+        if (chatIndicator) {
+            chatIndicator.classList.remove('hidden');
+            chatIndicator.style.display = 'inline-block'; // Force display
+            console.log('✅ "Thinking..." shimmer visible - will stay until response');
+            setTimeout(() => this.scrollToBottom(), 100);
+        } else {
+            console.error('❌ chatTypingIndicator element not found!');
         }
     }
 
     hideTypingIndicator() {
-        document.getElementById('typingIndicator').classList.add('hidden');
+        // Hide shimmer text
+        const chatIndicator = document.getElementById('chatTypingIndicator');
+        console.log('🔴 Hiding typing indicator - Response added');
+        if (chatIndicator) {
+            chatIndicator.classList.add('hidden');
+            chatIndicator.style.display = 'none';
+        }
     }
 
     clearConversation() {
@@ -4199,7 +4253,18 @@ SamCrypto AI remembers your preferences and conversation history to provide pers
                     
                     // Enable send button and update char count
                     document.getElementById('sendButton').disabled = false;
-                    document.querySelector('.char-count').textContent = `${transcript.length}/1000`;
+                    const charCountElement = document.getElementById('charCount');
+                    if (charCountElement) {
+                        charCountElement.textContent = `${transcript.length}/1000`;
+                    }
+                    // Also handle legacy char-count if exists
+                    const legacyCharCount = document.querySelector('.char-count');
+                    if (legacyCharCount) {
+                        legacyCharCount.textContent = `${transcript.length}/1000`;
+                    }
+                    
+                    // Trigger auto-resize
+                    this.handleInputChange();
                     
                     // Show interim results
                     if (event.results[event.results.length - 1].isFinal) {
@@ -4242,8 +4307,10 @@ SamCrypto AI remembers your preferences and conversation history to provide pers
             this.isRecording = true;
             
             // Update button state
-            const voiceButton = document.getElementById('voiceInputButton');
-            voiceButton.classList.add('recording');
+            const voiceButton = document.getElementById('voiceInputBtn');
+            if (voiceButton) {
+                voiceButton.classList.add('recording');
+            }
             
             // Show status
             this.showVoiceStatus('🎤 Listening...', '');
@@ -4268,8 +4335,10 @@ SamCrypto AI remembers your preferences and conversation history to provide pers
         this.isRecording = false;
         
         // Update button state
-        const voiceButton = document.getElementById('voiceInputButton');
-        voiceButton.classList.remove('recording');
+        const voiceButton = document.getElementById('voiceInputBtn');
+        if (voiceButton) {
+            voiceButton.classList.remove('recording');
+        }
         
         // Hide status after a delay
         setTimeout(() => {

@@ -6,19 +6,19 @@
     width: 44px;
     height: 44px;
     padding: 0;
-    background: linear-gradient(135deg, #00d4ff 0%, #0099cc 100%);
+    background: #242424;
     border: none;
     border-radius: 10px;
     color: white;
     cursor: pointer;
     transition: all 0.3s ease;
-    box-shadow: 0 4px 12px rgba(0, 212, 255, 0.3);
+    box-shadow: none;
 }
 
 .features-btn:hover {
-    background: linear-gradient(135deg, #00e5ff 0%, #00aad4 100%);
-    transform: translateY(-2px) scale(1.05);
-    box-shadow: 0 6px 20px rgba(0, 212, 255, 0.5);
+    background: #2d2d2d;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
 }
 
 .features-btn:active {

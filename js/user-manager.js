@@ -131,6 +131,14 @@ class UserManager {
                     console.log('✅ Session valid! Logging in:', user.name);
                     this.currentUser = user;
                     
+                    // Initialize stats if it doesn't exist
+                    if (!this.currentUser.stats) {
+                        this.currentUser.stats = {
+                            totalMessages: 0,
+                            lastActive: Date.now()
+                        };
+                    }
+                    
                     // Update last active time
                     this.currentUser.stats.lastActive = Date.now();
                     this.saveUsers();
@@ -369,6 +377,14 @@ class UserManager {
                 throw new Error('Invalid email or password');
             }
 
+            // Initialize stats if it doesn't exist
+            if (!user.stats) {
+                user.stats = {
+                    totalMessages: 0,
+                    lastActive: Date.now()
+                };
+            }
+            
             // Update last login in database (like SQL UPDATE)
             user.lastLogin = Date.now();
             user.stats.lastActive = Date.now();
@@ -490,7 +506,23 @@ class UserManager {
     updateConversationMemory(type, data) {
         if (!this.currentUser) return;
         
+        // Initialize conversationMemory if it doesn't exist or is incomplete
+        if (!this.currentUser.conversationMemory || typeof this.currentUser.conversationMemory !== 'object') {
+            this.currentUser.conversationMemory = {
+                userContext: {},
+                preferences: {},
+                pastConversations: [],
+                learnings: {}
+            };
+        }
+        
         const memory = this.currentUser.conversationMemory;
+        
+        // Ensure all required properties exist
+        if (!memory.pastConversations) memory.pastConversations = [];
+        if (!memory.userContext) memory.userContext = {};
+        if (!memory.preferences) memory.preferences = {};
+        if (!memory.learnings) memory.learnings = {};
         
         switch (type) {
             case 'context':
