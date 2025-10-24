@@ -102,6 +102,26 @@ class SamCryptoAI {
             SHIB: 'shiba-inu',
             BCHA: 'ecash'
         };
+        this.coinToBinanceSymbol = {
+            bitcoin: 'BTCUSDT', btc: 'BTCUSDT',
+            ethereum: 'ETHUSDT', eth: 'ETHUSDT',
+            solana: 'SOLUSDT', sol: 'SOLUSDT',
+            binancecoin: 'BNBUSDT', bnb: 'BNBUSDT',
+            ripple: 'XRPUSDT', xrp: 'XRPUSDT',
+            cardano: 'ADAUSDT', ada: 'ADAUSDT',
+            dogecoin: 'DOGEUSDT', doge: 'DOGEUSDT',
+            chainlink: 'LINKUSDT', link: 'LINKUSDT',
+            polygon: 'MATICUSDT', matic: 'MATICUSDT',
+            polkadot: 'DOTUSDT', dot: 'DOTUSDT',
+            litecoin: 'LTCUSDT', ltc: 'LTCUSDT',
+            avalanche: 'AVAXUSDT', 'avalanche-2': 'AVAXUSDT', avax: 'AVAXUSDT',
+            cosmos: 'ATOMUSDT', atom: 'ATOMUSDT',
+            near: 'NEARUSDT',
+            arbitrum: 'ARBUSDT', arb: 'ARBUSDT',
+            optimism: 'OPUSDT', op: 'OPUSDT'
+        };
+        this.currentAIPowersCoin = 'bitcoin';
+        this.aiPowersCache = new Map();
         
         // API caching and rate limiting
         this.cache = new Map();
@@ -2820,6 +2840,12 @@ Example: "Bitcoin (BTC) is trading at $43,521.45 USD — updated 12s ago from Co
    - Always use stop-loss (NO EXCEPTIONS)
    - Scale out at targets (take profits gradually)
 
+🔍 REAL-TIME INTELLIGENCE MODULES:
+- Real-Time Order Flow Engine (Level 2 depth + recent trades) from Binance public APIs
+- On-Chain Intelligence Analyst (active addresses, tx count, network fees via Blockchair/Helius and other public endpoints)
+- Global News & Sentiment API (CryptoPanic headlines + Alternative.me Fear & Greed Index)
+- Always cross-check signals against these data streams before making recommendations
+
 📊 YOUR CURRENT PORTFOLIO:
 
 💰 AVAILABLE CAPITAL:
@@ -3958,6 +3984,23 @@ Bitcoin, Ethereum, Solana, Cardano, Ripple, Dogecoin, Polkadot, Avalanche, Polyg
             console.log('Refreshing portfolio prices...');
             await this.updatePortfolioDisplay(true);
         });
+
+        // AI Powers Center
+        document.getElementById('aiPowersToggle')?.addEventListener('click', async () => {
+            document.getElementById('aiPowersPanel').classList.remove('hidden');
+            await this.loadAIPowersIntelligence(this.currentAIPowersCoin, true);
+        });
+        document.getElementById('closeAIPowers')?.addEventListener('click', () => {
+            document.getElementById('aiPowersPanel').classList.add('hidden');
+        });
+        document.getElementById('refreshAIPowers')?.addEventListener('click', async () => {
+            await this.loadAIPowersIntelligence(this.currentAIPowersCoin, true);
+        });
+        document.getElementById('aiPowersCoinSelect')?.addEventListener('change', async (event) => {
+            const coin = event.target.value;
+            this.currentAIPowersCoin = coin;
+            await this.loadAIPowersIntelligence(coin, true);
+        });
         
         document.getElementById('addAlertBtn')?.addEventListener('click', () => {
             this.addAlert();
@@ -4187,7 +4230,7 @@ Bitcoin, Ethereum, Solana, Cardano, Ripple, Dogecoin, Polkadot, Avalanche, Polyg
             };
             
             this.ws.onerror = (error) => {
-                console.error('❌ WebSocket error:', error);
+                console.error('WebSocket error:', error);
                 this.isConnected = false;
                 // Start REST API fallback on error
                 if (!this.restApiInterval) {
@@ -4196,7 +4239,7 @@ Bitcoin, Ethereum, Solana, Cardano, Ripple, Dogecoin, Polkadot, Avalanche, Polyg
             };
             
         } catch (error) {
-            console.error('❌ Failed to connect to Binance WebSocket:', error);
+            console.error('Failed to connect to Binance WebSocket:', error);
             this.isConnected = false;
             // Start REST API fallback
             this.startRestApiFallback();
@@ -4207,7 +4250,7 @@ Bitcoin, Ethereum, Solana, Cardano, Ripple, Dogecoin, Polkadot, Avalanche, Polyg
     startRestApiFallback() {
         if (this.restApiInterval) return; // Already running
         
-        console.log('🔄 Starting REST API fallback for price updates...');
+        console.log('Starting REST API fallback for price updates...');
         
         // Update immediately
         this.fetchPricesViaRestAPI();
@@ -4220,7 +4263,7 @@ Bitcoin, Ethereum, Solana, Cardano, Ripple, Dogecoin, Polkadot, Avalanche, Polyg
                 // WebSocket reconnected, stop fallback
                 clearInterval(this.restApiInterval);
                 this.restApiInterval = null;
-                console.log('✅ WebSocket reconnected, stopping REST API fallback');
+                console.log('WebSocket reconnected, stopping REST API fallback');
             }
         }, 10000);
     }
@@ -4243,9 +4286,9 @@ Bitcoin, Ethereum, Solana, Cardano, Ripple, Dogecoin, Polkadot, Avalanche, Polyg
                 }
             });
             
-            console.log('✅ Prices updated via REST API fallback');
+            console.log('Prices updated via REST API fallback');
         } catch (error) {
-            console.error('❌ REST API fallback failed:', error);
+            console.error('REST API fallback failed:', error);
         }
     }
 
@@ -4434,7 +4477,7 @@ Bitcoin, Ethereum, Solana, Cardano, Ripple, Dogecoin, Polkadot, Avalanche, Polyg
             // Save to user's data if logged in
             if (this.userManager && this.userManager.isLoggedIn()) {
                 this.userManager.updateConversationMemory('full', this.userMemory);
-                console.log('✅ Memory saved to user account');
+                console.log('Memory saved to user account');
             } else {
                 // Fallback to localStorage for non-logged-in users
                 localStorage.setItem('crypto_ai_memory', JSON.stringify(this.userMemory));
@@ -4471,7 +4514,7 @@ Bitcoin, Ethereum, Solana, Cardano, Ripple, Dogecoin, Polkadot, Avalanche, Polyg
             // Save to user's data if logged in
             if (this.userManager && this.userManager.isLoggedIn()) {
                 this.userManager.saveUserPreferences(this.userPreferences);
-                console.log('✅ Preferences saved to user account');
+                console.log('Preferences saved to user account');
             } else {
                 // Fallback to localStorage for non-logged-in users
                 localStorage.setItem('crypto_ai_preferences', JSON.stringify(this.userPreferences));
@@ -4584,17 +4627,17 @@ Bitcoin, Ethereum, Solana, Cardano, Ripple, Dogecoin, Polkadot, Avalanche, Polyg
         const interests = this.userPreferences.interests.length;
         const lastUpdated = new Date(this.userMemory.lastUpdated).toLocaleString();
         
-        const statusMessage = `🧠 SamCrypto AI Memory Status:
+        const statusMessage = `SamCrypto AI Memory Status:
         
-📊 Total Conversations: ${totalConversations}
-🪙 Favorite Coins: ${favoriteCoins} (${this.userPreferences.favoriteCoins.join(', ') || 'None'})
-🎯 Trading Style: ${this.userPreferences.tradingStyle}
-⚖️ Risk Tolerance: ${this.userPreferences.riskTolerance}
-📈 Experience Level: ${this.userPreferences.experienceLevel}
-🔍 Interests: ${interests} (${this.userPreferences.interests.join(', ') || 'None'})
-⏰ Last Updated: ${lastUpdated}
+Total Conversations: ${totalConversations}
+Favorite Coins: ${favoriteCoins} (${this.userPreferences.favoriteCoins.join(', ') || 'None'})
+Trading Style: ${this.userPreferences.tradingStyle}
+Risk Tolerance: ${this.userPreferences.riskTolerance}
+Experience Level: ${this.userPreferences.experienceLevel}
+Interests: ${interests} (${this.userPreferences.interests.join(', ') || 'None'})
+Last Updated: ${lastUpdated}
 
-SamCrypto AI remembers your preferences and conversation history to provide personalized crypto advice! 🚀`;
+SamCrypto AI remembers your preferences and conversation history to provide personalized crypto advice!`;
 
         this.addMessage(statusMessage, 'ai');
         this.addToConversationHistory('assistant', statusMessage);
@@ -4642,7 +4685,7 @@ SamCrypto AI remembers your preferences and conversation history to provide pers
         const featuresPage = document.getElementById('featuresPage');
         if (featuresPage) {
             featuresPage.classList.remove('hidden');
-            console.log('✅ Features page opened');
+            console.log('Features page opened');
             
             // Prevent body scroll when features page is open
             document.body.style.overflow = 'hidden';

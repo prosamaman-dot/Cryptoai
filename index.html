@@ -373,7 +373,23 @@
                     <p>Track AI signal accuracy & your stats</p>
                     <span class="feature-value" id="winRate">0%</span>
                 </div>
-                
+
+                <!-- NEW: AI Powers Center -->
+                <div class="feature-card" id="aiPowersToggle">
+                    <div class="feature-icon">
+                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="13 2 13 9 20 9"></polyline>
+                            <path d="M20 13v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h6"></path>
+                            <circle cx="9" cy="13" r="1"></circle>
+                            <circle cx="15" cy="17" r="1"></circle>
+                            <path d="M15 13a4 4 0 0 0-4-4"></path>
+                        </svg>
+                    </div>
+                    <h3>⚡ AI Powers</h3>
+                    <p>Order flow, on-chain & global sentiment intel</p>
+                    <span class="feature-badge">New</span>
+                </div>
+
                 <!-- Profile Settings -->
                 <div class="feature-card" id="openProfileSettings">
                     <div class="feature-icon">
@@ -679,6 +695,49 @@
             </div>
             <div class="alerts-list" id="alertsList">
                 <!-- Alerts will be added here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- AI Powers Intelligence Panel -->
+    <div id="aiPowersPanel" class="side-panel hidden">
+        <div class="panel-header">
+            <h3>⚡ AI Powers Intelligence</h3>
+            <div class="panel-actions">
+                <select id="aiPowersCoinSelect" class="panel-select">
+                    <option value="bitcoin" selected>Bitcoin (BTC)</option>
+                    <option value="ethereum">Ethereum (ETH)</option>
+                    <option value="solana">Solana (SOL)</option>
+                    <option value="binancecoin">BNB</option>
+                    <option value="ripple">XRP</option>
+                    <option value="cardano">Cardano (ADA)</option>
+                    <option value="dogecoin">Dogecoin (DOGE)</option>
+                    <option value="chainlink">Chainlink (LINK)</option>
+                </select>
+                <button id="refreshAIPowers" class="refresh-btn" title="Refresh Intelligence">↻</button>
+                <button id="closeAIPowers" class="close-btn">×</button>
+            </div>
+        </div>
+        <div class="panel-content">
+            <div id="aiPowersLoading" class="loading-state hidden">
+                <div class="loading-spinner"></div>
+                <p>Aggregating order flow, on-chain, and news intelligence...</p>
+            </div>
+            <div id="aiPowersContent" class="ai-powers-content hidden">
+                <section class="ai-power-section">
+                    <h4>📊 Real-Time Order Flow</h4>
+                    <div class="ai-metrics-grid" id="orderFlowMetrics"></div>
+                    <div class="orderbook-preview" id="orderBookPreview"></div>
+                </section>
+                <section class="ai-power-section">
+                    <h4>🔗 On-Chain Intelligence</h4>
+                    <div class="ai-metrics-grid" id="onChainMetrics"></div>
+                </section>
+                <section class="ai-power-section">
+                    <h4>📰 Global News & Sentiment</h4>
+                    <div class="sentiment-summary" id="sentimentSummary"></div>
+                    <div class="news-feed" id="sentimentNewsFeed"></div>
+                </section>
             </div>
         </div>
     </div>
