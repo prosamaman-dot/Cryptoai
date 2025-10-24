@@ -60,6 +60,7 @@ class SamCryptoAI {
             totalPnL: 0, 
             totalPnLPercent: 0, 
             holdings: [],
+            trades: [],
             usdtBalance: 0  // USDT capital for buying coins
         };
         this.alerts = [];
@@ -68,6 +69,39 @@ class SamCryptoAI {
         this.isDarkTheme = true;
         this.sentimentData = {};
         this.backtestResults = {};
+        this.tradeUpdateInterval = null;
+        this.symbolToCoinId = {
+            BTC: 'bitcoin',
+            ETH: 'ethereum',
+            SOL: 'solana',
+            BNB: 'binancecoin',
+            XRP: 'ripple',
+            ADA: 'cardano',
+            DOGE: 'dogecoin',
+            MATIC: 'polygon',
+            DOT: 'polkadot',
+            LTC: 'litecoin',
+            AVAX: 'avalanche-2',
+            LINK: 'chainlink',
+            TRX: 'tron',
+            XLM: 'stellar',
+            ATOM: 'cosmos',
+            ALGO: 'algorand',
+            FIL: 'filecoin',
+            VET: 'vechain',
+            APT: 'aptos',
+            INJ: 'injective-protocol',
+            NEAR: 'near',
+            OP: 'optimism',
+            ARB: 'arbitrum',
+            SEI: 'sei-network',
+            SUI: 'sui',
+            RENDER: 'render-token',
+            WLD: 'worldcoin-wld',
+            PEPE: 'pepe',
+            SHIB: 'shiba-inu',
+            BCHA: 'ecash'
+        };
         
         // API caching and rate limiting
         this.cache = new Map();
@@ -145,6 +179,417 @@ class SamCryptoAI {
                 this.showTradingViewChart('BTCUSDT');
             });
         }
+    }
+
+    parseTradePair(pairInput) {
+        if (!pairInput) return null;
+        const cleaned = pairInput.trim().toUpperCase().replace(/\s+/g, '');
+        const parts = cleaned.split('/');
+        if (parts.length !== 2) return null;
+        const base = parts[0];
+        const quote = parts[1];
+        if (!base || !quote) return null;
+        return { base, quote, normalized: `${base}/${quote}` };
+    }
+
+    mapPairToCoinId(pair) {
+        if (!pair) return null;
+        if (pair.quote === 'USDT') {
+            const mapped = this.symbolToCoinId[pair.base];
+            if (mapped) return mapped;
+        }
+        const fallback = pair.base.toLowerCase();
+        return fallback;
+    }
+
+    async addPortfolioTrade() {
+        const pairInput = document.getElementById('tradePairInput').value;
+        const side = document.getElementById('tradeSideSelect').value;
+        const leverage = parseFloat(document.getElementById('tradeLeverageInput').value);
+        const margin = parseFloat(document.getElementById('tradeMarginInput').value);
+        const entryPrice = parseFloat(document.getElementById('tradeEntryInput').value);
+        const takeProfit = parseFloat(document.getElementById('tradeTpInput').value);
+        const stopLoss = parseFloat(document.getElementById('tradeSlInput').value);
+
+        const pair = this.parseTradePair(pairInput);
+        if (!pair) {
+            alert('Please enter a valid pair like SOL/USDT');
+            return;
+        }
+
+        if (!side || !['long', 'short'].includes(side)) {
+            alert('Please select trade side (long or short)');
+            return;
+        }
+
+        if (!leverage || leverage <= 0) {
+            alert('Please enter a valid leverage (e.g., 10)');
+            return;
+        }
+
+        if (!margin || margin <= 0) {
+            alert('Please enter the margin (USDT) used for this trade');
+            return;
+        }
+
+        if (!entryPrice || entryPrice <= 0) {
+            alert('Please enter a valid entry price');
+            return;
+        }
+
+        const coinId = this.mapPairToCoinId(pair);
+        if (!coinId) {
+            alert('Unable to map the pair to a known coin for live pricing. Please try a different pair.');
+            return;
+        }
+
+        const marginAvailable = this.portfolio.usdtBalance || 0;
+        if (margin > marginAvailable) {
+            const confirmUse = confirm(`⚠️ Margin exceeds current USDT balance.\n\nMargin required: $${margin.toFixed(2)}\nAvailable USDT: $${marginAvailable.toFixed(2)}\n\nDo you want to continue?`);
+            if (!confirmUse) return;
+        }
+
+        const positionSize = margin * leverage;
+        const quantity = positionSize / entryPrice;
+
+        const newTrade = {
+            id: Date.now(),
+            pair: pair.normalized,
+            base: pair.base,
+            quote: pair.quote,
+            coinId,
+            side,
+            leverage,
+            margin,
+            entryPrice,
+            quantity,
+            takeProfit: takeProfit || null,
+            stopLoss: stopLoss || null,
+            status: 'open',
+            createdAt: new Date().toISOString(),
+            lastUpdated: null,
+            currentPrice: entryPrice,
+            pnl: 0,
+            pnlPercent: 0,
+            riskedAmount: margin,
+            liquidationPrice: this.calculateLiquidationPrice(side, entryPrice, leverage)
+        };
+
+        this.portfolio.trades.unshift(newTrade);
+        this.portfolio.usdtBalance = Math.max(0, (this.portfolio.usdtBalance || 0) - margin);
+
+        this.savePortfolio();
+        await this.updatePortfolioDisplay(true);
+        this.recordPortfolioSnapshot();
+        this.pushTradeToConversationMemory(newTrade);
+
+        document.getElementById('tradePairInput').value = '';
+        document.getElementById('tradeLeverageInput').value = '';
+        document.getElementById('tradeMarginInput').value = '';
+        document.getElementById('tradeEntryInput').value = '';
+        document.getElementById('tradeTpInput').value = '';
+        document.getElementById('tradeSlInput').value = '';
+
+        alert('✅ Trade added! Live P&L will update automatically.');
+    }
+
+    calculateLiquidationPrice(side, entryPrice, leverage) {
+        if (!entryPrice || !leverage) return null;
+        const maintenanceMargin = 0.0065; // Approx Binance futures maintenance margin
+        const liquidationBuffer = 1 - maintenanceMargin * leverage;
+        if (liquidationBuffer <= 0) return null;
+
+        if (side === 'long') {
+            return entryPrice * liquidationBuffer;
+        } else {
+            return entryPrice / liquidationBuffer;
+        }
+    }
+
+    pushTradeToConversationMemory(trade) {
+        try {
+            this.addToConversationHistory('system', `User opened a ${trade.side.toUpperCase()} trade on ${trade.pair} at ${trade.entryPrice} with ${trade.leverage}x leverage using $${trade.margin}. Quantity: ${trade.quantity}.`);
+            this.updateConversationContext(`User opened a ${trade.side} ${trade.pair} trade at ${trade.entryPrice} with ${trade.leverage}x leverage.`, 'system');
+        } catch (error) {
+            console.warn('Failed to push trade into conversation memory:', error);
+        }
+    }
+
+    calculateTradesSummary() {
+        if (!this.portfolio.trades || this.portfolio.trades.length === 0) {
+            return {
+                marginInUse: 0,
+                totalPnL: 0,
+                totalPnLPercent: 0
+            };
+        }
+
+        let marginInUse = 0;
+        let totalPnL = 0;
+        let totalCost = 0;
+
+        this.portfolio.trades.forEach(trade => {
+            if (trade.status === 'open') {
+                marginInUse += trade.margin || 0;
+                totalPnL += trade.pnl || 0;
+                totalCost += trade.margin || 0;
+            }
+        });
+
+        return {
+            marginInUse,
+            totalPnL,
+            totalPnLPercent: totalCost > 0 ? (totalPnL / totalCost) * 100 : 0
+        };
+    }
+
+    renderTrades() {
+        const tradesList = document.getElementById('tradesList');
+        if (!tradesList) return;
+
+        tradesList.innerHTML = '';
+
+        if (!this.portfolio.trades || this.portfolio.trades.length === 0) {
+            tradesList.innerHTML = '<div class="no-trades">No leveraged trades yet. Add one to start tracking live P&L.</div>';
+            return;
+        }
+
+        this.portfolio.trades.forEach((trade, index) => {
+            const tradeDiv = document.createElement('div');
+            tradeDiv.className = 'trade-item';
+
+            const pnlClass = trade.pnl >= 0 ? 'positive' : 'negative';
+            const tp = trade.takeProfit ? `$${trade.takeProfit.toFixed(4)}` : '—';
+            const sl = trade.stopLoss ? `$${trade.stopLoss.toFixed(4)}` : '—';
+            const liquidation = trade.liquidationPrice ? `$${trade.liquidationPrice.toFixed(4)}` : '—';
+
+            tradeDiv.innerHTML = `
+                <div class="trade-header">
+                    <span class="trade-pair">${trade.pair}</span>
+                    <span class="trade-side ${trade.side}">${trade.side}</span>
+                    <span class="trade-leverage">${trade.leverage}x</span>
+                </div>
+                <div class="trade-metric">
+                    <span class="label">Entry</span>
+                    <span class="value">$${trade.entryPrice.toFixed(4)}</span>
+                </div>
+                <div class="trade-metric">
+                    <span class="label">Current</span>
+                    <span class="value">$${(trade.currentPrice || trade.entryPrice).toFixed(4)}</span>
+                </div>
+                <div class="trade-metric">
+                    <span class="label">Margin</span>
+                    <span class="value">$${(trade.margin || 0).toFixed(2)}</span>
+                </div>
+                <div class="trade-metric">
+                    <span class="label">Position Size</span>
+                    <span class="value">$${(trade.quantity * trade.currentPrice).toFixed(2)}</span>
+                </div>
+                <div class="trade-metric">
+                    <span class="label">Quantity</span>
+                    <span class="value">${trade.quantity.toFixed(4)}</span>
+                </div>
+                <div class="trade-metric">
+                    <span class="label">TP / SL</span>
+                    <span class="value">${tp} / ${sl}</span>
+                </div>
+                <div class="trade-metric">
+                    <span class="label">Liquidation</span>
+                    <span class="value">${liquidation}</span>
+                </div>
+                <div class="trade-metric">
+                    <span class="label">PnL</span>
+                    <span class="trade-pnl ${pnlClass}">${trade.pnl >= 0 ? '+' : ''}$${(trade.pnl || 0).toFixed(2)} (${(trade.pnlPercent || 0).toFixed(2)}%)</span>
+                </div>
+                <div class="trade-actions">
+                    <button onclick="samCryptoAI.closeTrade(${index})" class="close-trade">Close Trade</button>
+                    <button onclick="samCryptoAI.editTrade(${index})">Edit</button>
+                </div>
+            `;
+
+            tradesList.appendChild(tradeDiv);
+        });
+    }
+
+    async closeTrade(index) {
+        const trade = this.portfolio.trades[index];
+        if (!trade) return;
+
+        if (!confirm(`Close ${trade.side.toUpperCase()} ${trade.pair} trade?`)) {
+            return;
+        }
+
+        if (trade.status === 'closed') {
+            alert('Trade already closed');
+            return;
+        }
+
+        try {
+            const latestPrice = await this.fetchTradePrice(trade);
+            const settledPrice = latestPrice?.price_usd || trade.currentPrice || trade.entryPrice;
+            const pnlInfo = this.calculateTradePnL(trade, settledPrice);
+
+            trade.status = 'closed';
+            trade.closePrice = settledPrice;
+            trade.closedAt = new Date().toISOString();
+            trade.pnl = pnlInfo.pnl;
+            trade.pnlPercent = pnlInfo.pnlPercent;
+
+            this.portfolio.usdtBalance = (this.portfolio.usdtBalance || 0) + trade.margin + trade.pnl;
+
+            this.savePortfolio();
+            await this.updatePortfolioDisplay(true);
+
+            alert(`✅ Trade closed!\n\nPnL: ${trade.pnl >= 0 ? '+' : ''}$${trade.pnl.toFixed(2)} (${trade.pnlPercent.toFixed(2)}%)\nFunds returned to USDT balance.`);
+
+            this.pushTradeClosureToMemory(trade);
+        } catch (error) {
+            console.error('Error closing trade:', error);
+            alert('Failed to close trade: ' + error.message);
+        }
+    }
+
+    editTrade(index) {
+        const trade = this.portfolio.trades[index];
+        if (!trade) return;
+
+        const newTp = prompt('Update Take-Profit (leave blank to keep current):', trade.takeProfit ?? '');
+        if (newTp === null) return;
+
+        const newSl = prompt('Update Stop-Loss (leave blank to keep current):', trade.stopLoss ?? '');
+        if (newSl === null) return;
+
+        const parsedTp = newTp === '' ? null : parseFloat(newTp);
+        const parsedSl = newSl === '' ? null : parseFloat(newSl);
+
+        if (parsedTp !== null && (isNaN(parsedTp) || parsedTp <= 0)) {
+            alert('Invalid Take-Profit value');
+            return;
+        }
+
+        if (parsedSl !== null && (isNaN(parsedSl) || parsedSl <= 0)) {
+            alert('Invalid Stop-Loss value');
+            return;
+        }
+
+        trade.takeProfit = parsedTp;
+        trade.stopLoss = parsedSl;
+        trade.lastUpdated = new Date().toISOString();
+
+        this.savePortfolio();
+        this.renderTrades();
+        alert('✅ Trade updated!');
+    }
+
+    pushTradeClosureToMemory(trade) {
+        try {
+            this.addToConversationHistory('system', `Trade closed: ${trade.side.toUpperCase()} ${trade.pair} at ${trade.closePrice}. PnL: ${trade.pnl >= 0 ? '+' : ''}$${trade.pnl.toFixed(2)} (${trade.pnlPercent.toFixed(2)}%).`);
+            this.updateConversationContext(`Trade closed for ${trade.pair}. Result: ${trade.pnl >= 0 ? 'profit' : 'loss'} of ${trade.pnl.toFixed(2)} USDT.`, 'system');
+        } catch (error) {
+            console.warn('Failed to update trade closure memory:', error);
+        }
+    }
+
+    async fetchTradePrice(trade) {
+        try {
+            const cacheKey = `trade_price_${trade.coinId}`;
+            const cached = this.getFromCache(cacheKey);
+            if (cached) return cached;
+
+            const data = await this.fetchMarketData(trade.coinId);
+            if (data) {
+                this.setCache(cacheKey, data);
+            }
+            return data;
+        } catch (error) {
+            console.error('Error fetching trade price:', error);
+            return null;
+        }
+    }
+
+    calculateTradePnL(trade, currentPrice) {
+        const priceDiff = trade.side === 'long'
+            ? currentPrice - trade.entryPrice
+            : trade.entryPrice - currentPrice;
+
+        const pnl = priceDiff * trade.quantity;
+        const pnlPercent = (pnl / (trade.margin || 1)) * 100;
+
+        return { pnl, pnlPercent };
+    }
+
+    async updateTradesPrices(force = false) {
+        if (!this.portfolio.trades || this.portfolio.trades.length === 0) return;
+
+        for (const trade of this.portfolio.trades) {
+            if (trade.status === 'closed') continue;
+
+            const lastUpdate = trade.lastUpdated ? new Date(trade.lastUpdated).getTime() : 0;
+            if (!force && Date.now() - lastUpdate < 10000) {
+                continue;
+            }
+
+            const priceData = await this.fetchTradePrice(trade);
+            if (!priceData || !priceData.price_usd) continue;
+
+            const pnlInfo = this.calculateTradePnL(trade, priceData.price_usd);
+            trade.currentPrice = priceData.price_usd;
+            trade.pnl = pnlInfo.pnl;
+            trade.pnlPercent = pnlInfo.pnlPercent;
+            trade.lastUpdated = new Date().toISOString();
+
+            // Auto-close if TP/SL hit
+            if (trade.takeProfit && ((trade.side === 'long' && trade.currentPrice >= trade.takeProfit) ||
+                (trade.side === 'short' && trade.currentPrice <= trade.takeProfit))) {
+                this.notifyTradeTargetHit(trade, 'Take-Profit');
+            }
+
+            if (trade.stopLoss && ((trade.side === 'long' && trade.currentPrice <= trade.stopLoss) ||
+                (trade.side === 'short' && trade.currentPrice >= trade.stopLoss))) {
+                this.notifyTradeTargetHit(trade, 'Stop-Loss');
+            }
+        }
+
+        this.savePortfolio();
+        this.renderTrades();
+        const summary = this.calculateTradesSummary();
+        const tradePnLElement = document.getElementById('totalTradePnL');
+        if (tradePnLElement) {
+            tradePnLElement.textContent = `${summary.totalPnL >= 0 ? '+' : ''}$${summary.totalPnL.toFixed(2)} (${summary.totalPnLPercent.toFixed(2)}%)`;
+            tradePnLElement.className = `value ${summary.totalPnL >= 0 ? 'positive' : 'negative'}`;
+        }
+        const marginElement = document.getElementById('totalMarginInUse');
+        if (marginElement) {
+            marginElement.textContent = `$${summary.marginInUse.toFixed(2)}`;
+        }
+    }
+
+    notifyTradeTargetHit(trade, type) {
+        const message = `⚠️ ${type} triggered for ${trade.pair} ${trade.side.toUpperCase()} trade at $${trade.currentPrice.toFixed(4)}.`;
+        alert(message);
+        this.addMessage(message, 'ai');
+        this.addToConversationHistory('assistant', message);
+    }
+
+    startTradeUpdates() {
+        if (this.tradeUpdateInterval) {
+            clearInterval(this.tradeUpdateInterval);
+        }
+
+        this.tradeUpdateInterval = setInterval(() => {
+            this.updateTradesPrices();
+        }, 15000);
+    }
+
+    stopTradeUpdates() {
+        if (this.tradeUpdateInterval) {
+            clearInterval(this.tradeUpdateInterval);
+            this.tradeUpdateInterval = null;
+        }
+    }
+
+    async forceRefreshTrades() {
+        await this.updateTradesPrices(true);
     }
 
     showTradingViewChart(symbol) {
@@ -238,8 +683,12 @@ class SamCryptoAI {
                 totalPnL: 0, 
                 totalPnLPercent: 0, 
                 holdings: [],
+                trades: [],
                 usdtBalance: 0 
             };
+            this.portfolio.holdings = this.portfolio.holdings || [];
+            this.portfolio.trades = this.portfolio.trades || [];
+            this.portfolio.usdtBalance = this.portfolio.usdtBalance || 0;
             
             console.log('📊 Portfolio loaded:', this.portfolio);
             
@@ -279,6 +728,7 @@ class SamCryptoAI {
                 totalPnL: 0, 
                 totalPnLPercent: 0, 
                 holdings: [],
+                trades: [],
                 usdtBalance: 0
             };
             this.alerts = [];
@@ -1304,40 +1754,58 @@ class SamCryptoAI {
     }
 
     async fetchFromCoinCap(coinId) {
+        // Map coin IDs to CoinCap IDs (only coins supported by CoinCap API)
+        const coinCapMap = {
+            'bitcoin': 'bitcoin',
+            'ethereum': 'ethereum',
+            'binancecoin': 'binance-coin',
+            'cardano': 'cardano',
+            'solana': 'solana',
+            'polkadot': 'polkadot',
+            'chainlink': 'chainlink',
+            'litecoin': 'litecoin',
+            'bitcoin-cash': 'bitcoin-cash',
+            'stellar': 'stellar',
+            'ripple': 'xrp',
+            'dogecoin': 'dogecoin',
+            'avalanche-2': 'avalanche',
+            'polygon': 'polygon',
+            'uniswap': 'uniswap',
+            'aptos': 'aptos',
+            'injective-protocol': 'injective-protocol',
+            'near': 'near',
+            'optimism': 'optimism',
+            'arbitrum': 'arbitrum',
+            'sei-network': 'sei',
+            'sui': 'sui',
+            'render-token': 'render-token',
+            'worldcoin-wld': 'worldcoin',
+            'pepe': 'pepe',
+            'shiba-inu': 'shiba-inu',
+            'ecash': 'ecash'
+        };
+
+        const coinCapId = coinCapMap[coinId];
+        if (!coinCapId) {
+            console.warn(`CoinCap mapping not available for ${coinId}, skipping.`);
+            return null;
+        }
+
         try {
-            // Map coin IDs to CoinCap IDs
-            const coinCapMap = {
-                'bitcoin': 'bitcoin',
-                'ethereum': 'ethereum',
-                'binancecoin': 'binance-coin',
-                'cardano': 'cardano',
-                'solana': 'solana',
-                'polkadot': 'polkadot',
-                'chainlink': 'chainlink',
-                'litecoin': 'litecoin',
-                'bitcoin-cash': 'bitcoin-cash',
-                'stellar': 'stellar',
-                'ripple': 'xrp',
-                'dogecoin': 'dogecoin',
-                'avalanche-2': 'avalanche',
-                'matic-network': 'polygon',
-                'uniswap': 'uniswap'
-            };
-            
-            const coinCapId = coinCapMap[coinId];
-            if (!coinCapId) {
-                throw new Error('Coin not found in CoinCap');
-            }
-            
             const response = await fetch(`${this.coinCapAPI}/assets/${coinCapId}`);
-            
+
             if (!response.ok) {
-                throw new Error('CoinCap API failed');
+                console.warn(`CoinCap API response not ok for ${coinId}: ${response.status}`);
+                return null;
             }
-            
+
             const data = await response.json();
-            const asset = data.data;
-            
+            const asset = data?.data;
+            if (!asset) {
+                console.warn(`CoinCap returned empty payload for ${coinId}`);
+                return null;
+            }
+
             return {
                 price_usd: parseFloat(asset.priceUsd),
                 change_24h: parseFloat(asset.changePercent24Hr),
@@ -1347,8 +1815,8 @@ class SamCryptoAI {
                 source: 'CoinCap'
             };
         } catch (error) {
-            console.error('CoinCap fetch error:', error);
-            throw error;
+            console.warn(`CoinCap fetch skipped for ${coinId}:`, error?.message || error);
+            return null;
         }
     }
 
@@ -3420,10 +3888,7 @@ Bitcoin, Ethereum, Solana, Cardano, Ripple, Dogecoin, Polkadot, Avalanche, Polyg
             document.getElementById('portfolioPanel').classList.add('hidden');
         });
         
-        document.getElementById('refreshPortfolio')?.addEventListener('click', async () => {
-            console.log('Refreshing portfolio prices...');
-            await this.updatePortfolioDisplay();
-        });
+        this.startTradeUpdates();
         
         document.getElementById('closeCharts')?.addEventListener('click', () => {
             document.getElementById('chartsPanel').classList.add('hidden');
@@ -3478,9 +3943,20 @@ Bitcoin, Ethereum, Solana, Cardano, Ripple, Dogecoin, Polkadot, Avalanche, Polyg
         document.getElementById('addUsdtBtn')?.addEventListener('click', () => {
             this.addUsdtCapital();
         });
+        document.getElementById('editUsdtBtn')?.addEventListener('click', () => {
+            this.editUsdtBalance();
+        });
         
         document.getElementById('addHoldingBtn')?.addEventListener('click', () => {
             this.addHolding();
+        });
+        document.getElementById('addTradeBtn')?.addEventListener('click', () => {
+            this.addPortfolioTrade();
+        });
+
+        document.getElementById('refreshPortfolio')?.addEventListener('click', async () => {
+            console.log('Refreshing portfolio prices...');
+            await this.updatePortfolioDisplay(true);
         });
         
         document.getElementById('addAlertBtn')?.addEventListener('click', () => {
@@ -4565,6 +5041,7 @@ SamCrypto AI remembers your preferences and conversation history to provide pers
                 const currentUser = this.userManager.getCurrentUser();
                 return currentUser.portfolio || { 
                     holdings: [], 
+                    trades: [],
                     totalValue: 0, 
                     totalPnL: 0, 
                     totalPnLPercent: 0,
@@ -4717,8 +5194,15 @@ SamCrypto AI remembers your preferences and conversation history to provide pers
         document.getElementById('totalCapital').textContent = `$${totalCapital.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
         document.getElementById('totalPnL').textContent = `${this.portfolio.totalPnL >= 0 ? '+' : ''}$${this.portfolio.totalPnL.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})} (${this.portfolio.totalPnLPercent.toFixed(2)}%)`;
         document.getElementById('totalPnL').className = `value ${this.portfolio.totalPnL >= 0 ? 'positive' : 'negative'}`;
+        const tradesSummary = this.calculateTradesSummary();
+        document.getElementById('totalMarginInUse').textContent = `$${tradesSummary.marginInUse.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+        const tradePnLValue = `${tradesSummary.totalPnL >= 0 ? '+' : ''}$${tradesSummary.totalPnL.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})} (${tradesSummary.totalPnLPercent.toFixed(2)}%)`;
+        const tradePnLElement = document.getElementById('totalTradePnL');
+        tradePnLElement.textContent = tradePnLValue;
+        tradePnLElement.className = `value ${tradesSummary.totalPnL >= 0 ? 'positive' : 'negative'}`;
         document.getElementById('portfolioValue').textContent = `$${totalCapital.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
         this.renderHoldings();
+        this.renderTrades();
         
         // Update charts
         if (this.portfolioHistory) {
@@ -5440,6 +5924,24 @@ SamCrypto AI remembers your preferences and conversation history to provide pers
         this.updatePortfolioDisplay();
         
         alert(`✅ USDT added successfully!\n\nAdded: $${usdtAmount.toFixed(2)}\nNew Balance: $${this.portfolio.usdtBalance.toFixed(2)}`);
+    }
+
+    editUsdtBalance() {
+        const currentBalance = this.portfolio.usdtBalance || 0;
+        const newValue = prompt('✏️ Edit USDT Balance\n\nEnter the new USDT balance:', currentBalance.toFixed(2));
+        if (newValue === null) return;
+
+        const parsed = parseFloat(newValue);
+        if (isNaN(parsed) || parsed < 0) {
+            alert('Please enter a valid non-negative number');
+            return;
+        }
+
+        this.portfolio.usdtBalance = parsed;
+        this.savePortfolio();
+        this.updatePortfolioDisplay();
+
+        alert(`✅ USDT balance updated!\n\nNew Balance: $${parsed.toFixed(2)}`);
     }
 
     async addHolding() {

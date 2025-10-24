@@ -497,7 +497,10 @@
                         <span class="label">💰 USDT Balance</span>
                         <span id="usdtBalance" class="value">$0.00</span>
                     </div>
-                    <button id="addUsdtBtn" class="add-usdt-btn" title="Add USDT Capital">+ Add</button>
+                    <div class="usdt-actions">
+                        <button id="addUsdtBtn" class="add-usdt-btn" title="Add USDT Capital">+ Add</button>
+                        <button id="editUsdtBtn" class="edit-usdt-btn" title="Edit USDT Balance">Edit</button>
+                    </div>
                 </div>
             </div>
 
@@ -511,8 +514,16 @@
                     <span id="totalCapital" class="value">$0.00</span>
                 </div>
                 <div class="total-pnl">
-                    <span class="label">Total P&L</span>
+                    <span class="label">Total P&amp;L</span>
                     <span id="totalPnL" class="value">+$0.00 (0%)</span>
+                </div>
+                <div class="margin-used">
+                    <span class="label">Margin In Use</span>
+                    <span id="totalMarginInUse" class="value">$0.00</span>
+                </div>
+                <div class="trades-pnl">
+                    <span class="label">Trades P&amp;L</span>
+                    <span id="totalTradePnL" class="value">+$0.00 (0%)</span>
                 </div>
             </div>
 
@@ -568,6 +579,28 @@
                 </div>
                 <small class="input-hint">Enter how much USDT you want to spend (uses current market price)</small>
             </div>
+            <div class="add-trade">
+                <h4>Futures Trade Tracker</h4>
+                <div class="trade-form-grid">
+                    <input type="text" id="tradePairInput" placeholder="Pair (e.g., SOL/USDT)">
+                    <select id="tradeSideSelect">
+                        <option value="long">Long</option>
+                        <option value="short">Short</option>
+                    </select>
+                    <input type="number" id="tradeLeverageInput" placeholder="Leverage" min="1" max="125" step="1">
+                    <input type="number" id="tradeMarginInput" placeholder="Margin (USDT)" min="0" step="0.01">
+                    <input type="number" id="tradeEntryInput" placeholder="Entry Price" min="0" step="0.0001">
+                    <input type="number" id="tradeTpInput" placeholder="Take Profit" min="0" step="0.0001">
+                    <input type="number" id="tradeSlInput" placeholder="Stop Loss" min="0" step="0.0001">
+                    <button id="addTradeBtn" class="add-trade-btn">Add Trade</button>
+                </div>
+                <small class="input-hint">Add leveraged positions manually. Live P&amp;L updates automatically using real-time prices.</small>
+            </div>
+
+            <div class="trades-list" id="tradesList">
+                <!-- Trades will be rendered here -->
+            </div>
+
             <div class="holdings-list" id="holdingsList">
                 <!-- Holdings will be added here -->
             </div>
