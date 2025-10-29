@@ -28,8 +28,8 @@ class SamCryptoAI {
             previousQuestions: [],
             userProfile: {}
         };
-        this.maxContextMessages = 20; // Keep last 20 messages
-        this.contextWindowSize = 15000; // Characters for context
+        this.maxContextMessages = 10; // Reduced from 20 to 10 for speed
+        this.contextWindowSize = 8000; // Reduced from 15000 for faster processing
         
         // Enhanced Multi-Source Crypto Price APIs
         this.coinGeckoAPI = 'https://api.coingecko.com/api/v3';
@@ -2370,8 +2370,8 @@ class SamCryptoAI {
             parts: [{ text: 'I understand! I\'m SamCrypto AI with full memory of our conversations. I remember your preferences, trading history, and past discussions. I\'ll provide personalized advice based on what I know about you and continue our conversation naturally.' }]
         });
         
-        // Add recent conversation history with better context (last 10 messages)
-        const recentHistory = this.conversationHistory.slice(-10);
+        // Add recent conversation history with better context (last 5 messages for speed)
+        const recentHistory = this.conversationHistory.slice(-5);
         for (const msg of recentHistory) {
             contents.push({
                 role: msg.role === 'user' ? 'user' : 'model',
@@ -2867,26 +2867,26 @@ ${this.getRecentTradingContext()}
     }
 
     getOptimalGenerationConfig(intent) {
-        // Dynamic config based on intent - INCREASED TOKEN LIMITS
+        // Optimized config for SPEED - Lower tokens = Faster response
         const baseConfig = {
-            temperature: 0.7,
-            topK: 40,
-            topP: 0.95,
-            maxOutputTokens: 4096, // DOUBLED from 2048 to 4096
+            temperature: 0.6,  // Slightly lower for faster decisions
+            topK: 35,          // Reduced for speed
+            topP: 0.92,        // Reduced for speed
+            maxOutputTokens: 1800, // Optimized for 5-8 second response time
         };
         
         // Adjust based on intent type
         switch (intent.type) {
             case 'trade_advice':
             case 'price_check':
-                return { ...baseConfig, temperature: 0.4, topK: 30, maxOutputTokens: 4096 }; // More tokens for complete analysis
+                return { ...baseConfig, temperature: 0.4, topK: 30, maxOutputTokens: 1500 }; // Fast & focused
             case 'learning':
             case 'comparison':
-                return { ...baseConfig, temperature: 0.8, maxOutputTokens: 6144 }; // Even more for explanations
+                return { ...baseConfig, temperature: 0.7, maxOutputTokens: 2000 }; // Slightly longer for education
             case 'analysis':
-                return { ...baseConfig, temperature: 0.5, topK: 35, maxOutputTokens: 4096 }; // Complete analysis
+                return { ...baseConfig, temperature: 0.5, topK: 32, maxOutputTokens: 1800 }; // Balanced
             default:
-                return { ...baseConfig, maxOutputTokens: 4096 }; // Always ensure complete responses
+                return { ...baseConfig, maxOutputTokens: 1600 }; // Default optimized for speed
         }
     }
 
@@ -4667,9 +4667,9 @@ Bitcoin, Ethereum, Solana, Cardano, Ripple, Dogecoin, Polkadot, Avalanche, Polyg
             timestamp: Date.now()
         });
         
-        // Keep only last 20 messages to avoid overwhelming the API
-        if (this.conversationHistory.length > 20) {
-            this.conversationHistory = this.conversationHistory.slice(-20);
+        // Keep only last 10 messages to avoid overwhelming the API (optimized for speed)
+        if (this.conversationHistory.length > 10) {
+            this.conversationHistory = this.conversationHistory.slice(-10);
         }
         
         // Save to user profile if logged in
