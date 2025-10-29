@@ -1,0 +1,840 @@
+/* ============================================
+   MOBILE RESPONSIVE ENHANCEMENTS
+   Optimized for All Screen Sizes
+   ============================================ */
+
+/* ===== RESPONSIVE BREAKPOINTS ===== */
+/* 
+   - Mobile: 320px - 480px
+   - Tablet: 481px - 768px
+   - Desktop: 769px - 1024px
+   - Large Desktop: 1025px+
+*/
+
+/* ===== TABLET (768px and below) ===== */
+@media (max-width: 768px) {
+    /* Typography */
+    :root {
+        font-size: 14px;
+    }
+    
+    /* Header Adjustments */
+    .chat-header {
+        padding: 12px 16px;
+    }
+    
+    .ticker-container {
+        padding: 6px 0;
+    }
+    
+    .ticker-item {
+        padding: 6px 16px;
+        font-size: 0.85rem;
+        margin-right: 24px;
+    }
+    
+    .price-change {
+        font-size: 0.75rem;
+        padding: 2px 6px;
+    }
+    
+    /* Header Actions */
+    .header-actions {
+        gap: 8px;
+    }
+    
+    .features-btn {
+        padding: 8px;
+    }
+    
+    .features-btn svg {
+        width: 20px;
+        height: 20px;
+    }
+    
+    /* Chat Messages */
+    .chat-messages {
+        padding: 20px 16px 140px;
+    }
+    
+    .message {
+        margin-bottom: 20px;
+    }
+    
+    .message-text {
+        font-size: 0.95rem;
+        padding: 12px 16px;
+    }
+    
+    .user-message .message-text {
+        max-width: 85%;
+        margin-left: 20px;
+    }
+    
+    /* Welcome Screen */
+    .welcome-title {
+        font-size: 2.25rem;
+        margin-bottom: 36px;
+    }
+    
+    .welcome-message {
+        min-height: 40vh;
+        padding: 40px 20px;
+    }
+    
+    .action-buttons {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
+        max-width: 100%;
+    }
+    
+    .action-btn {
+        padding: 16px 12px;
+        min-height: 90px;
+        font-size: 0.8rem;
+    }
+    
+    .btn-icon svg {
+        width: 22px;
+        height: 22px;
+    }
+    
+    /* Input Area */
+    .chat-input-container {
+        padding: 16px;
+    }
+    
+    .ai-input-wrapper {
+        max-width: 100%;
+        padding: 12px 16px;
+    }
+    
+    .ai-textarea-container textarea {
+        font-size: 0.95rem;
+    }
+    
+    .ai-send-button {
+        width: 36px;
+        height: 36px;
+    }
+    
+    .ai-send-button svg {
+        width: 18px;
+        height: 18px;
+    }
+    
+    .voice-input-btn {
+        width: 20px;
+        height: 20px;
+    }
+    
+    .voice-input-btn svg {
+        width: 16px;
+        height: 16px;
+    }
+    
+    /* Side Panels */
+    .side-panel {
+        width: 100%;
+        max-width: 100vw;
+    }
+    
+    .panel-header {
+        padding: 18px;
+    }
+    
+    .panel-header h3 {
+        font-size: 1.25rem;
+    }
+    
+    .panel-content {
+        padding: 16px;
+    }
+    
+    /* Features Page */
+    .features-page-header {
+        padding: 18px;
+    }
+    
+    .features-page-header h2 {
+        font-size: 1.5rem;
+    }
+    
+    .features-page-content {
+        padding: 16px;
+        grid-template-columns: 1fr;
+        gap: 12px;
+    }
+    
+    .feature-card {
+        padding: 18px;
+    }
+    
+    .feature-card h3 {
+        font-size: 1.1rem;
+    }
+    
+    .feature-card p {
+        font-size: 0.9rem;
+    }
+    
+    .feature-icon svg {
+        width: 28px;
+        height: 28px;
+    }
+    
+    /* Portfolio Panel */
+    .portfolio-summary {
+        grid-template-columns: 1fr;
+        gap: 12px;
+    }
+    
+    .usdt-capital {
+        padding: 16px;
+    }
+    
+    .usdt-balance .value {
+        font-size: 24px;
+    }
+    
+    .add-usdt-btn {
+        padding: 8px 16px;
+        font-size: 13px;
+    }
+    
+    .holding-item,
+    .trade-item {
+        padding: 16px;
+    }
+    
+    .trade-form-grid {
+        grid-template-columns: 1fr;
+        gap: 10px;
+    }
+    
+    /* Charts */
+    .portfolio-chart-container {
+        height: 120px;
+    }
+    
+    .allocation-chart-container {
+        height: 180px;
+    }
+    
+    .chart-header {
+        flex-direction: column;
+        gap: 12px;
+        align-items: stretch;
+    }
+    
+    .chart-timeframe {
+        justify-content: center;
+        flex-wrap: wrap;
+    }
+    
+    .timeframe-btn {
+        flex: 1;
+        min-width: 60px;
+        padding: 8px 12px;
+        font-size: 11px;
+    }
+    
+    /* News Feed */
+    .news-controls {
+        padding: 10px;
+    }
+    
+    .news-filters {
+        gap: 6px;
+    }
+    
+    .filter-btn {
+        padding: 6px 12px;
+        font-size: 11px;
+    }
+    
+    .fb-news-card {
+        margin-bottom: 16px;
+    }
+    
+    .fb-news-header {
+        padding: 12px;
+    }
+    
+    .fb-source-avatar {
+        width: 36px;
+        height: 36px;
+    }
+    
+    .fb-news-content {
+        padding: 12px;
+    }
+    
+    .fb-news-title {
+        font-size: 14px;
+    }
+    
+    .fb-news-description {
+        font-size: 13px;
+    }
+    
+    .fb-news-image img {
+        height: 180px;
+    }
+    
+    /* Modals */
+    .modal-content {
+        width: 95%;
+        max-width: 100%;
+        padding: 24px;
+        margin: 16px;
+        border-radius: 16px;
+    }
+    
+    .modal-header h2 {
+        font-size: 1.4rem;
+    }
+    
+    /* Forms */
+    input,
+    select,
+    textarea {
+        padding: 10px 14px;
+        font-size: 14px;
+    }
+    
+    button {
+        padding: 10px 20px;
+        font-size: 14px;
+    }
+    
+    /* Auth Screen */
+    .auth-card {
+        width: 95%;
+        max-width: 100%;
+        padding: 24px;
+    }
+    
+    .auth-card-title {
+        font-size: 1.5rem;
+    }
+    
+    /* Indicators Grid */
+    .indicators-grid {
+        grid-template-columns: 1fr;
+        gap: 10px;
+    }
+}
+
+/* ===== MOBILE (480px and below) ===== */
+@media (max-width: 480px) {
+    /* Typography */
+    :root {
+        font-size: 13px;
+    }
+    
+    /* Header */
+    .chat-header {
+        padding: 10px 12px;
+    }
+    
+    .ticker-item {
+        padding: 4px 12px;
+        font-size: 0.8rem;
+        margin-right: 20px;
+    }
+    
+    .price-change {
+        font-size: 0.7rem;
+        padding: 1px 4px;
+    }
+    
+    .features-btn {
+        padding: 6px;
+    }
+    
+    .features-btn svg {
+        width: 18px;
+        height: 18px;
+    }
+    
+    /* Chat Messages */
+    .chat-messages {
+        padding: 16px 12px 150px;
+    }
+    
+    .message {
+        margin-bottom: 16px;
+    }
+    
+    .message-text {
+        font-size: 0.9rem;
+        padding: 10px 14px;
+        border-radius: 16px;
+    }
+    
+    .user-message .message-text {
+        max-width: 90%;
+        margin-left: 10px;
+        border-radius: 16px 16px 4px 16px;
+    }
+    
+    .ai-message .message-text {
+        border-radius: 16px 16px 16px 4px;
+    }
+    
+    /* Welcome Screen */
+    .welcome-title {
+        font-size: 1.75rem;
+        margin-bottom: 28px;
+    }
+    
+    .welcome-message {
+        min-height: 35vh;
+        padding: 28px 16px;
+    }
+    
+    .action-buttons {
+        grid-template-columns: 1fr;
+        gap: 10px;
+    }
+    
+    .action-btn {
+        padding: 14px 10px;
+        min-height: 70px;
+        font-size: 0.75rem;
+    }
+    
+    .btn-icon svg {
+        width: 20px;
+        height: 20px;
+    }
+    
+    /* Input Area */
+    .chat-input-container {
+        padding: 12px;
+    }
+    
+    .ai-input-wrapper {
+        padding: 10px 14px;
+        gap: 10px;
+    }
+    
+    .ai-textarea-container textarea {
+        font-size: 0.9rem;
+    }
+    
+    .ai-send-button {
+        width: 32px;
+        height: 32px;
+    }
+    
+    .ai-send-button svg {
+        width: 16px;
+        height: 16px;
+    }
+    
+    .voice-input-btn {
+        width: 18px;
+        height: 18px;
+    }
+    
+    .voice-input-btn svg {
+        width: 14px;
+        height: 14px;
+    }
+    
+    /* Side Panels */
+    .panel-header {
+        padding: 16px;
+    }
+    
+    .panel-header h3 {
+        font-size: 1.1rem;
+    }
+    
+    .panel-content {
+        padding: 14px;
+    }
+    
+    .close-btn {
+        width: 28px;
+        height: 28px;
+        font-size: 20px;
+    }
+    
+    /* Features Page */
+    .features-page-header {
+        padding: 16px;
+    }
+    
+    .features-page-header h2 {
+        font-size: 1.25rem;
+    }
+    
+    .features-page-content {
+        padding: 12px;
+    }
+    
+    .feature-card {
+        padding: 16px;
+    }
+    
+    .feature-card h3 {
+        font-size: 1rem;
+    }
+    
+    .feature-card p {
+        font-size: 0.85rem;
+    }
+    
+    .feature-icon svg {
+        width: 24px;
+        height: 24px;
+    }
+    
+    /* Portfolio */
+    .usdt-capital {
+        padding: 14px;
+    }
+    
+    .usdt-balance .value {
+        font-size: 20px;
+    }
+    
+    .add-usdt-btn {
+        padding: 6px 12px;
+        font-size: 12px;
+    }
+    
+    .holding-item,
+    .trade-item {
+        padding: 12px;
+    }
+    
+    .portfolio-chart-container {
+        height: 100px;
+    }
+    
+    .allocation-chart-container {
+        height: 160px;
+    }
+    
+    .stat-label {
+        font-size: 9px;
+    }
+    
+    .stat-value {
+        font-size: 12px;
+    }
+    
+    /* News Feed */
+    .news-filters {
+        gap: 4px;
+    }
+    
+    .filter-btn {
+        padding: 4px 8px;
+        font-size: 10px;
+    }
+    
+    .fb-news-header {
+        padding: 10px;
+    }
+    
+    .fb-source-avatar {
+        width: 32px;
+        height: 32px;
+        font-size: 14px;
+    }
+    
+    .fb-source-name {
+        font-size: 12px;
+    }
+    
+    .fb-post-time {
+        font-size: 10px;
+    }
+    
+    .fb-news-content {
+        padding: 10px;
+    }
+    
+    .fb-news-title {
+        font-size: 13px;
+    }
+    
+    .fb-news-description {
+        font-size: 12px;
+    }
+    
+    .fb-news-image img {
+        height: 150px;
+    }
+    
+    .fb-engagement-bar {
+        padding: 8px 10px;
+    }
+    
+    .confidence-bar {
+        width: 60px;
+        height: 6px;
+    }
+    
+    .confidence-percentage {
+        font-size: 10px;
+    }
+    
+    .fb-action-btn {
+        padding: 8px;
+        font-size: 11px;
+    }
+    
+    .action-icon {
+        font-size: 14px;
+    }
+    
+    .action-text {
+        display: none; /* Hide text on mobile to save space */
+    }
+    
+    /* Modals */
+    .modal-content {
+        width: 96%;
+        padding: 20px;
+        margin: 12px;
+    }
+    
+    .modal-header h2 {
+        font-size: 1.2rem;
+    }
+    
+    /* Forms */
+    input,
+    select,
+    textarea {
+        padding: 8px 12px;
+        font-size: 13px;
+    }
+    
+    button {
+        padding: 8px 16px;
+        font-size: 13px;
+    }
+    
+    /* Auth Screen */
+    .auth-card {
+        padding: 20px;
+    }
+    
+    .auth-card-title {
+        font-size: 1.25rem;
+    }
+    
+    .auth-input {
+        padding: 10px 14px;
+        font-size: 14px;
+    }
+    
+    /* Timeframe Buttons */
+    .timeframe-btn {
+        padding: 6px 10px;
+        font-size: 10px;
+    }
+}
+
+/* ===== SMALL MOBILE (320px - 375px) ===== */
+@media (max-width: 375px) {
+    .welcome-title {
+        font-size: 1.5rem;
+        margin-bottom: 20px;
+    }
+    
+    .action-btn {
+        min-height: 60px;
+        font-size: 0.7rem;
+    }
+    
+    .btn-icon svg {
+        width: 18px;
+        height: 18px;
+    }
+    
+    .chat-messages {
+        padding: 12px 10px 160px;
+    }
+    
+    .message-text {
+        font-size: 0.85rem;
+        padding: 8px 12px;
+    }
+    
+    .fb-news-image img {
+        height: 120px;
+    }
+}
+
+/* ===== LANDSCAPE MOBILE ===== */
+@media (max-height: 500px) and (orientation: landscape) {
+    .welcome-message {
+        min-height: 50vh;
+        padding: 20px 16px;
+    }
+    
+    .welcome-title {
+        font-size: 1.5rem;
+        margin-bottom: 20px;
+    }
+    
+    .action-buttons {
+        grid-template-columns: repeat(3, 1fr);
+        gap: 8px;
+    }
+    
+    .action-btn {
+        min-height: 60px;
+        padding: 10px 8px;
+    }
+    
+    .chat-messages {
+        padding: 16px 12px 120px;
+    }
+}
+
+/* ===== TOUCH-FRIENDLY IMPROVEMENTS ===== */
+@media (hover: none) and (pointer: coarse) {
+    /* Increase touch targets */
+    button,
+    .action-btn,
+    .feature-card,
+    .ticker-item,
+    input,
+    select {
+        min-height: 44px; /* Apple's recommended touch target size */
+        min-width: 44px;
+    }
+    
+    /* Remove hover effects on touch devices */
+    .action-btn:hover,
+    .feature-card:hover,
+    .ticker-item:hover,
+    button:hover {
+        transform: none;
+    }
+    
+    /* Add active states for better feedback */
+    .action-btn:active,
+    .feature-card:active,
+    button:active {
+        transform: scale(0.95);
+        opacity: 0.8;
+    }
+    
+    /* Larger tap areas for small elements */
+    .close-btn,
+    .refresh-btn,
+    .voice-input-btn {
+        padding: 12px;
+    }
+}
+
+/* ===== REDUCE MOTION ===== */
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+}
+
+/* ===== HIGH DPI SCREENS ===== */
+@media (-webkit-min-device-pixel-ratio: 2),
+       (min-resolution: 192dpi) {
+    /* Sharper borders */
+    * {
+        border-width: 0.5px;
+    }
+    
+    /* Better font rendering */
+    body {
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+    }
+}
+
+/* ===== DARK MODE SUPPORT ===== */
+@media (prefers-color-scheme: dark) {
+    /* Already using dark theme, but can add additional adjustments */
+    body {
+        background: linear-gradient(135deg, #000000 0%, #0a0a0f 50%, #000000 100%);
+    }
+}
+
+/* ===== PRINT STYLES ===== */
+@media print {
+    .chat-header,
+    .chat-input-container,
+    .side-panel,
+    .features-page,
+    .modal,
+    button {
+        display: none !important;
+    }
+    
+    .chat-messages {
+        padding: 20px !important;
+    }
+    
+    body {
+        background: white !important;
+        color: black !important;
+    }
+    
+    .message-text {
+        border: 1px solid #ccc !important;
+        background: white !important;
+        color: black !important;
+    }
+}
+
+/* ===== ORIENTATION CHANGE ===== */
+@media (orientation: portrait) {
+    .side-panel {
+        width: 100%;
+    }
+    
+    .action-buttons {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (orientation: landscape) and (max-width: 768px) {
+    .action-buttons {
+        grid-template-columns: repeat(3, 1fr);
+    }
+    
+    .welcome-title {
+        font-size: 2rem;
+    }
+}
+
+/* ===== SAFE AREA INSETS (iPhone X and newer) ===== */
+@supports (padding: max(0px)) {
+    .chat-header {
+        padding-left: max(16px, env(safe-area-inset-left));
+        padding-right: max(16px, env(safe-area-inset-right));
+    }
+    
+    .chat-input-container {
+        padding-left: max(16px, env(safe-area-inset-left));
+        padding-right: max(16px, env(safe-area-inset-right));
+        padding-bottom: max(20px, env(safe-area-inset-bottom));
+    }
+    
+    .side-panel {
+        padding-bottom: env(safe-area-inset-bottom);
+    }
+}
+
