@@ -667,44 +667,6 @@ Provide complete analysis that helps users make informed decisions.
         return 'general_inquiry';
     }
 
-    /**
-     * 🎯 Detect if user wants detailed analysis
-     */
-    detectDetailLevel(message) {
-        const msg = message.toLowerCase();
-        
-        // Keywords that indicate user wants detailed analysis
-        const detailedKeywords = [
-            'detailed', 'full', 'complete', 'comprehensive', 'thorough',
-            'deep', 'in-depth', 'explain', 'why', 'how',
-            'analysis', 'analyze', 'break down', 'breakdown',
-            'all indicators', 'everything', 'full report'
-        ];
-        
-        // Keywords that indicate user wants quick answer
-        const quickKeywords = [
-            'quick', 'fast', 'brief', 'short', 'simple',
-            'just tell me', 'should i', 'yes or no'
-        ];
-        
-        // Check for detailed keywords
-        const wantsDetailed = detailedKeywords.some(keyword => msg.includes(keyword));
-        const wantsQuick = quickKeywords.some(keyword => msg.includes(keyword));
-        
-        // If user explicitly asks for quick, return false
-        if (wantsQuick) return false;
-        
-        // If user asks for detailed, return true
-        if (wantsDetailed) return true;
-        
-        // Default: use medium length (slightly detailed)
-        // More detailed for analysis/compare, less for price check
-        if (msg.includes('analyze') || msg.includes('compare')) return true;
-        if (msg.includes('price') || msg.includes('worth')) return false;
-        
-        return false; // Default to concise
-    }
-
     extractCoins(message) {
         const coins = [];
         const coinKeywords = ['bitcoin', 'btc', 'ethereum', 'eth', 'solana', 'sol', 'cardano', 'ada', 'ripple', 'xrp', 'dogecoin', 'doge'];

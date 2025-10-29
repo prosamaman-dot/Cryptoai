@@ -5,8 +5,17 @@ class SamCryptoAI {
         // Initialize UserManager first
         this.userManager = new UserManager();
         
-        // Core API configuration
-        this.apiKey = 'AIzaSyBmjoj-WrHWoLJEbYF97LxxU-scf3wXMQQ'; // Default API key
+        // Multiple API Keys for Rate Limit Distribution (Rotation System)
+        this.apiKeys = [
+            'AIzaSyBmjoj-WrHWoLJEbYF97LxxU-scf3wXMQQ', // Key 1 (Original)
+            'AIzaSyAmUENTunN37snDBhjHDXm4xgDHN6BdbOg', // Key 2 (New)
+            'AIzaSyBDPpqPETFTpTp_VALS6PJFjZKat3qY-_g', // Key 3 (New)
+            'AIzaSyARBZ1vwzTsBTkmd6bHGWeSuCwScjckLQ4'  // Key 4 (New)
+        ];
+        this.currentKeyIndex = 0; // Track which key we're using
+        this.apiKey = this.apiKeys[this.currentKeyIndex]; // Start with first key
+        this.keyUsageCount = {}; // Track usage per key
+        this.lastKeyRotation = Date.now();
         this.conversationHistory = [];
         
         // Advanced Memory System (ChatGPT/Claude-level)
@@ -2014,7 +2023,11 @@ class SamCryptoAI {
 
     async generateAIResponse(userMessage, marketData) {
         console.log('🤖 Generating AI response for:', userMessage);
-        console.log('🔑 API Key available:', !!this.apiKey);
+        
+        // Automatic load distribution - rotate keys every message
+        this.rotateToNextKey();
+        
+        console.log(`🔑 Using API Key ${this.currentKeyIndex + 1}/${this.apiKeys.length}`);
         console.log('📊 Market Data received:', marketData);
         console.log('📊 Market Data keys:', marketData ? Object.keys(marketData) : 'null');
         
@@ -2149,8 +2162,18 @@ class SamCryptoAI {
                 this.showUserMessage('⚠️ API busy - Using real Binance data instead!', 3000);
                 return this.handleAPIOverload(userMessage, marketData);
             } else if (error.message === 'RATE_LIMITED') {
-                console.log('⏰ Rate limited, using demo response...');
-                this.showUserMessage('⏰ API rate limited - Using real Binance data!', 3000);
+                console.log('⏰ Rate limited on key', this.currentKeyIndex + 1);
+                
+                // Try rotating to next API key
+                const nextResponse = await this.rotateAPIKeyAndRetry(userMessage, marketData);
+                if (nextResponse) {
+                    console.log('✅ Successfully used alternate API key!');
+                    return nextResponse;
+                }
+                
+                // If all keys are rate limited, use fallback
+                console.log('⚠️ All API keys rate limited, using fallback...');
+                this.showUserMessage('⏰ High demand - Using cached data!', 3000);
                 return this.handleAPIOverload(userMessage, marketData);
             } else if (error.message === 'INVALID_REQUEST') {
                 console.log('❌ Invalid request, using fallback...');
@@ -2161,6 +2184,119 @@ class SamCryptoAI {
             console.log('🔄 Falling back to demo response');
             return this.generateDemoResponse(userMessage, marketData);
         }
+    }
+
+    rotateToNextKey() {
+        // Automatic rotation for load distribution
+        this.currentKeyIndex = (this.currentKeyIndex + 1) % this.apiKeys.length;
+        this.apiKey = this.apiKeys[this.currentKeyIndex];
+        this.lastKeyRotation = Date.now();
+        
+        // Track usage
+        if (!this.keyUsageCount[this.currentKeyIndex]) {
+            this.keyUsageCount[this.currentKeyIndex] = 0;
+        }
+        this.keyUsageCount[this.currentKeyIndex]++;
+        
+        console.log(`🔄 Auto-rotated to key ${this.currentKeyIndex + 1} (Used ${this.keyUsageCount[this.currentKeyIndex]} times)`);
+    }
+
+    async rotateAPIKeyAndRetry(userMessage, marketData) {
+        console.log('🔄 Rate limit hit! Attempting API key rotation...');
+        
+        const startingKeyIndex = this.currentKeyIndex;
+        let attempts = 0;
+        const maxAttempts = this.apiKeys.length;
+        
+        // Try each API key in sequence
+        while (attempts < maxAttempts) {
+            // Move to next key
+            this.currentKeyIndex = (this.currentKeyIndex + 1) % this.apiKeys.length;
+            this.apiKey = this.apiKeys[this.currentKeyIndex];
+            attempts++;
+            
+            // Don't try the same key we just failed with
+            if (this.currentKeyIndex === startingKeyIndex) {
+                continue;
+            }
+            
+            console.log(`🔑 Trying API key ${this.currentKeyIndex + 1} of ${this.apiKeys.length}...`);
+            
+            try {
+                // Track key usage
+                if (!this.keyUsageCount[this.currentKeyIndex]) {
+                    this.keyUsageCount[this.currentKeyIndex] = 0;
+                }
+                this.keyUsageCount[this.currentKeyIndex]++;
+                
+                // Try to generate response with new key
+                const response = await this.attemptAIRequest(userMessage, marketData);
+                
+                if (response) {
+                    console.log(`✅ Success with API key ${this.currentKeyIndex + 1}!`);
+                    this.showUserMessage(`🔑 Switched to backup API (${this.currentKeyIndex + 1}/${this.apiKeys.length})`, 2000);
+                    return response;
+                }
+            } catch (error) {
+                console.log(`❌ Key ${this.currentKeyIndex + 1} also failed:`, error.message);
+                
+                // If this key is also rate limited, continue to next
+                if (error.message === 'RATE_LIMITED' || error.message.includes('429')) {
+                    continue;
+                }
+                
+                // If it's a different error, return null to use fallback
+                return null;
+            }
+        }
+        
+        console.log('⚠️ All API keys exhausted');
+        return null;
+    }
+
+    async attemptAIRequest(userMessage, marketData) {
+        // Simplified request attempt - core logic only
+        const intent = this.detectIntent(userMessage);
+        const isNewsQuery = this.isNewsRelatedQuery(userMessage);
+        let newsData = null;
+        
+        if (isNewsQuery || intent.topic === 'news') {
+            newsData = await this.fetchCoinDeskNews();
+        }
+        
+        const systemPrompt = this.createAdvancedSystemPrompt(marketData, newsData, intent, userMessage);
+        const conversationContents = this.buildConversationHistory(systemPrompt, userMessage);
+        const generationConfig = this.getOptimalGenerationConfig(intent);
+        
+        const response = await fetch(`${this.geminiAPI}?key=${this.apiKey}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                contents: conversationContents,
+                generationConfig: generationConfig,
+                safetySettings: [
+                    { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_NONE' },
+                    { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_NONE' },
+                    { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_NONE' },
+                    { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_NONE' }
+                ]
+            })
+        });
+        
+        if (!response.ok) {
+            if (response.status === 429) {
+                throw new Error('RATE_LIMITED');
+            }
+            throw new Error(`API_ERROR_${response.status}`);
+        }
+        
+        const data = await response.json();
+        
+        if (!data.candidates || !data.candidates[0] || !data.candidates[0].content) {
+            throw new Error('Invalid API response');
+        }
+        
+        return data.candidates[0].content.parts[0].text;
     }
 
     async handleAPIOverload(userMessage, marketData) {
