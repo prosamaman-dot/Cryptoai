@@ -85,25 +85,54 @@ ${this.getContextualPromptEnhancement()}
 
 ---
 
-**RESPONSE REQUIREMENTS:**
+**RESPONSE REQUIREMENTS - KEEP IT CONCISE:**
 
-1. **START WITH ANALYSIS**: Show your step-by-step thinking process
-2. **USE REAL DATA**: Reference actual prices, volumes, percentages from market data above
-3. **BE SPECIFIC**: Give exact entry points, targets, stop losses with numbers
-4. **SHOW CONFIDENCE**: State your confidence level (0-100%) and explain why
-5. **MANAGE RISK**: Always include risk warnings and position sizing advice
-6. **CITE SOURCES**: Reference which indicators, patterns, or data points you're using
-7. **BE CONCISE**: Important info first, details after
-8. **USE EMOJIS**: Make it readable (📈 for bullish, 📉 for bearish, ⚠️ for warnings)
+1. **BE BRIEF BUT COMPLETE**: 150-250 words maximum
+2. **KEY INFO ONLY**: Price, trend, recommendation, confidence, entry/exit
+3. **NO FLUFF**: Skip long explanations, get to the point
+4. **USE BULLET POINTS**: Easy to scan and read quickly
+5. **SHOW CONFIDENCE**: One line with percentage
+6. **SPECIFIC NUMBERS**: Entry, targets, stop loss in one section
+7. **QUICK RISK NOTE**: One sentence warning
+8. **USE EMOJIS**: Visual clarity (📈📉⚠️✅❌)
 
-**CONFIDENCE SCORING RULES:**
-- 80-100%: Multiple strong signals align, low risk, clear trend
-- 60-79%: Good signals, moderate risk, some uncertainty
-- 40-59%: Mixed signals, higher risk, neutral territory
-- 20-39%: Weak signals, high risk, conflicting data
-- 0-19%: Insufficient data or very high risk
+**FORMAT EXAMPLE (FOLLOW THIS):**
+📊 [COIN] - $[PRICE] ([CHANGE]%)
 
-Remember: You're a professional crypto analyst. Give actionable, data-driven advice!`;
+**Analysis:**
+• Trend: [Bullish/Bearish] (RSI: X, MACD: Y)
+• Sentiment: [Score]/100
+• Volume: [High/Medium/Low]
+
+**Recommendation:** [BUY/HOLD/SELL]
+**Confidence:** [X]% ([High/Medium/Low])
+
+**Strategy:**
+• Entry: $X-Y
+• Target: $Z (+X%)
+• Stop: $W (-X%)
+• Size: X% portfolio
+
+⚠️ **Risk:** [One sentence]
+
+**STRICT RULES:**
+- Maximum 250 words total
+- No long paragraphs
+- No step-by-step explanations
+- Just actionable info
+- Be direct and clear
+
+**CONFIDENCE LEVELS:**
+- 80-100%: Strong signal ✅
+- 60-79%: Good signal 👍
+- 40-59%: Weak signal ⚠️
+- Below 40%: Avoid ❌
+
+**REMEMBER:** 
+- Keep response under 250 words
+- Be direct and actionable
+- No long explanations
+- Professional but concise`;
 
             return enhancedPrompt;
         };
@@ -163,35 +192,14 @@ Remember: You're a professional crypto analyst. Give actionable, data-driven adv
                 const resistance1 = (high24h * 1.02).toFixed(2);
                 const resistance2 = (high24h * 1.04).toFixed(2);
 
-                // Build technical section
+                // Build concise technical section
                 section += `
-**Price Action:**
-- Current: $${price.toFixed(2)}
-- 24h Range: $${low24h.toFixed(2)} - $${high24h.toFixed(2)}
-- 24h Change: ${change24h.toFixed(2)}% ${trendEmoji}
-- Volatility: ${volatility.toFixed(2)}%
+**${coinId.toUpperCase()}:** $${price.toFixed(2)} (${change24h.toFixed(2)}% ${trendEmoji})
+• Trend: ${trend}, RSI: ${rsiClamped.toFixed(0)} (${rsiSignal})
+• Volume: ${volumeRank} ($${this.formatLargeNumber(volume)})
+• Resistance: $${resistance1} / Support: $${support1}
+• Signals: ${this.getQuickSignalSummary(change24h, rsiClamped, volatility)}
 
-**Trend Analysis:**
-- Direction: ${trend} ${trendEmoji}
-- Strength: ${trendStrength > 5 ? 'Strong' : trendStrength > 2 ? 'Moderate' : 'Weak'}
-- RSI (Estimated): ${rsiClamped.toFixed(0)} - ${rsiSignal}
-
-**Volume Analysis:**
-- 24h Volume: $${this.formatLargeNumber(volume)}
-- Volume Rank: ${volumeRank}
-- Market Cap: $${this.formatLargeNumber(marketCap)}
-
-**Key Levels:**
-- Resistance 2: $${resistance2} (Strong)
-- Resistance 1: $${resistance1} (Immediate)
-- **CURRENT PRICE: $${price.toFixed(2)}**
-- Support 1: $${support1} (Immediate)
-- Support 2: $${support2} (Strong)
-
-**Trading Signals:**
-${this.generateQuickSignals(change24h, rsiClamped, volatility)}
-
----
 `;
             }
 
@@ -199,40 +207,26 @@ ${this.generateQuickSignals(change24h, rsiClamped, volatility)}
         };
 
         /**
-         * 🎯 Generate Quick Trading Signals
+         * 🎯 Generate Quick Trading Signals Summary (Concise)
          */
-        proto.generateQuickSignals = function(change24h, rsi, volatility) {
+        proto.getQuickSignalSummary = function(change24h, rsi, volatility) {
             const signals = [];
 
-            // Trend signals
-            if (change24h > 5) {
-                signals.push('🟢 Strong Uptrend - Consider long positions');
-            } else if (change24h < -5) {
-                signals.push('🔴 Strong Downtrend - Consider short positions or wait');
-            }
+            // Trend
+            if (change24h > 5) signals.push('Strong Up📈');
+            else if (change24h < -5) signals.push('Strong Down📉');
+            else if (change24h > 2) signals.push('Bullish');
+            else if (change24h < -2) signals.push('Bearish');
+            else signals.push('Neutral');
 
-            // RSI signals
-            if (rsi > 70) {
-                signals.push('⚠️ Overbought - Potential reversal or pullback');
-            } else if (rsi < 30) {
-                signals.push('🎯 Oversold - Potential bounce opportunity');
-            }
+            // RSI
+            if (rsi > 70) signals.push('Overbought⚠️');
+            else if (rsi < 30) signals.push('Oversold🎯');
 
-            // Volatility signals
-            if (volatility > 10) {
-                signals.push('⚡ High Volatility - Use tight stop losses');
-            } else if (volatility < 3) {
-                signals.push('😴 Low Volatility - Possible breakout brewing');
-            }
+            // Volatility
+            if (volatility > 10) signals.push('High Vol⚡');
 
-            // Momentum signals
-            if (change24h > 3 && rsi < 70) {
-                signals.push('🚀 Bullish Momentum - Trend likely to continue');
-            } else if (change24h < -3 && rsi > 30) {
-                signals.push('🔻 Bearish Momentum - Downtrend may persist');
-            }
-
-            return signals.length > 0 ? signals.map(s => `  - ${s}`).join('\n') : '  - No clear signals - Wait for better setup';
+            return signals.join(', ');
         };
 
         /**
@@ -258,24 +252,18 @@ ${this.generateQuickSignals(change24h, rsiClamped, volatility)}
         };
 
         /**
-         * 📰 Format News Data
+         * 📰 Format News Data (Concise)
          */
         proto.formatNewsData = function(newsData) {
             if (!newsData || !Array.isArray(newsData) || newsData.length === 0) {
-                return 'No recent news available';
+                return 'No recent news';
             }
 
-            let formatted = '';
-            newsData.slice(0, 5).forEach((article, index) => {
+            let formatted = '\n';
+            newsData.slice(0, 3).forEach((article, index) => {
                 const title = article.title || 'Untitled';
-                const description = article.description || article.summary || '';
                 const time = this.getTimeAgo(article.publishedAt || article.published_at);
-                
-                formatted += `
-**${index + 1}. ${title}**
-${description ? `   ${description.substring(0, 150)}...` : ''}
-   ⏰ ${time}
-`;
+                formatted += `• ${title.substring(0, 60)}... (${time})\n`;
             });
 
             return formatted;
@@ -308,15 +296,20 @@ ${description ? `   ${description.substring(0, 150)}...` : ''}
                 response = this._originalValidateAIResponse(response);
             }
 
-            // Additional validation for confidence scores
-            if (!response.includes('%') && !response.includes('confidence')) {
-                console.warn('⚠️ Response missing confidence score, adding disclaimer...');
-                response += '\n\n📊 *Confidence assessment pending - please analyze multiple indicators before trading.*';
+            // Trim excessive length (keep under ~300 words)
+            const words = response.split(/\s+/).length;
+            if (words > 350) {
+                console.warn(`⚠️ Response too long (${words} words), may need trimming`);
             }
 
-            // Ensure risk warnings are present
+            // Add confidence if missing
+            if (!response.includes('%') && !response.includes('onfidence')) {
+                response += '\n\n📊 Confidence: Medium';
+            }
+
+            // Add brief risk warning if missing
             if (!response.toLowerCase().includes('risk') && !response.includes('⚠️')) {
-                response += '\n\n⚠️ **Risk Warning**: All investments carry risk. Never invest more than you can afford to lose.';
+                response += '\n⚠️ Risk: Always use stop losses';
             }
 
             return response;

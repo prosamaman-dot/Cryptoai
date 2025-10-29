@@ -61,81 +61,52 @@ class AIEnhancementEngine {
      */
     createChainOfThoughtPrompt(userMessage, marketData, context) {
         const cot = `
-# ADVANCED CRYPTO ANALYSIS FRAMEWORK
+# CRYPTO ANALYSIS - CONCISE FORMAT
 
-## Step 1: UNDERSTAND THE QUESTION
-Question: "${userMessage}"
-- Intent: ${this.classifyIntent(userMessage)}
-- Coins Mentioned: ${this.extractCoins(userMessage)}
-- Time Horizon: ${this.extractTimeHorizon(userMessage)}
-- Risk Appetite: ${context.userProfile?.riskTolerance || 'moderate'}
+**Question:** "${userMessage}"
+**Intent:** ${this.classifyIntent(userMessage)} | **Risk:** ${context.userProfile?.riskTolerance || 'moderate'}
 
-## Step 2: GATHER REAL-TIME DATA
+## MARKET DATA:
 ${this.formatMarketData(marketData)}
 
-## Step 3: TECHNICAL ANALYSIS
-Apply these indicators in order of priority:
-1. Trend Analysis (EMA 9, 21, 50, 200)
-2. Momentum (RSI, MACD)
-3. Volatility (Bollinger Bands, ATR)
-4. Volume Profile
-5. Support/Resistance Levels
-6. Chart Patterns
+## YOUR TASK:
+Analyze using: RSI, MACD, EMA, Volume, Sentiment
+Provide: Recommendation, Confidence %, Entry/Exit, Risk
 
-## Step 4: FUNDAMENTAL ANALYSIS
-Consider:
-- Market Cap & Liquidity
-- 24h Volume & Volume Trends
-- Market Dominance
-- Network Activity (if applicable)
-- Recent News & Developments
+## OUTPUT FORMAT (MUST FOLLOW):
+Keep under 250 words. Use this structure:
 
-## Step 5: SENTIMENT ANALYSIS
-Evaluate:
-- Fear & Greed Index
-- Social Media Sentiment
-- News Sentiment
-- Whale Activity
-- Institutional Interest
+📊 **[COIN] - $[PRICE] ([CHANGE]%)**
 
-## Step 6: RISK ASSESSMENT
-Calculate:
-- Volatility Score (0-100)
-- Liquidity Score (0-100)
-- Technical Strength Score (0-100)
-- Sentiment Score (0-100)
-- **Overall Confidence: X%** (Be explicit)
+**Analysis:**
+• Trend: [Direction] (Key indicators)
+• Sentiment: [Score]/100
+• Volume: [Level]
 
-## Step 7: FORMULATE RECOMMENDATION
-Based on ALL above factors, provide:
-1. **RECOMMENDATION**: Buy/Hold/Sell
-2. **CONFIDENCE LEVEL**: Low/Medium/High (with percentage)
-3. **REASONING**: Why this recommendation
-4. **ENTRY POINTS**: Specific price levels
-5. **TARGETS**: Take-profit levels
-6. **STOP LOSS**: Risk management level
-7. **POSITION SIZE**: Based on risk tolerance
-8. **TIME HORIZON**: Short/Medium/Long term
+**Recommendation:** [Action]
+**Confidence:** [%] ([Level])
 
-## Step 8: RISK WARNINGS
-- List specific risks
-- Probability of each risk
-- How to mitigate risks
+**Strategy:**
+• Entry: $[range]
+• Target: $[price] (+%)
+• Stop: $[price] (-%)
+• Size: [%] portfolio
+
+⚠️ **Risk:** [One sentence]
 
 ---
 
-**CRITICAL RULES**:
-- Always show your reasoning step-by-step
-- Use REAL market data (prices, volumes, changes)
-- Give specific numbers, not vague statements
-- Include confidence percentages
-- Explain WHY, not just WHAT
-- Consider user's risk profile: ${context.userProfile?.riskTolerance || 'moderate'}
-- Never guarantee profits, always mention risks
-- If data is insufficient, say so explicitly
+**RULES**:
+✅ Maximum 250 words
+✅ Use bullet points
+✅ Real numbers from data
+✅ Be direct and clear
+✅ No long explanations
+❌ No step-by-step thinking shown
+❌ No multiple paragraphs
+❌ No fluff or filler
 
-**OUTPUT FORMAT**:
-Use clear sections with emojis for readability. Be concise but thorough.
+User risk: ${context.userProfile?.riskTolerance || 'moderate'}
 `;
         return cot;
     }
