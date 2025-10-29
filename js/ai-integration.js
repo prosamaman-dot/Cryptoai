@@ -85,42 +85,26 @@ ${this.getContextualPromptEnhancement()}
 
 ---
 
-**RESPONSE REQUIREMENTS - KEEP IT CONCISE:**
+**RESPONSE REQUIREMENTS - ADAPTIVE LENGTH:**
 
-1. **BE BRIEF BUT COMPLETE**: 150-250 words maximum
-2. **KEY INFO ONLY**: Price, trend, recommendation, confidence, entry/exit
-3. **NO FLUFF**: Skip long explanations, get to the point
-4. **USE BULLET POINTS**: Easy to scan and read quickly
-5. **SHOW CONFIDENCE**: One line with percentage
-6. **SPECIFIC NUMBERS**: Entry, targets, stop loss in one section
-7. **QUICK RISK NOTE**: One sentence warning
-8. **USE EMOJIS**: Visual clarity (📈📉⚠️✅❌)
+**Adjust response length based on user's question:**
 
-**FORMAT EXAMPLE (FOLLOW THIS):**
-📊 [COIN] - $[PRICE] ([CHANGE]%)
+🔹 **Simple Questions** (e.g., "Bitcoin price?", "Should I buy BTC?")
+   → 100-200 words, quick format, direct answer
 
-**Analysis:**
-• Trend: [Bullish/Bearish] (RSI: X, MACD: Y)
-• Sentiment: [Score]/100
-• Volume: [High/Medium/Low]
+🔹 **Analysis Requests** (e.g., "Analyze Bitcoin", "Compare BTC and ETH")
+   → 300-400 words, detailed indicators, full reasoning
 
-**Recommendation:** [BUY/HOLD/SELL]
-**Confidence:** [X]% ([High/Medium/Low])
+🔹 **Detailed Requests** (e.g., "Give me full detailed analysis", "Explain everything")
+   → 400-600 words, comprehensive breakdown, step-by-step
 
-**Strategy:**
-• Entry: $X-Y
-• Target: $Z (+X%)
-• Stop: $W (-X%)
-• Size: X% portfolio
-
-⚠️ **Risk:** [One sentence]
-
-**STRICT RULES:**
-- Maximum 250 words total
-- No long paragraphs
-- No step-by-step explanations
-- Just actionable info
-- Be direct and clear
+**ALWAYS INCLUDE:**
+✅ Real data and specific numbers
+✅ Confidence score (%)
+✅ Entry/exit points when relevant
+✅ Risk warning
+✅ Use bullet points for clarity
+✅ Emojis for visual scanning (📈📉⚠️✅)
 
 **CONFIDENCE LEVELS:**
 - 80-100%: Strong signal ✅
@@ -129,10 +113,10 @@ ${this.getContextualPromptEnhancement()}
 - Below 40%: Avoid ❌
 
 **REMEMBER:** 
-- Keep response under 250 words
-- Be direct and actionable
-- No long explanations
-- Professional but concise`;
+- Match detail level to user's question
+- Be professional and clear
+- Always include actionable info
+- Explain reasoning when user asks for analysis`;
 
             return enhancedPrompt;
         };
@@ -296,10 +280,14 @@ ${this.getContextualPromptEnhancement()}
                 response = this._originalValidateAIResponse(response);
             }
 
-            // Trim excessive length (keep under ~300 words)
+            // Check response length (warn if excessive, but don't enforce hard limit)
             const words = response.split(/\s+/).length;
-            if (words > 350) {
-                console.warn(`⚠️ Response too long (${words} words), may need trimming`);
+            if (words > 600) {
+                console.warn(`⚠️ Response very long (${words} words)`);
+            } else if (words > 400) {
+                console.log(`ℹ️ Detailed response (${words} words)`);
+            } else {
+                console.log(`✅ Response length: ${words} words`);
             }
 
             // Add confidence if missing

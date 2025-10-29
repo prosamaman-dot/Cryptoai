@@ -60,8 +60,11 @@ class AIEnhancementEngine {
      * This creates a step-by-step reasoning process like GPT-4
      */
     createChainOfThoughtPrompt(userMessage, marketData, context) {
+        // Detect if user wants detailed analysis
+        const wantsDetailed = this.detectDetailLevel(userMessage);
+        
         const cot = `
-# CRYPTO ANALYSIS - CONCISE FORMAT
+# CRYPTO ANALYSIS - ADAPTIVE FORMAT
 
 **Question:** "${userMessage}"
 **Intent:** ${this.classifyIntent(userMessage)} | **Risk:** ${context.userProfile?.riskTolerance || 'moderate'}
@@ -69,42 +72,95 @@ class AIEnhancementEngine {
 ## MARKET DATA:
 ${this.formatMarketData(marketData)}
 
-## YOUR TASK:
-Analyze using: RSI, MACD, EMA, Volume, Sentiment
-Provide: Recommendation, Confidence %, Entry/Exit, Risk
+## RESPONSE LENGTH RULES:
+${wantsDetailed ? `
+**DETAILED MODE** (User requested full analysis):
+- Provide comprehensive analysis (300-500 words)
+- Include step-by-step reasoning
+- Explain WHY behind recommendations
+- Show multiple indicators in detail
+- Include risk assessment
+- Give complete strategy breakdown
+` : `
+**QUICK MODE** (Simple question):
+- Keep concise (100-200 words)
+- Focus on key info only
+- Direct recommendation
+- Essential strategy points
+- One-line risk note
+`}
 
-## OUTPUT FORMAT (MUST FOLLOW):
-Keep under 250 words. Use this structure:
+## OUTPUT FORMAT:
 
+${wantsDetailed ? `
+📊 **[COIN] DETAILED ANALYSIS**
+
+**Current Status:**
+Price: $X (+X%)
+Volume: $X (Level)
+Market Cap: $X
+
+**Technical Analysis:**
+• Trend: [Detailed trend with EMAs]
+• RSI: X ([Explain what it means])
+• MACD: [Explain the signal]
+• Volume: [Explain the significance]
+• Support/Resistance: [Explain levels]
+
+**Sentiment Analysis:**
+• Fear & Greed: X/100
+• Social Sentiment: X/100
+• News Impact: [Mention if relevant]
+
+**Recommendation:** [BUY/HOLD/SELL]
+**Confidence:** X% (Level)
+
+**Why This Recommendation:**
+[Explain reasoning in 2-3 sentences]
+
+**Entry Strategy:**
+• Best Entry: $X-Y (explain timing)
+• Target 1: $X (+X%) - why this level
+• Target 2: $X (+X%) - why this level
+• Stop Loss: $X (-X%) - why placed here
+• Position Size: X% (based on risk)
+
+**Risk Assessment:**
+1. [Risk 1 with probability]
+2. [Risk 2 with probability]
+3. [How to mitigate risks]
+
+**Time Horizon:** [Short/Medium/Long] - explain why
+` : `
 📊 **[COIN] - $[PRICE] ([CHANGE]%)**
 
 **Analysis:**
-• Trend: [Direction] (Key indicators)
-• Sentiment: [Score]/100
+• Trend: [Direction] (RSI: X, MACD: X)
+• Sentiment: X/100
 • Volume: [Level]
 
 **Recommendation:** [Action]
-**Confidence:** [%] ([Level])
+**Confidence:** X% ([Level])
 
 **Strategy:**
 • Entry: $[range]
 • Target: $[price] (+%)
 • Stop: $[price] (-%)
-• Size: [%] portfolio
+• Size: X% portfolio
 
 ⚠️ **Risk:** [One sentence]
+`}
 
 ---
 
-**RULES**:
-✅ Maximum 250 words
-✅ Use bullet points
-✅ Real numbers from data
-✅ Be direct and clear
-✅ No long explanations
-❌ No step-by-step thinking shown
-❌ No multiple paragraphs
-❌ No fluff or filler
+**CRITICAL RULES**:
+✅ Use REAL data from market data above
+✅ Give specific numbers, not vague statements
+✅ Include confidence percentage
+✅ Always provide entry/exit points
+✅ Mention risks
+${wantsDetailed ? '✅ Explain your reasoning\n✅ Show your analysis process' : '✅ Be concise and direct\n✅ Focus on actionable info'}
+❌ Never guarantee profits
 
 User risk: ${context.userProfile?.riskTolerance || 'moderate'}
 `;
@@ -633,6 +689,44 @@ User risk: ${context.userProfile?.riskTolerance || 'moderate'}
         if (msg.includes('predict') || msg.includes('future')) return 'prediction';
         if (msg.includes('compare')) return 'comparison';
         return 'general_inquiry';
+    }
+
+    /**
+     * 🎯 Detect if user wants detailed analysis
+     */
+    detectDetailLevel(message) {
+        const msg = message.toLowerCase();
+        
+        // Keywords that indicate user wants detailed analysis
+        const detailedKeywords = [
+            'detailed', 'full', 'complete', 'comprehensive', 'thorough',
+            'deep', 'in-depth', 'explain', 'why', 'how',
+            'analysis', 'analyze', 'break down', 'breakdown',
+            'all indicators', 'everything', 'full report'
+        ];
+        
+        // Keywords that indicate user wants quick answer
+        const quickKeywords = [
+            'quick', 'fast', 'brief', 'short', 'simple',
+            'just tell me', 'should i', 'yes or no'
+        ];
+        
+        // Check for detailed keywords
+        const wantsDetailed = detailedKeywords.some(keyword => msg.includes(keyword));
+        const wantsQuick = quickKeywords.some(keyword => msg.includes(keyword));
+        
+        // If user explicitly asks for quick, return false
+        if (wantsQuick) return false;
+        
+        // If user asks for detailed, return true
+        if (wantsDetailed) return true;
+        
+        // Default: use medium length (slightly detailed)
+        // More detailed for analysis/compare, less for price check
+        if (msg.includes('analyze') || msg.includes('compare')) return true;
+        if (msg.includes('price') || msg.includes('worth')) return false;
+        
+        return false; // Default to concise
     }
 
     extractCoins(message) {
