@@ -60,109 +60,85 @@ class AIEnhancementEngine {
      * This creates a step-by-step reasoning process like GPT-4
      */
     createChainOfThoughtPrompt(userMessage, marketData, context) {
-        // Detect if user wants detailed analysis
-        const wantsDetailed = this.detectDetailLevel(userMessage);
-        
         const cot = `
-# CRYPTO ANALYSIS - ADAPTIVE FORMAT
+# ADVANCED CRYPTO ANALYSIS FRAMEWORK
 
-**Question:** "${userMessage}"
-**Intent:** ${this.classifyIntent(userMessage)} | **Risk:** ${context.userProfile?.riskTolerance || 'moderate'}
+## Step 1: UNDERSTAND THE QUESTION
+Question: "${userMessage}"
+- Intent: ${this.classifyIntent(userMessage)}
+- Coins Mentioned: ${this.extractCoins(userMessage)}
+- Time Horizon: ${this.extractTimeHorizon(userMessage)}
+- Risk Appetite: ${context.userProfile?.riskTolerance || 'moderate'}
 
-## MARKET DATA:
+## Step 2: GATHER REAL-TIME DATA
 ${this.formatMarketData(marketData)}
 
-## RESPONSE LENGTH RULES:
-${wantsDetailed ? `
-**DETAILED MODE** (User requested full analysis):
-- Provide comprehensive analysis (300-500 words)
-- Include step-by-step reasoning
-- Explain WHY behind recommendations
-- Show multiple indicators in detail
-- Include risk assessment
-- Give complete strategy breakdown
-` : `
-**QUICK MODE** (Simple question):
-- Keep concise (100-200 words)
-- Focus on key info only
-- Direct recommendation
-- Essential strategy points
-- One-line risk note
-`}
+## Step 3: TECHNICAL ANALYSIS
+Apply these indicators in order of priority:
+1. Trend Analysis (EMA 9, 21, 50, 200)
+2. Momentum (RSI, MACD)
+3. Volatility (Bollinger Bands, ATR)
+4. Volume Profile
+5. Support/Resistance Levels
+6. Chart Patterns
 
-## OUTPUT FORMAT:
+## Step 4: FUNDAMENTAL ANALYSIS
+Consider:
+- Market Cap & Liquidity
+- 24h Volume & Volume Trends
+- Market Dominance
+- Network Activity (if applicable)
+- Recent News & Developments
 
-${wantsDetailed ? `
-📊 **[COIN] DETAILED ANALYSIS**
+## Step 5: SENTIMENT ANALYSIS
+Evaluate:
+- Fear & Greed Index
+- Social Media Sentiment
+- News Sentiment
+- Whale Activity
+- Institutional Interest
 
-**Current Status:**
-Price: $X (+X%)
-Volume: $X (Level)
-Market Cap: $X
+## Step 6: RISK ASSESSMENT
+Calculate:
+- Volatility Score (0-100)
+- Liquidity Score (0-100)
+- Technical Strength Score (0-100)
+- Sentiment Score (0-100)
+- **Overall Confidence: X%** (Be explicit)
 
-**Technical Analysis:**
-• Trend: [Detailed trend with EMAs]
-• RSI: X ([Explain what it means])
-• MACD: [Explain the signal]
-• Volume: [Explain the significance]
-• Support/Resistance: [Explain levels]
+## Step 7: FORMULATE RECOMMENDATION
+Based on ALL above factors, provide:
+1. **RECOMMENDATION**: Buy/Hold/Sell
+2. **CONFIDENCE LEVEL**: Low/Medium/High (with percentage)
+3. **REASONING**: Why this recommendation (explain in detail)
+4. **ENTRY POINTS**: Specific price levels with reasoning
+5. **TARGETS**: Take-profit levels with explanations
+6. **STOP LOSS**: Risk management level with justification
+7. **POSITION SIZE**: Based on risk tolerance
+8. **TIME HORIZON**: Short/Medium/Long term with reasoning
 
-**Sentiment Analysis:**
-• Fear & Greed: X/100
-• Social Sentiment: X/100
-• News Impact: [Mention if relevant]
-
-**Recommendation:** [BUY/HOLD/SELL]
-**Confidence:** X% (Level)
-
-**Why This Recommendation:**
-[Explain reasoning in 2-3 sentences]
-
-**Entry Strategy:**
-• Best Entry: $X-Y (explain timing)
-• Target 1: $X (+X%) - why this level
-• Target 2: $X (+X%) - why this level
-• Stop Loss: $X (-X%) - why placed here
-• Position Size: X% (based on risk)
-
-**Risk Assessment:**
-1. [Risk 1 with probability]
-2. [Risk 2 with probability]
-3. [How to mitigate risks]
-
-**Time Horizon:** [Short/Medium/Long] - explain why
-` : `
-📊 **[COIN] - $[PRICE] ([CHANGE]%)**
-
-**Analysis:**
-• Trend: [Direction] (RSI: X, MACD: X)
-• Sentiment: X/100
-• Volume: [Level]
-
-**Recommendation:** [Action]
-**Confidence:** X% ([Level])
-
-**Strategy:**
-• Entry: $[range]
-• Target: $[price] (+%)
-• Stop: $[price] (-%)
-• Size: X% portfolio
-
-⚠️ **Risk:** [One sentence]
-`}
+## Step 8: RISK WARNINGS
+- List specific risks with probabilities
+- Explain the probability of each risk
+- Provide strategies to mitigate risks
 
 ---
 
 **CRITICAL RULES**:
-✅ Use REAL data from market data above
-✅ Give specific numbers, not vague statements
-✅ Include confidence percentage
-✅ Always provide entry/exit points
-✅ Mention risks
-${wantsDetailed ? '✅ Explain your reasoning\n✅ Show your analysis process' : '✅ Be concise and direct\n✅ Focus on actionable info'}
-❌ Never guarantee profits
+- Provide COMPREHENSIVE analysis (don't be brief!)
+- Show your reasoning step-by-step
+- Use REAL market data (prices, volumes, changes)
+- Give specific numbers, not vague statements
+- Include confidence percentages
+- Explain WHY, not just WHAT
+- Consider user's risk profile: ${context.userProfile?.riskTolerance || 'moderate'}
+- Never guarantee profits, always mention risks
+- If data is insufficient, say so explicitly
+- Be thorough and professional
 
-User risk: ${context.userProfile?.riskTolerance || 'moderate'}
+**OUTPUT FORMAT**:
+Use clear sections with emojis for readability. Be DETAILED and thorough.
+Provide complete analysis that helps users make informed decisions.
 `;
         return cot;
     }
@@ -756,15 +732,32 @@ User risk: ${context.userProfile?.riskTolerance || 'moderate'}
         for (const [coin, data] of Object.entries(marketData)) {
             if (data && typeof data === 'object') {
                 formatted += `\n**${coin.toUpperCase()}:**\n`;
-                formatted += `- Price: $${data.price || data.current_price || 'N/A'}\n`;
-                formatted += `- 24h Change: ${data.price_change_24h || data.change_24h || 'N/A'}%\n`;
-                formatted += `- Volume: $${data.volume || data.total_volume || 'N/A'}\n`;
-                formatted += `- Market Cap: $${data.market_cap || 'N/A'}\n`;
-                if (data.high_24h) formatted += `- 24h High: $${data.high_24h}\n`;
-                if (data.low_24h) formatted += `- 24h Low: $${data.low_24h}\n`;
+                // Support multiple price field names
+                const price = data.price_usd || data.price || data.current_price || null;
+                const change = data.change_24h || data.price_change_24h || data.price_change_percentage_24h || null;
+                const volume = data.volume_24h || data.volume || data.total_volume || null;
+                const marketCap = data.market_cap_usd || data.market_cap || null;
+                const high = data.high_24h || null;
+                const low = data.low_24h || null;
+                
+                if (price) formatted += `- Price: $${typeof price === 'number' ? price.toFixed(2) : price}\n`;
+                if (change !== null) formatted += `- 24h Change: ${typeof change === 'number' ? change.toFixed(2) : change}%\n`;
+                if (volume) formatted += `- Volume: $${this.formatLargeNumber(volume)}\n`;
+                if (marketCap) formatted += `- Market Cap: $${this.formatLargeNumber(marketCap)}\n`;
+                if (high) formatted += `- 24h High: $${typeof high === 'number' ? high.toFixed(2) : high}\n`;
+                if (low) formatted += `- 24h Low: $${typeof low === 'number' ? low.toFixed(2) : low}\n`;
             }
         }
         return formatted;
+    }
+
+    formatLargeNumber(num) {
+        if (!num) return '0';
+        if (num >= 1e12) return (num / 1e12).toFixed(2) + 'T';
+        if (num >= 1e9) return (num / 1e9).toFixed(2) + 'B';
+        if (num >= 1e6) return (num / 1e6).toFixed(2) + 'M';
+        if (num >= 1e3) return (num / 1e3).toFixed(2) + 'K';
+        return typeof num === 'number' ? num.toFixed(2) : num;
     }
 
     getBasicTechnicalAnalysis(coinId) {
