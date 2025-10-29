@@ -6,7 +6,7 @@ class SamCryptoAI {
         this.userManager = new UserManager();
         
         // Core API configuration
-        this.apiKey = 'AIzaSyBAgDmA7Uak6FIGh9MsN2582ouRaqpQ_Cg'; // Default API key
+        this.apiKey = 'AIzaSyBmjoj-WrHWoLJEbYF97LxxU-scf3wXMQQ'; // Default API key
         this.conversationHistory = [];
         
         // Advanced Memory System (ChatGPT/Claude-level)
