@@ -2867,26 +2867,26 @@ ${this.getRecentTradingContext()}
     }
 
     getOptimalGenerationConfig(intent) {
-        // Optimized config for SPEED - Lower tokens = Faster response
+        // Balanced config for SPEED + COMPLETENESS
         const baseConfig = {
             temperature: 0.6,  // Slightly lower for faster decisions
             topK: 35,          // Reduced for speed
             topP: 0.92,        // Reduced for speed
-            maxOutputTokens: 1800, // Optimized for 5-8 second response time
+            maxOutputTokens: 3000, // Balanced - fast but complete responses
         };
         
         // Adjust based on intent type
         switch (intent.type) {
             case 'trade_advice':
             case 'price_check':
-                return { ...baseConfig, temperature: 0.4, topK: 30, maxOutputTokens: 1500 }; // Fast & focused
+                return { ...baseConfig, temperature: 0.4, topK: 30, maxOutputTokens: 2500 }; // Complete analysis
             case 'learning':
             case 'comparison':
-                return { ...baseConfig, temperature: 0.7, maxOutputTokens: 2000 }; // Slightly longer for education
+                return { ...baseConfig, temperature: 0.7, maxOutputTokens: 3200 }; // Full explanations
             case 'analysis':
-                return { ...baseConfig, temperature: 0.5, topK: 32, maxOutputTokens: 1800 }; // Balanced
+                return { ...baseConfig, temperature: 0.5, topK: 32, maxOutputTokens: 3000 }; // Complete analysis
             default:
-                return { ...baseConfig, maxOutputTokens: 1600 }; // Default optimized for speed
+                return { ...baseConfig, maxOutputTokens: 2800 }; // Complete responses
         }
     }
 
