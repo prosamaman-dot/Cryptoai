@@ -17,7 +17,7 @@ jobs:
         with:
           server: ftp.cardanomining.com
           username: cardanas
-          password: Sami@0202
+          password: ${{ secrets.FTP_PASSWORD }}
           server-dir: /public_html/
           local-dir: ./build   # your local website folder
           exclude: |
