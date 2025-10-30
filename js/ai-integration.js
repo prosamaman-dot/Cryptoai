@@ -85,32 +85,17 @@ ${this.getContextualPromptEnhancement()}
 
 ---
 
-**RESPONSE REQUIREMENTS:**
+You are SamCrypto AI — a concise, professional crypto assistant modeled after ChatGPT.
 
-1. **BE COMPREHENSIVE**: Provide detailed, thorough analysis
-2. **SHOW YOUR THINKING**: Explain step-by-step reasoning
-3. **USE REAL DATA**: Reference actual prices, volumes, percentages from market data above
-4. **BE SPECIFIC**: Give exact entry points, targets, stop losses with numbers
-5. **SHOW CONFIDENCE**: State your confidence level (0-100%) and explain why
-6. **MANAGE RISK**: Always include detailed risk warnings and position sizing advice
-7. **CITE SOURCES**: Reference which indicators, patterns, or data points you're using
-8. **BE THOROUGH**: Important info first, then details and explanations
-9. **USE EMOJIS**: Make it readable (📈 for bullish, 📉 for bearish, ⚠️ for warnings)
-10. **EDUCATE**: Help users understand WHY you're making recommendations
-
-**CONFIDENCE SCORING RULES:**
-- 80-100%: Multiple strong signals align, low risk, clear trend
-- 60-79%: Good signals, moderate risk, some uncertainty
-- 40-59%: Mixed signals, higher risk, neutral territory
-- 20-39%: Weak signals, high risk, conflicting data
-- 0-19%: Insufficient data or very high risk
-
-**REMEMBER:** 
-- You're a professional crypto analyst
-- Give actionable, data-driven advice
-- Be thorough and comprehensive
-- Help users understand the markets
-- Explain your reasoning in detail`;
+RESPONSE RULES:
+- Be concise: 1–4 short paragraphs max. No filler.
+- Use clear structure with short sentences and bullet points when helpful.
+- Use real data from above; show numbers for calculations/signals.
+- Provide precise trading insights: levels, entries/stops/targets, risk.
+- Do not ask questions; respond directly to the user’s request.
+- No emojis unless the user used them first.
+- Maintain a calm, factual tone. End with a complete answer.
+`;
 
             return enhancedPrompt;
         };
@@ -319,14 +304,12 @@ ${description ? `   ${description.substring(0, 150)}...` : ''}
             const words = response.split(/\s+/).length;
             console.log(`📝 Response length: ${words} words`);
 
-            // Add confidence if missing
-            if (!response.includes('%') && !response.includes('onfidence')) {
-                response += '\n\n📊 Confidence: Medium';
-            }
+            // Remove emojis to match persona unless user initiated them
+            response = response.replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/gu, '');
 
-            // Ensure risk warnings are present
-            if (!response.toLowerCase().includes('risk') && !response.includes('⚠️')) {
-                response += '\n\n⚠️ **Risk Warning**: All investments carry risk. Never invest more than you can afford to lose. Always use stop losses and proper risk management.';
+            // Ensure a brief risk reminder is present (emoji-free)
+            if (!/risk/i.test(response)) {
+                response += '\n\nRisk: Crypto is volatile. Use stops and size conservatively.';
             }
 
             return response;

@@ -159,12 +159,12 @@ class SamCryptoAI {
         
         // Professional greeting messages
         this.greetingMessages = [
-            "Welcome to SamCrypto AI! Ready to analyze the markets and find profitable opportunities? 📈💰",
-            "Hello! I'm your professional crypto trading assistant. Let's dive into market analysis! 🚀",
-            "Greetings! Time for some serious market analysis and trading insights. What can I help you with? 💎",
-            "Welcome! I'm here to provide professional crypto analysis and trading recommendations. 📊⚡",
-            "Hello trader! Ready to explore market opportunities with data-driven insights? 🎯💰",
-            "Welcome to professional crypto analysis! Let's find you some winning trading opportunities! 📈🚀"
+            "Welcome to SamCrypto AI. Ready for focused market analysis.",
+            "You're in. I provide precise crypto insights and trading levels.",
+            "SamCrypto AI online. Share your pair and timeframe to begin.",
+            "Professional crypto analysis loaded. Ask for levels, setup, or risk.",
+            "I deliver concise, data-driven crypto insights. What do you need?",
+            "SamCrypto AI is ready. Technicals, risk, and targets on request."
         ];
         
         // Initialize application
