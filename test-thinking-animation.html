@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Thinking Animation Demo - SamCrypto AI</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #0f0f1e 0%, #1a1a2e 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 40px;
+            color: white;
+        }
+
+        .demo-container {
+            max-width: 600px;
+            width: 100%;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 40px;
+            backdrop-filter: blur(10px);
+        }
+
+        h1 {
+            font-size: 28px;
+            margin-bottom: 12px;
+            background: linear-gradient(135deg, #00d4ff, #0099ff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .subtitle {
+            font-size: 14px;
+            color: rgba(255, 255, 255, 0.6);
+            margin-bottom: 40px;
+        }
+
+        .demo-box {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 12px;
+            padding: 30px;
+            margin-bottom: 30px;
+        }
+
+        .demo-label {
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: rgba(255, 255, 255, 0.5);
+            margin-bottom: 20px;
+        }
+
+        /* ===== ENHANCED CHATGPT-STYLE THINKING INDICATOR ===== */
+
+        .chat-typing-indicator {
+            position: relative;
+            display: block;
+            margin-top: 20px;
+            margin-bottom: 20px;
+            margin-left: 0;
+            padding-left: 20px;
+            animation: fadeInSlide 0.4s ease-out;
+            width: 100%;
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .chat-typing-indicator.hidden {
+            display: none !important;
+            opacity: 0;
+        }
+
+        /* Glowing pulse container with backdrop blur */
+        .typing-bubble {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            background: rgba(0, 212, 255, 0.06);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1.5px solid rgba(0, 212, 255, 0.25);
+            border-radius: 20px;
+            padding: 14px 22px;
+            box-shadow: 
+                0 4px 20px rgba(0, 212, 255, 0.15),
+                0 0 40px rgba(0, 212, 255, 0.08),
+                inset 0 1px 0 rgba(255, 255, 255, 0.1);
+            animation: bubblePulse 2.5s ease-in-out infinite;
+            position: relative;
+        }
+
+        /* Animated glowing border effect */
+        .typing-bubble::before {
+            content: '';
+            position: absolute;
+            top: -2px;
+            left: -2px;
+            right: -2px;
+            bottom: -2px;
+            background: linear-gradient(135deg, 
+                rgba(0, 212, 255, 0.4), 
+                rgba(0, 153, 255, 0.4), 
+                rgba(0, 212, 255, 0.4));
+            border-radius: 20px;
+            z-index: -1;
+            opacity: 0;
+            animation: borderPulse 2.5s ease-in-out infinite;
+            filter: blur(10px);
+        }
+
+        .typing-text {
+            position: relative;
+            display: inline-block;
+            font-size: 15px;
+            font-weight: 500;
+            letter-spacing: 0.5px;
+            color: rgba(255, 255, 255, 0.9);
+            animation: textBreath 2.5s ease-in-out infinite;
+        }
+
+        /* Enhanced ChatGPT-style bouncing dots */
+        .thinking-dots {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            margin-left: 4px;
+            height: 20px;
+        }
+
+        .thinking-dots .dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #00d4ff 0%, #0099ff 100%);
+            display: inline-block;
+            box-shadow: 
+                0 0 12px rgba(0, 212, 255, 0.6),
+                0 0 24px rgba(0, 212, 255, 0.3),
+                inset 0 0 6px rgba(255, 255, 255, 0.4);
+            animation: chatGPTBounce 1.4s ease-in-out infinite;
+        }
+
+        .thinking-dots .dot:nth-child(1) {
+            animation-delay: 0s;
+        }
+
+        .thinking-dots .dot:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+
+        .thinking-dots .dot:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+
+        /* ===== ANIMATIONS ===== */
+
+        /* Bouncing dots with vertical movement and scaling */
+        @keyframes chatGPTBounce {
+            0%, 60%, 100% {
+                transform: scale(0.7) translateY(0);
+                opacity: 0.4;
+                box-shadow: 
+                    0 0 8px rgba(0, 212, 255, 0.4),
+                    0 0 16px rgba(0, 212, 255, 0.2);
+            }
+            30% {
+                transform: scale(1.4) translateY(-10px);
+                opacity: 1;
+                box-shadow: 
+                    0 0 16px rgba(0, 212, 255, 0.8),
+                    0 0 32px rgba(0, 212, 255, 0.5),
+                    0 0 48px rgba(0, 212, 255, 0.3),
+                    inset 0 0 8px rgba(255, 255, 255, 0.5);
+            }
+        }
+
+        /* Subtle breathing animation for text */
+        @keyframes textBreath {
+            0%, 100% {
+                opacity: 0.75;
+                transform: scale(1);
+            }
+            50% {
+                opacity: 1;
+                transform: scale(1.03);
+            }
+        }
+
+        /* Bubble glow pulse animation */
+        @keyframes bubblePulse {
+            0%, 100% {
+                box-shadow: 
+                    0 4px 20px rgba(0, 212, 255, 0.15),
+                    0 0 40px rgba(0, 212, 255, 0.08);
+                background: rgba(0, 212, 255, 0.06);
+                border-color: rgba(0, 212, 255, 0.25);
+            }
+            50% {
+                box-shadow: 
+                    0 6px 30px rgba(0, 212, 255, 0.25),
+                    0 0 60px rgba(0, 212, 255, 0.15),
+                    0 0 80px rgba(0, 212, 255, 0.08);
+                background: rgba(0, 212, 255, 0.1);
+                border-color: rgba(0, 212, 255, 0.4);
+            }
+        }
+
+        /* Border glow pulse */
+        @keyframes borderPulse {
+            0%, 100% {
+                opacity: 0;
+            }
+            50% {
+                opacity: 0.4;
+            }
+        }
+
+        /* Slide in animation */
+        @keyframes fadeInSlide {
+            from {
+                opacity: 0;
+                transform: translateX(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        .control-buttons {
+            display: flex;
+            gap: 12px;
+            margin-top: 20px;
+        }
+
+        button {
+            flex: 1;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn-show {
+            background: linear-gradient(135deg, #00d4ff, #0099ff);
+            color: white;
+        }
+
+        .btn-show:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(0, 212, 255, 0.3);
+        }
+
+        .btn-hide {
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .btn-hide:hover {
+            background: rgba(255, 255, 255, 0.15);
+        }
+
+        .info-box {
+            background: rgba(0, 212, 255, 0.1);
+            border: 1px solid rgba(0, 212, 255, 0.3);
+            border-radius: 10px;
+            padding: 20px;
+            margin-top: 30px;
+        }
+
+        .info-box h3 {
+            font-size: 16px;
+            margin-bottom: 12px;
+            color: #00d4ff;
+        }
+
+        .info-box ul {
+            list-style: none;
+            font-size: 14px;
+            color: rgba(255, 255, 255, 0.8);
+        }
+
+        .info-box li {
+            padding: 6px 0;
+            padding-left: 20px;
+            position: relative;
+        }
+
+        .info-box li::before {
+            content: '✓';
+            position: absolute;
+            left: 0;
+            color: #00d4ff;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="demo-container">
+        <h1>🎨 Thinking Animation Demo</h1>
+        <p class="subtitle">ChatGPT-style bouncing dots with glowing pulse effect</p>
+
+        <div class="demo-box">
+            <div class="demo-label">Live Preview</div>
+            
+            <div id="chatTypingIndicator" class="chat-typing-indicator">
+                <div class="typing-bubble">
+                    <span class="typing-text">Thinking</span>
+                    <span class="thinking-dots">
+                        <span class="dot"></span>
+                        <span class="dot"></span>
+                        <span class="dot"></span>
+                    </span>
+                </div>
+            </div>
+
+            <div class="control-buttons">
+                <button class="btn-show" onclick="showAnimation()">Show Animation</button>
+                <button class="btn-hide" onclick="hideAnimation()">Hide Animation</button>
+            </div>
+        </div>
+
+        <div class="info-box">
+            <h3>✨ Animation Features</h3>
+            <ul>
+                <li>Bouncing dots with sequential wave pattern</li>
+                <li>Glowing pulse container with backdrop blur</li>
+                <li>Breathing text animation</li>
+                <li>Animated gradient border effect</li>
+                <li>Smooth 60fps hardware-accelerated animations</li>
+                <li>State-managed with isThinking flag</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        function showAnimation() {
+            const indicator = document.getElementById('chatTypingIndicator');
+            indicator.classList.remove('hidden');
+            indicator.style.display = 'block';
+            console.log('✅ Animation started (isThinking = true)');
+        }
+
+        function hideAnimation() {
+            const indicator = document.getElementById('chatTypingIndicator');
+            indicator.classList.add('hidden');
+            indicator.style.display = 'none';
+            console.log('⛔ Animation stopped (isThinking = false)');
+        }
+
+        // Show animation by default
+        window.addEventListener('DOMContentLoaded', () => {
+            showAnimation();
+        });
+    </script>
+</body>
+</html>
+

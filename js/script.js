@@ -151,6 +151,12 @@ class SamCryptoAI {
         // Message sending flag to prevent duplicates
         this.isSending = false;
         
+        // Thinking state for animation control
+        this.isThinking = false;
+        
+        // Abort controller for stopping AI responses
+        this.abortController = null;
+        
         // Professional greeting messages
         this.greetingMessages = [
             "Welcome to SamCrypto AI! Ready to analyze the markets and find profitable opportunities? 📈💰",
@@ -898,7 +904,13 @@ class SamCryptoAI {
 
         messageInput.addEventListener('input', () => this.handleInputChange());
         messageInput.addEventListener('keydown', (e) => this.handleKeyDown(e));
-        sendButton.addEventListener('click', () => this.sendMessage());
+        sendButton.addEventListener('click', () => {
+            if (this.isThinking) {
+                this.stopResponse();
+            } else {
+                this.sendMessage();
+            }
+        });
         saveApiKey?.addEventListener('click', () => this.saveApiKey());
         skipApiKey?.addEventListener('click', () => this.skipApiKey());
         
@@ -1142,6 +1154,9 @@ class SamCryptoAI {
         // Show typing indicator
         this.showTypingIndicator();
         
+        // Create abort controller for this request
+        this.abortController = new AbortController();
+        
         try {
             // Get market data for crypto-related queries
             const marketData = await this.getMarketDataForQuery(message);
@@ -1166,6 +1181,12 @@ class SamCryptoAI {
             this.updateConversationContext(response, 'assistant');
             
         } catch (error) {
+            // Check if request was aborted by user
+            if (error.name === 'AbortError') {
+                console.log('🛑 Request aborted by user');
+                return; // Already handled in stopResponse()
+            }
+            
             console.error('❌ Error generating response:', error);
             console.error('❌ Error stack:', error.stack);
             
@@ -1186,20 +1207,11 @@ class SamCryptoAI {
             this.hideTypingIndicator();
             this.hideSearchIndicator();
         } finally {
-            // Always reset sending flag and loading animation
+            // Always reset sending flag
             this.isSending = false;
             
-            // Reset loading animation on send button
-            if (sendButton) {
-                sendButton.classList.remove('sending');
-                const sendIcon = sendButton.querySelector('.send-icon');
-                const loadingIcon = sendButton.querySelector('.loading-icon');
-                if (sendIcon) sendIcon.style.opacity = '1';
-                if (loadingIcon) {
-                    loadingIcon.classList.add('hidden');
-                    loadingIcon.style.opacity = '0';
-                }
-            }
+            // Clean up abort controller
+            this.abortController = null;
             
             console.log('✅ Message send complete');
         }
@@ -2227,7 +2239,8 @@ class SamCryptoAI {
                             threshold: 'BLOCK_NONE'
                         }
                     ]
-                })
+                }),
+                signal: this.abortController?.signal
             }, 3); // 3 retries
 
             console.log('📡 Response status:', response.status);
@@ -4136,10 +4149,16 @@ Bitcoin, Ethereum, Solana, Cardano, Ripple, Dogecoin, Polkadot, Avalanche, Polyg
     }
 
     showTypingIndicator() {
-        // Show shimmer text in chat
+        // Set thinking state to true
+        this.isThinking = true;
+        
+        // Show stop button
+        this.toggleSendStopButton(true);
+        
+        // Show animated thinking indicator
         let chatIndicator = document.getElementById('chatTypingIndicator');
         const messagesContainer = document.getElementById('chatMessages');
-        console.log('🔵 Showing typing indicator with shimmer animation');
+        console.log('🔵 AI is thinking - showing animated indicator');
         
         if (!messagesContainer) {
             console.error('❌ chatMessages element not found!');
@@ -4171,50 +4190,96 @@ Bitcoin, Ethereum, Solana, Cardano, Ripple, Dogecoin, Polkadot, Avalanche, Polyg
             messagesContainer.appendChild(chatIndicator);
         }
         
+        // Show the indicator with animations
         chatIndicator.classList.remove('hidden');
-        chatIndicator.style.display = 'block'; // Force display as block
-        chatIndicator.style.opacity = '1'; // Ensure visibility
-        chatIndicator.style.visibility = 'visible'; // Ensure visibility
+        chatIndicator.style.display = 'block';
+        chatIndicator.style.opacity = '1';
+        chatIndicator.style.visibility = 'visible';
         
-        // Track when indicator was shown (for minimum 12 second display)
+        // Track when indicator was shown
         this.typingIndicatorStartTime = Date.now();
         
-        console.log('✅ "Thinking..." shimmer visible - will stay for at least 30 seconds');
+        console.log('✅ Thinking animation started (bouncing dots)');
         setTimeout(() => this.scrollToBottom(), 100);
     }
 
     hideTypingIndicator() {
-        // Hide shimmer text, but ensure minimum 12 seconds display time
+        // Hide the animated thinking indicator
         const chatIndicator = document.getElementById('chatTypingIndicator');
-        console.log('🔴 Hiding typing indicator - Response added');
+        console.log('🔴 AI response received - hiding thinking animation');
         
         if (!chatIndicator) {
             return;
         }
         
-        // Check if minimum display time has passed (30 seconds = 30000ms)
-        const minDisplayTime = 30000; // 30 seconds
+        // Check if minimum display time has passed (40 seconds = 40000ms)
+        const minDisplayTime = 40000; // 40 seconds
         const timeShown = Date.now() - (this.typingIndicatorStartTime || 0);
         const remainingTime = Math.max(0, minDisplayTime - timeShown);
         
         if (remainingTime > 0) {
-            console.log(`⏳ Keeping indicator visible for ${Math.round(remainingTime / 1000)} more seconds (minimum 30s total)`);
+            console.log(`⏳ Keeping indicator and stop button visible for ${Math.round(remainingTime / 1000)} more seconds (minimum 40s total)`);
             setTimeout(() => {
                 if (chatIndicator) {
                     chatIndicator.classList.add('hidden');
                     chatIndicator.style.display = 'none';
-                    console.log('✅ Typing indicator hidden after minimum display time');
+                    this.isThinking = false;
+                    this.toggleSendStopButton(false);
+                    console.log('✅ Thinking animation and stop button hidden after 40s');
                 }
             }, remainingTime);
         } else {
-            // Already shown for at least 30 seconds, hide immediately
+            // Already shown for at least 40 seconds, hide immediately
             chatIndicator.classList.add('hidden');
             chatIndicator.style.display = 'none';
-            console.log('✅ Typing indicator hidden immediately (already shown for 30+ seconds)');
+            this.isThinking = false;
+            this.toggleSendStopButton(false);
+            console.log('✅ Thinking animation stopped immediately (already shown for 40+ seconds)');
         }
         
         // Reset the start time
         this.typingIndicatorStartTime = null;
+    }
+    
+    toggleSendStopButton(showStop) {
+        const sendButton = document.getElementById('sendButton');
+        const sendIcon = sendButton.querySelector('.send-icon');
+        const stopIcon = sendButton.querySelector('.stop-icon');
+        
+        if (showStop) {
+            // Show stop button
+            sendIcon.style.display = 'none';
+            stopIcon.style.display = 'block';
+            sendButton.disabled = false;
+            sendButton.title = 'Stop generating';
+        } else {
+            // Show send button
+            sendIcon.style.display = 'block';
+            stopIcon.style.display = 'none';
+            sendButton.title = 'Send message';
+        }
+    }
+    
+    stopResponse() {
+        console.log('🛑 Stopping AI response...');
+        
+        // Abort the current request
+        if (this.abortController) {
+            this.abortController.abort();
+            this.abortController = null;
+        }
+        
+        // Reset states
+        this.isThinking = false;
+        this.isSending = false;
+        
+        // Hide typing indicator
+        this.hideTypingIndicator();
+        
+        // Add a message that response was stopped
+        this.addMessage('Response stopped by user.', 'ai');
+        
+        console.log('✅ Response stopped');
     }
 
     clearConversation() {
