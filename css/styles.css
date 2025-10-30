@@ -653,7 +653,7 @@ body::before {
 
 /* Typing cursor animation */
 .typing-cursor {
-    animation: blink 1s infinite;
+    animation: blink 0.5s infinite;
     color: #00d4ff;
     font-weight: bold;
 }

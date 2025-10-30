@@ -41,6 +41,12 @@ class SamCryptoAI {
         // AI and other APIs - Upgraded to Gemini 2.5 Pro for superior crypto analysis
         this.geminiAPI = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent';
         this.coinDeskAPI = 'https://api.coindesk.com/v1';
+        
+        // 🌐 Perplexity AI API - Real-time web search for news and market sentiment
+        this.perplexityAPI = 'https://api.perplexity.ai/chat/completions';
+        this.perplexityApiKey = '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';
+        this.useHybridAI = true; // Enable hybrid AI mode (Perplexity + Gemini)
+        
         this.tradingStrategies = this.initializeTradingStrategies();
         
         // Price update configuration
@@ -62,6 +68,9 @@ class SamCryptoAI {
         this.isUserScrolling = false;
         this.userScrollTimeout = null;
         this.isNearBottom = true;
+        
+        // Typing indicator tracking
+        this.typingIndicatorStartTime = null;
         
         // Professional features (user-specific data)
         this.portfolio = { 
@@ -2021,6 +2030,110 @@ class SamCryptoAI {
         return newsKeywords.some(keyword => messageLower.includes(keyword));
     }
 
+    // 🌐 HYBRID AI: Determine if Perplexity should be used for real-time insights
+    shouldUsePerplexity(message, intent) {
+        const messageLower = message.toLowerCase();
+        
+        // Use Perplexity for:
+        // 1. News and latest updates
+        const newsKeywords = ['news', 'latest', 'update', 'recent', 'today', 'breaking', 'announcement', 'headline', 'happening'];
+        const hasNewsKeyword = newsKeywords.some(keyword => messageLower.includes(keyword));
+        
+        // 2. Market sentiment and opinions
+        const sentimentKeywords = ['sentiment', 'feeling', 'opinion', 'people think', 'bullish', 'bearish', 'mood', 'what do', 'community'];
+        const hasSentimentKeyword = sentimentKeywords.some(keyword => messageLower.includes(keyword));
+        
+        // 3. Events and developments
+        const eventKeywords = ['event', 'launch', 'release', 'upgrade', 'fork', 'partnership', 'adoption', 'regulation'];
+        const hasEventKeyword = eventKeywords.some(keyword => messageLower.includes(keyword));
+        
+        // 4. Predictions and future outlook
+        const futureKeywords = ['predict', 'forecast', 'future', 'outlook', 'next', 'will', 'expect', '2024', '2025'];
+        const hasFutureKeyword = futureKeywords.some(keyword => messageLower.includes(keyword));
+        
+        // 5. Comparisons with external factors
+        const externalKeywords = ['vs stock', 'vs gold', 'inflation', 'economy', 'fed', 'interest rate', 'macro'];
+        const hasExternalKeyword = externalKeywords.some(keyword => messageLower.includes(keyword));
+        
+        return hasNewsKeyword || hasSentimentKeyword || hasEventKeyword || hasFutureKeyword || hasExternalKeyword;
+    }
+
+    // 🌐 HYBRID AI: Fetch real-time insights from Perplexity AI
+    async fetchPerplexityInsights(userMessage, marketData) {
+        try {
+            // Extract crypto names from market data
+            const cryptoNames = Object.keys(marketData || {})
+                .map(id => {
+                    // Convert ID to readable name (e.g., 'bitcoin' -> 'Bitcoin')
+                    return id.charAt(0).toUpperCase() + id.slice(1).replace(/-/g, ' ');
+                })
+                .join(', ');
+            
+            // Create focused query for Perplexity
+            const perplexityQuery = cryptoNames 
+                ? `${userMessage}\n\nContext: Focus on ${cryptoNames} cryptocurrency market.`
+                : userMessage;
+            
+            console.log('🌐 Querying Perplexity AI:', perplexityQuery);
+            
+            const response = await fetch(this.perplexityAPI, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${this.perplexityApiKey}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    model: 'sonar-pro', // Use sonar-pro for best quality with online search
+                    messages: [
+                        {
+                            role: 'system',
+                            content: 'You are a cryptocurrency market analyst with access to real-time web data. Provide concise, fact-based insights with citations. Focus on: latest news, market sentiment, recent events, regulatory updates, and expert opinions. Keep responses under 300 words.'
+                        },
+                        {
+                            role: 'user',
+                            content: perplexityQuery
+                        }
+                    ],
+                    temperature: 0.2, // Low temperature for factual accuracy
+                    max_tokens: 800,
+                    top_p: 0.9,
+                    search_domain_filter: ['coindesk.com', 'cointelegraph.com', 'decrypt.co', 'theblock.co', 'bloomberg.com'],
+                    return_citations: true,
+                    search_recency_filter: 'week' // Focus on recent information
+                })
+            });
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                console.error('❌ Perplexity API error:', response.status, errorText);
+                throw new Error(`Perplexity API error: ${response.status}`);
+            }
+
+            const data = await response.json();
+            
+            if (!data.choices || !data.choices[0] || !data.choices[0].message) {
+                console.error('❌ Invalid Perplexity response structure:', data);
+                return null;
+            }
+
+            const insights = data.choices[0].message.content;
+            const citations = data.citations || [];
+            
+            console.log('✅ Perplexity insights length:', insights.length, 'chars');
+            console.log('📚 Citations:', citations.length);
+            
+            return {
+                insights: insights,
+                citations: citations,
+                timestamp: new Date().toISOString()
+            };
+            
+        } catch (error) {
+            console.error('❌ Error fetching Perplexity insights:', error);
+            return null;
+        }
+    }
+
     async generateAIResponse(userMessage, marketData) {
         console.log('🤖 Generating AI response for:', userMessage);
         
@@ -2041,6 +2154,27 @@ class SamCryptoAI {
             const intent = this.detectIntent(userMessage);
             console.log('🎯 Detected intent:', intent);
             
+            // 🌐 HYBRID AI: Check if we should use Perplexity for real-time data
+            let perplexityInsights = null;
+            if (this.useHybridAI && this.shouldUsePerplexity(userMessage, intent)) {
+                console.log('🌐 Using Perplexity AI for real-time insights...');
+                
+                // Show user that Perplexity is being used
+                this.showUserMessage('🌐 Searching the web with Perplexity AI for real-time information...', 3000);
+                
+                try {
+                    perplexityInsights = await this.fetchPerplexityInsights(userMessage, marketData);
+                    console.log('✅ Perplexity insights received');
+                    
+                    // Notify user that web search was successful
+                    if (perplexityInsights && perplexityInsights.insights) {
+                        this.showUserMessage('✅ Real-time web data retrieved from Perplexity AI!', 2000);
+                    }
+                } catch (error) {
+                    console.warn('⚠️ Perplexity API error, continuing with Gemini only:', error);
+                }
+            }
+            
             // Gather comprehensive context
             const isNewsQuery = this.isNewsRelatedQuery(userMessage);
             let newsData = null;
@@ -2049,8 +2183,8 @@ class SamCryptoAI {
                 newsData = await this.fetchCoinDeskNews();
             }
             
-            // Build enhanced system prompt
-            const systemPrompt = this.createAdvancedSystemPrompt(marketData, newsData, intent, userMessage);
+            // Build enhanced system prompt (with Perplexity insights if available)
+            const systemPrompt = this.createAdvancedSystemPrompt(marketData, newsData, intent, userMessage, perplexityInsights);
             console.log('📏 System prompt length:', systemPrompt.length, 'characters');
             
             // Build conversation history for multi-turn context
@@ -2130,9 +2264,19 @@ class SamCryptoAI {
                 throw new Error('Invalid API response - no candidates');
             }
             
+            // Check if response was truncated
+            const finishReason = data.candidates[0].finishReason;
+            if (finishReason) {
+                console.log('⚠️ Finish reason:', finishReason);
+                if (finishReason === 'MAX_TOKENS' || finishReason === 'LENGTH') {
+                    console.warn('⚠️ Response was truncated due to token limit!');
+                }
+            }
+            
             const aiResponse = data.candidates[0].content.parts[0].text;
-            console.log('✅ AI response generated successfully, length:', aiResponse.length);
-            console.log('📝 Response ends with:', aiResponse.slice(-50)); // Last 50 characters
+            console.log('✅ AI response generated successfully');
+            console.log('📝 Response length:', aiResponse.length, 'characters');
+            console.log('📝 Response ends with:', aiResponse.slice(-100)); // Last 100 characters
             
             // Check if response seems incomplete (ends abruptly without proper conclusion)
             const incompletePatterns = [
@@ -2264,7 +2408,7 @@ class SamCryptoAI {
             newsData = await this.fetchCoinDeskNews();
         }
         
-        const systemPrompt = this.createAdvancedSystemPrompt(marketData, newsData, intent, userMessage);
+        const systemPrompt = this.createAdvancedSystemPrompt(marketData, newsData, intent, userMessage, null);
         const conversationContents = this.buildConversationHistory(systemPrompt, userMessage);
         const generationConfig = this.getOptimalGenerationConfig(intent);
         
@@ -2867,30 +3011,30 @@ ${this.getRecentTradingContext()}
     }
 
     getOptimalGenerationConfig(intent) {
-        // Balanced config for SPEED + COMPLETENESS
+        // Increased token limits to prevent truncation
         const baseConfig = {
             temperature: 0.6,  // Slightly lower for faster decisions
             topK: 35,          // Reduced for speed
             topP: 0.92,        // Reduced for speed
-            maxOutputTokens: 3000, // Balanced - fast but complete responses
+            maxOutputTokens: 4096, // Increased to prevent cutoffs
         };
         
         // Adjust based on intent type
         switch (intent.type) {
             case 'trade_advice':
             case 'price_check':
-                return { ...baseConfig, temperature: 0.4, topK: 30, maxOutputTokens: 2500 }; // Complete analysis
+                return { ...baseConfig, temperature: 0.4, topK: 30, maxOutputTokens: 4096 }; // Complete analysis
             case 'learning':
             case 'comparison':
-                return { ...baseConfig, temperature: 0.7, maxOutputTokens: 3200 }; // Full explanations
+                return { ...baseConfig, temperature: 0.7, maxOutputTokens: 4096 }; // Full explanations
             case 'analysis':
-                return { ...baseConfig, temperature: 0.5, topK: 32, maxOutputTokens: 3000 }; // Complete analysis
+                return { ...baseConfig, temperature: 0.5, topK: 32, maxOutputTokens: 4096 }; // Complete analysis
             default:
-                return { ...baseConfig, maxOutputTokens: 2800 }; // Complete responses
+                return { ...baseConfig, maxOutputTokens: 4096 }; // Complete responses
         }
     }
 
-    createAdvancedSystemPrompt(marketData, newsData, intent, userMessage) {
+    createAdvancedSystemPrompt(marketData, newsData, intent, userMessage, perplexityInsights = null) {
         const currentTime = new Date().toISOString();
         const userPortfolio = this.portfolio;
         const userAlerts = this.alerts;
@@ -3157,6 +3301,36 @@ ${userPortfolio.holdings.length > 0 ? userPortfolio.holdings.map(h => {
 
 ⚠️ MANDATORY: Use EXACTLY ${this.formatCryptoPrice(data.price_usd)} when quoting ${coinName} price`;
             }
+        }
+
+        // 🌐 HYBRID AI: Add Perplexity insights if available
+        if (perplexityInsights && perplexityInsights.insights) {
+            prompt += `\n\n🌐 ===== REAL-TIME WEB INSIGHTS (PERPLEXITY AI) ===== 🌐
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+⚡ LATEST MARKET INTELLIGENCE FROM THE WEB:
+📅 Retrieved: ${perplexityInsights.timestamp}
+🔍 Sources: Real-time web search with citations
+
+${perplexityInsights.insights}`;
+
+            // Add citations if available
+            if (perplexityInsights.citations && perplexityInsights.citations.length > 0) {
+                prompt += `\n\n📚 SOURCES & CITATIONS:`;
+                perplexityInsights.citations.slice(0, 5).forEach((citation, index) => {
+                    prompt += `\n${index + 1}. ${citation}`;
+                });
+            }
+            
+            prompt += `\n\n⚠️ IMPORTANT INSTRUCTIONS FOR RESPONDING:
+1. START your response by mentioning you're using Perplexity AI for real-time web data
+2. CLEARLY state that this information comes from live web search
+3. Include the citations in your response to show sources
+4. Use phrases like: "According to Perplexity AI's real-time search..." or "Based on live web data from Perplexity..."
+5. Make it CLEAR to the user that you have access to current, real-time information
+
+Example opening: "🌐 I'm using Perplexity AI to search the web in real-time for the latest information..."
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`;
         }
 
         if (newsData && newsData.length > 0) {
@@ -3888,8 +4062,8 @@ Bitcoin, Ethereum, Solana, Cardano, Ripple, Dogecoin, Polkadot, Avalanche, Polyg
                 }
                 
                 // Variable typing speed for more natural feel
-                const baseDelay = 8;
-                const randomDelay = Math.random() * 5;
+                const baseDelay = 2;
+                const randomDelay = Math.random() * 2;
                 const delay = baseDelay + randomDelay;
                 
                 setTimeout(type, delay);
@@ -3948,33 +4122,119 @@ Bitcoin, Ethereum, Solana, Cardano, Ripple, Dogecoin, Polkadot, Avalanche, Polyg
 
     showTypingIndicator() {
         // Show shimmer text in chat
-        const chatIndicator = document.getElementById('chatTypingIndicator');
+        let chatIndicator = document.getElementById('chatTypingIndicator');
+        const messagesContainer = document.getElementById('chatMessages');
         console.log('🔵 Showing typing indicator with shimmer animation');
-        if (chatIndicator) {
-            chatIndicator.classList.remove('hidden');
-            chatIndicator.style.display = 'inline-block'; // Force display
-            console.log('✅ "Thinking..." shimmer visible - will stay until response');
-            setTimeout(() => this.scrollToBottom(), 100);
-        } else {
-            console.error('❌ chatTypingIndicator element not found!');
+        
+        if (!messagesContainer) {
+            console.error('❌ chatMessages element not found!');
+            return;
         }
+        
+        // Create indicator if it doesn't exist
+        if (!chatIndicator) {
+            console.log('⚠️ chatTypingIndicator not found, creating it...');
+            chatIndicator = document.createElement('div');
+            chatIndicator.id = 'chatTypingIndicator';
+            chatIndicator.className = 'chat-typing-indicator hidden';
+            chatIndicator.innerHTML = `
+                <div class="typing-bubble">
+                    <span class="typing-text">Thinking</span>
+                    <span class="thinking-dots">
+                        <span class="dot"></span>
+                        <span class="dot"></span>
+                        <span class="dot"></span>
+                    </span>
+                </div>
+            `;
+            messagesContainer.appendChild(chatIndicator);
+        }
+        
+        // Move indicator to the end of messages container (after all messages)
+        if (chatIndicator.parentNode !== messagesContainer || 
+            chatIndicator.nextSibling !== null) {
+            messagesContainer.appendChild(chatIndicator);
+        }
+        
+        chatIndicator.classList.remove('hidden');
+        chatIndicator.style.display = 'block'; // Force display as block
+        chatIndicator.style.opacity = '1'; // Ensure visibility
+        chatIndicator.style.visibility = 'visible'; // Ensure visibility
+        
+        // Track when indicator was shown (for minimum 12 second display)
+        this.typingIndicatorStartTime = Date.now();
+        
+        console.log('✅ "Thinking..." shimmer visible - will stay for at least 30 seconds');
+        setTimeout(() => this.scrollToBottom(), 100);
     }
 
     hideTypingIndicator() {
-        // Hide shimmer text
+        // Hide shimmer text, but ensure minimum 12 seconds display time
         const chatIndicator = document.getElementById('chatTypingIndicator');
         console.log('🔴 Hiding typing indicator - Response added');
-        if (chatIndicator) {
+        
+        if (!chatIndicator) {
+            return;
+        }
+        
+        // Check if minimum display time has passed (30 seconds = 30000ms)
+        const minDisplayTime = 30000; // 30 seconds
+        const timeShown = Date.now() - (this.typingIndicatorStartTime || 0);
+        const remainingTime = Math.max(0, minDisplayTime - timeShown);
+        
+        if (remainingTime > 0) {
+            console.log(`⏳ Keeping indicator visible for ${Math.round(remainingTime / 1000)} more seconds (minimum 30s total)`);
+            setTimeout(() => {
+                if (chatIndicator) {
+                    chatIndicator.classList.add('hidden');
+                    chatIndicator.style.display = 'none';
+                    console.log('✅ Typing indicator hidden after minimum display time');
+                }
+            }, remainingTime);
+        } else {
+            // Already shown for at least 30 seconds, hide immediately
             chatIndicator.classList.add('hidden');
             chatIndicator.style.display = 'none';
+            console.log('✅ Typing indicator hidden immediately (already shown for 30+ seconds)');
         }
+        
+        // Reset the start time
+        this.typingIndicatorStartTime = null;
     }
 
     clearConversation() {
         const messagesContainer = document.getElementById('chatMessages');
+        if (!messagesContainer) return;
+        
+        // Preserve the typing indicator
+        const typingIndicator = document.getElementById('chatTypingIndicator');
+        
         // Keep only the first AI message
         const firstMessage = messagesContainer.querySelector('.ai-message');
         messagesContainer.innerHTML = '';
+        
+        // Re-add the typing indicator if it exists
+        if (typingIndicator) {
+            messagesContainer.appendChild(typingIndicator);
+            typingIndicator.classList.add('hidden');
+        } else {
+            // Recreate it if it was removed
+            const newIndicator = document.createElement('div');
+            newIndicator.id = 'chatTypingIndicator';
+            newIndicator.className = 'chat-typing-indicator hidden';
+            newIndicator.innerHTML = `
+                <div class="typing-bubble">
+                    <span class="typing-text">Thinking</span>
+                    <span class="thinking-dots">
+                        <span class="dot"></span>
+                        <span class="dot"></span>
+                        <span class="dot"></span>
+                    </span>
+                </div>
+            `;
+            messagesContainer.appendChild(newIndicator);
+        }
+        
         if (firstMessage) {
             messagesContainer.appendChild(firstMessage);
         }
@@ -5093,8 +5353,34 @@ SamCrypto AI remembers your preferences and conversation history to provide pers
             const chatMessages = document.getElementById('chatMessages');
             const welcomeMessage = document.getElementById('welcomeMessage');
             
+            // Preserve typing indicator
+            const typingIndicator = document.getElementById('chatTypingIndicator');
+            
             // Clear existing messages except welcome message
             chatMessages.innerHTML = '';
+            
+            // Re-add typing indicator
+            if (typingIndicator) {
+                chatMessages.appendChild(typingIndicator);
+                typingIndicator.classList.add('hidden');
+            } else {
+                // Recreate if missing
+                const newIndicator = document.createElement('div');
+                newIndicator.id = 'chatTypingIndicator';
+                newIndicator.className = 'chat-typing-indicator hidden';
+                newIndicator.innerHTML = `
+                    <div class="typing-bubble">
+                        <span class="typing-text">Thinking</span>
+                        <span class="thinking-dots">
+                            <span class="dot"></span>
+                            <span class="dot"></span>
+                            <span class="dot"></span>
+                        </span>
+                    </div>
+                `;
+                chatMessages.appendChild(newIndicator);
+            }
+            
             if (welcomeMessage) {
                 chatMessages.appendChild(welcomeMessage);
             }
@@ -5179,8 +5465,34 @@ SamCrypto AI remembers your preferences and conversation history to provide pers
         const chatMessages = document.getElementById('chatMessages');
         const welcomeMessage = document.getElementById('welcomeMessage');
         
+        // Preserve typing indicator
+        const typingIndicator = document.getElementById('chatTypingIndicator');
+        
         // Clear existing messages and show welcome message
         chatMessages.innerHTML = '';
+        
+        // Re-add typing indicator
+        if (typingIndicator) {
+            chatMessages.appendChild(typingIndicator);
+            typingIndicator.classList.add('hidden');
+        } else {
+            // Recreate if missing
+            const newIndicator = document.createElement('div');
+            newIndicator.id = 'chatTypingIndicator';
+            newIndicator.className = 'chat-typing-indicator hidden';
+            newIndicator.innerHTML = `
+                <div class="typing-bubble">
+                    <span class="typing-text">Thinking</span>
+                    <span class="thinking-dots">
+                        <span class="dot"></span>
+                        <span class="dot"></span>
+                        <span class="dot"></span>
+                    </span>
+                </div>
+            `;
+            chatMessages.appendChild(newIndicator);
+        }
+        
         if (welcomeMessage) {
             chatMessages.appendChild(welcomeMessage);
         }

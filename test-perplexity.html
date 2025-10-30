@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🧪 Perplexity Integration Tester</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        
+        h1 {
+            color: #667eea;
+            margin-bottom: 10px;
+            font-size: 36px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 18px;
+        }
+        
+        .alert {
+            background: #fff3cd;
+            border: 2px solid #ffc107;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .alert h3 {
+            color: #856404;
+            margin-bottom: 10px;
+        }
+        
+        .alert ol {
+            color: #856404;
+            margin-left: 20px;
+        }
+        
+        .alert li {
+            margin: 8px 0;
+        }
+        
+        .test-card {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 25px;
+            margin-bottom: 20px;
+            border-left: 5px solid #667eea;
+            transition: transform 0.2s;
+        }
+        
+        .test-card:hover {
+            transform: translateX(5px);
+        }
+        
+        .test-card h3 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .test-card p {
+            color: #666;
+            margin-bottom: 15px;
+            line-height: 1.6;
+        }
+        
+        .status {
+            display: inline-block;
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            border: 2px solid #ddd;
+        }
+        
+        .status.pass {
+            background: #28a745;
+            border-color: #28a745;
+        }
+        
+        .status.fail {
+            background: #dc3545;
+            border-color: #dc3545;
+        }
+        
+        .status.pending {
+            background: #ffc107;
+            border-color: #ffc107;
+        }
+        
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin: 5px;
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+        }
+        
+        button:active {
+            transform: translateY(0);
+        }
+        
+        button.secondary {
+            background: #6c757d;
+        }
+        
+        .result-box {
+            margin-top: 15px;
+            padding: 15px;
+            border-radius: 8px;
+            font-family: 'Consolas', 'Courier New', monospace;
+            font-size: 13px;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            max-height: 400px;
+            overflow-y: auto;
+            line-height: 1.5;
+        }
+        
+        .result-box.success {
+            background: #d4edda;
+            color: #155724;
+            border: 2px solid #c3e6cb;
+        }
+        
+        .result-box.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 2px solid #f5c6cb;
+        }
+        
+        .result-box.info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 2px solid #bee5eb;
+        }
+        
+        .actions {
+            margin-top: 40px;
+            text-align: center;
+            padding: 30px;
+            background: linear-gradient(135deg, #667eea10 0%, #764ba210 100%);
+            border-radius: 15px;
+        }
+        
+        .actions h2 {
+            color: #667eea;
+            margin-bottom: 20px;
+        }
+        
+        .big-button {
+            font-size: 20px !important;
+            padding: 18px 50px !important;
+            margin: 10px !important;
+        }
+        
+        code {
+            background: #e9ecef;
+            padding: 3px 8px;
+            border-radius: 4px;
+            color: #e83e8c;
+            font-family: 'Consolas', 'Courier New', monospace;
+        }
+        
+        .progress {
+            margin: 20px 0;
+            text-align: center;
+            font-size: 24px;
+            font-weight: bold;
+            color: #667eea;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 Perplexity Integration Tester</h1>
+        <p class="subtitle">Quick diagnostic tool to verify Perplexity AI is working in your crypto AI</p>
+        
+        <div class="alert">
+            <h3>📋 Before You Start:</h3>
+            <ol>
+                <li><strong>Clear your browser cache!</strong> Press <code>Ctrl + Shift + Delete</code> (Windows) or <code>Cmd + Shift + Delete</code> (Mac)</li>
+                <li>Hard refresh your main app: Press <code>Ctrl + F5</code> or <code>Cmd + Shift + R</code></li>
+                <li>Make sure <code>js/script.js</code> has been saved with the changes</li>
+                <li>Run the tests below to diagnose any issues</li>
+            </ol>
+        </div>
+        
+        <div id="progress" class="progress" style="display: none;"></div>
+        
+        <!-- Test 1 -->
+        <div class="test-card">
+            <h3><span class="status" id="status1"></span> Test 1: Code Configuration</h3>
+            <p>Checks if Perplexity API configuration exists in your script.js file</p>
+            <button onclick="runTest1()">▶️ Run Test 1</button>
+            <div id="result1"></div>
+        </div>
+        
+        <!-- Test 2 -->
+        <div class="test-card">
+            <h3><span class="status" id="status2"></span> Test 2: Method Detection</h3>
+            <p>Verifies that required Perplexity methods exist in your code</p>
+            <button onclick="runTest2()">▶️ Run Test 2</button>
+            <div id="result2"></div>
+        </div>
+        
+        <!-- Test 3 -->
+        <div class="test-card">
+            <h3><span class="status" id="status3"></span> Test 3: Trigger Keywords</h3>
+            <p>Tests if the right keywords will trigger Perplexity</p>
+            <button onclick="runTest3()">▶️ Run Test 3</button>
+            <div id="result3"></div>
+        </div>
+        
+        <!-- Test 4 -->
+        <div class="test-card">
+            <h3><span class="status" id="status4"></span> Test 4: Live API Connection</h3>
+            <p>Makes a real call to Perplexity API (uses 1 request from your quota)</p>
+            <button onclick="runTest4()">▶️ Run Test 4 (Live API)</button>
+            <div id="result4"></div>
+        </div>
+        
+        <div class="actions">
+            <h2>🚀 Quick Actions</h2>
+            <button class="big-button" onclick="runAllTests()">Run All Tests</button>
+            <button class="big-button secondary" onclick="location.reload()">🔄 Reset</button>
+        </div>
+        
+        <div style="margin-top: 30px; padding: 20px; background: #e7f3ff; border-radius: 10px; border-left: 4px solid #2196f3;">
+            <h3 style="color: #1976d2; margin-bottom: 10px;">💡 Quick Diagnosis:</h3>
+            <p style="color: #1565c0;">After running tests, if Perplexity is still not working in your main app:</p>
+            <ol style="color: #1565c0; margin-left: 20px; margin-top: 10px;">
+                <li>Open your main app (index.html)</li>
+                <li>Press <strong>F12</strong> to open console</li>
+                <li>Type this query: <code>"What's the latest Bitcoin news?"</code></li>
+                <li>Look for: <code>🌐 Using Perplexity AI...</code> in console</li>
+                <li>If you don't see it → Perplexity is not triggering</li>
+            </ol>
+        </div>
+    </div>
+    
+    <script>
+        let testsPassed = 0;
+        let testsTotal = 4;
+        
+        // Test 1: Check Configuration
+        async function runTest1() {
+            const statusEl = document.getElementById('status1');
+            const resultEl = document.getElementById('result1');
+            
+            statusEl.className = 'status pending';
+            resultEl.innerHTML = '<div class="result-box info">⏳ Running test...</div>';
+            
+            try {
+                const response = await fetch('js/script.js');
+                if (!response.ok) throw new Error('Could not load script.js file. Make sure you\'re running this from the app directory.');
+                
+                const code = await response.text();
+                
+                const checks = {
+                    'Perplexity API URL': code.includes('https://api.perplexity.ai/chat/completions'),
+                    'Perplexity API Key': code.includes('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'),
+                    'Hybrid Mode Enabled': code.includes('this.useHybridAI = true'),
+                    'API Key Variable': code.includes('this.perplexityApiKey')
+                };
+                
+                let result = '📋 Configuration Check Results:\n\n';
+                let allPass = true;
+                
+                for (const [name, passed] of Object.entries(checks)) {
+                    result += `${passed ? '✅' : '❌'} ${name}: ${passed ? 'FOUND' : 'MISSING'}\n`;
+                    if (!passed) allPass = false;
+                }
+                
+                if (allPass) {
+                    result += '\n🎉 SUCCESS! All configuration is correct!\n';
+                    result += '\nNext: Verify your browser cache is cleared.';
+                    resultEl.innerHTML = `<div class="result-box success">${result}</div>`;
+                    statusEl.className = 'status pass';
+                    testsPassed++;
+                } else {
+                    result += '\n⚠️ FAILED! Some configuration is missing.\n';
+                    result += '\nSolution: Make sure you saved the changes to js/script.js';
+                    resultEl.innerHTML = `<div class="result-box error">${result}</div>`;
+                    statusEl.className = 'status fail';
+                }
+            } catch (error) {
+                resultEl.innerHTML = `<div class="result-box error">❌ ERROR: ${error.message}\n\nMake sure:\n1. You're in the correct directory\n2. js/script.js file exists\n3. You're using a local server or opening from file system</div>`;
+                statusEl.className = 'status fail';
+            }
+        }
+        
+        // Test 2: Check Methods
+        async function runTest2() {
+            const statusEl = document.getElementById('status2');
+            const resultEl = document.getElementById('result2');
+            
+            statusEl.className = 'status pending';
+            resultEl.innerHTML = '<div class="result-box info">⏳ Running test...</div>';
+            
+            try {
+                const response = await fetch('js/script.js');
+                const code = await response.text();
+                
+                const methods = {
+                    'shouldUsePerplexity() method': code.includes('shouldUsePerplexity(message, intent)'),
+                    'fetchPerplexityInsights() method': code.includes('fetchPerplexityInsights(userMessage, marketData)'),
+                    'Perplexity trigger in generateAIResponse': code.includes('🌐 Using Perplexity AI'),
+                    'Perplexity insights parameter': code.includes('perplexityInsights')
+                };
+                
+                let result = '🔍 Method Detection Results:\n\n';
+                let allPass = true;
+                
+                for (const [name, exists] of Object.entries(methods)) {
+                    result += `${exists ? '✅' : '❌'} ${name}: ${exists ? 'FOUND' : 'MISSING'}\n`;
+                    if (!exists) allPass = false;
+                }
+                
+                if (allPass) {
+                    result += '\n🎉 SUCCESS! All methods are present!\n';
+                    result += '\nThe code integration looks good!';
+                    resultEl.innerHTML = `<div class="result-box success">${result}</div>`;
+                    statusEl.className = 'status pass';
+                    testsPassed++;
+                } else {
+                    result += '\n⚠️ FAILED! Some methods are missing.\n';
+                    result += '\nSolution: The integration may not be complete.';
+                    resultEl.innerHTML = `<div class="result-box error">${result}</div>`;
+                    statusEl.className = 'status fail';
+                }
+            } catch (error) {
+                resultEl.innerHTML = `<div class="result-box error">❌ ERROR: ${error.message}</div>`;
+                statusEl.className = 'status fail';
+            }
+        }
+        
+        // Test 3: Check Trigger Logic
+        async function runTest3() {
+            const statusEl = document.getElementById('status3');
+            const resultEl = document.getElementById('result3');
+            
+            statusEl.className = 'status pending';
+            resultEl.innerHTML = '<div class="result-box info">⏳ Running test...</div>';
+            
+            try {
+                const testCases = [
+                    { query: "What's the latest Bitcoin news?", should: true, reason: "has 'latest' + 'news'" },
+                    { query: "Recent Ethereum updates", should: true, reason: "has 'recent'" },
+                    { query: "What's the sentiment on crypto?", should: true, reason: "has 'sentiment'" },
+                    { query: "Upcoming Solana events", should: true, reason: "has 'events'" },
+                    { query: "Bitcoin predictions for 2025", should: true, reason: "has 'predictions' + '2025'" },
+                    { query: "Analyze Bitcoin RSI", should: false, reason: "technical query" },
+                    { query: "What is Bitcoin?", should: false, reason: "general query" }
+                ];
+                
+                let result = '🎯 Trigger Keyword Test Results:\n\n';
+                let correct = 0;
+                
+                for (const test of testCases) {
+                    const hasKeywords = checkTriggers(test.query);
+                    const pass = hasKeywords === test.should;
+                    
+                    if (pass) correct++;
+                    
+                    result += `${pass ? '✅' : '❌'} "${test.query}"\n`;
+                    result += `   Expected: ${test.should ? 'TRIGGER' : 'NO TRIGGER'}\n`;
+                    result += `   Got: ${hasKeywords ? 'TRIGGER' : 'NO TRIGGER'}\n`;
+                    result += `   Reason: ${test.reason}\n\n`;
+                }
+                
+                result += `\n📊 Score: ${correct}/${testCases.length} tests passed\n`;
+                
+                if (correct === testCases.length) {
+                    result += '\n🎉 SUCCESS! All trigger tests passed!';
+                    resultEl.innerHTML = `<div class="result-box success">${result}</div>`;
+                    statusEl.className = 'status pass';
+                    testsPassed++;
+                } else {
+                    result += '\n⚠️ Some tests failed, but this might be OK.';
+                    resultEl.innerHTML = `<div class="result-box error">${result}</div>`;
+                    statusEl.className = 'status fail';
+                }
+            } catch (error) {
+                resultEl.innerHTML = `<div class="result-box error">❌ ERROR: ${error.message}</div>`;
+                statusEl.className = 'status fail';
+            }
+        }
+        
+        function checkTriggers(query) {
+            const q = query.toLowerCase();
+            const news = ['news', 'latest', 'update', 'recent', 'today', 'breaking', 'announcement', 'headline', 'happening'];
+            const sentiment = ['sentiment', 'feeling', 'opinion', 'people think', 'bullish', 'bearish', 'mood', 'community'];
+            const events = ['event', 'launch', 'release', 'upgrade', 'fork', 'partnership', 'adoption', 'regulation', 'upcoming'];
+            const future = ['predict', 'forecast', 'future', 'outlook', 'next', 'will', 'expect', '2024', '2025', 'prediction'];
+            const external = ['vs stock', 'vs gold', 'inflation', 'economy', 'fed', 'interest rate', 'macro'];
+            
+            return news.some(k => q.includes(k)) ||
+                   sentiment.some(k => q.includes(k)) ||
+                   events.some(k => q.includes(k)) ||
+                   future.some(k => q.includes(k)) ||
+                   external.some(k => q.includes(k));
+        }
+        
+        // Test 4: Live API Test
+        async function runTest4() {
+            const statusEl = document.getElementById('status4');
+            const resultEl = document.getElementById('result4');
+            
+            statusEl.className = 'status pending';
+            resultEl.innerHTML = '<div class="result-box info">⏳ Calling Perplexity API...\nThis may take 3-5 seconds...</div>';
+            
+            try {
+                const apiKey = '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';
+                
+                const response = await fetch('https://api.perplexity.ai/chat/completions', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${apiKey}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        model: 'sonar-pro',
+                        messages: [
+                            {
+                                role: 'system',
+                                content: 'Respond with: "Perplexity API test successful!"'
+                            },
+                            {
+                                role: 'user',
+                                content: 'Test'
+                            }
+                        ],
+                        temperature: 0.1,
+                        max_tokens: 50
+                    })
+                });
+                
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    let errorMsg = `API returned status ${response.status}`;
+                    
+                    if (response.status === 401 || response.status === 403) {
+                        errorMsg += '\n\n🔑 API Key Error!\nThe API key may be invalid or expired.\n\nSolution: Check your Perplexity account and update the API key.';
+                    } else if (response.status === 429) {
+                        errorMsg += '\n\n⏰ Rate Limit!\nToo many requests.\n\nSolution: Wait 1 minute and try again.';
+                    }
+                    
+                    throw new Error(errorMsg);
+                }
+                
+                const data = await response.json();
+                const aiResponse = data.choices[0].message.content;
+                
+                let result = '🌐 Live API Test Results:\n\n';
+                result += `✅ Status: Connected\n`;
+                result += `✅ API Key: Valid\n`;
+                result += `✅ Model: ${data.model || 'sonar-pro'}\n`;
+                result += `✅ Response: "${aiResponse}"\n\n`;
+                result += `🎉 SUCCESS! Perplexity API is working!\n\n`;
+                result += `This confirms:\n`;
+                result += `• Your API key is valid\n`;
+                result += `• Your network can reach Perplexity\n`;
+                result += `• The API is responding correctly\n`;
+                
+                resultEl.innerHTML = `<div class="result-box success">${result}</div>`;
+                statusEl.className = 'status pass';
+                testsPassed++;
+            } catch (error) {
+                let result = '❌ Live API Test FAILED\n\n';
+                result += `Error: ${error.message}\n`;
+                resultEl.innerHTML = `<div class="result-box error">${result}</div>`;
+                statusEl.className = 'status fail';
+            }
+        }
+        
+        // Run all tests
+        async function runAllTests() {
+            testsPassed = 0;
+            const progressEl = document.getElementById('progress');
+            progressEl.style.display = 'block';
+            
+            progressEl.textContent = '🧪 Running Test 1/4...';
+            await runTest1();
+            await sleep(800);
+            
+            progressEl.textContent = '🧪 Running Test 2/4...';
+            await runTest2();
+            await sleep(800);
+            
+            progressEl.textContent = '🧪 Running Test 3/4...';
+            await runTest3();
+            await sleep(800);
+            
+            if (confirm('Run live API test? This will use 1 request from your Perplexity quota.')) {
+                progressEl.textContent = '🧪 Running Test 4/4...';
+                await runTest4();
+            } else {
+                testsTotal = 3;
+            }
+            
+            progressEl.textContent = `✅ Tests Complete! ${testsPassed}/${testsTotal} passed`;
+            
+            if (testsPassed === testsTotal) {
+                alert('🎉 All tests passed! Perplexity integration is working!\n\nNow:\n1. Clear browser cache (Ctrl+Shift+Delete)\n2. Hard refresh main app (Ctrl+F5)\n3. Try: "What\'s the latest Bitcoin news?"');
+            } else {
+                alert(`⚠️ ${testsTotal - testsPassed} test(s) failed.\n\nCheck the results above for details.`);
+            }
+        }
+        
+        function sleep(ms) {
+            return new Promise(resolve => setTimeout(resolve, ms));
+        }
+    </script>
+</body>
+</html>
+
+
+
