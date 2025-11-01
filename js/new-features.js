@@ -571,38 +571,13 @@ class NewFeatures {
         analyzeBtn.disabled = true;
 
         try {
-            // Use Gemini Vision API to analyze the chart
-            const base64Image = this.uploadedChartImage.split(',')[1];
-            
-            const response = await fetch(`${this.app.geminiAPI}?key=${this.app.apiKey}`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    contents: [{
-                        parts: [
-                            {
-                                text: "You are a professional crypto trader. Analyze this trading chart screenshot and provide: 1) What coin/timeframe you see, 2) Current trend (bullish/bearish/sideways), 3) Key support/resistance levels, 4) Technical patterns visible, 5) Trading recommendation (BUY/SELL/WAIT) with entry, target, and stop-loss. Be specific and actionable."
-                            },
-                            {
-                                inline_data: {
-                                    mime_type: "image/jpeg",
-                                    data: base64Image
-                                }
-                            }
-                        ]
-                    }]
-                })
-            });
-
-            const data = await response.json();
-            const analysis = data.candidates?.[0]?.content?.parts?.[0]?.text || 'Could not analyze chart. Please try again.';
-
-            resultText.innerHTML = analysis.replace(/\n/g, '<br>');
+            // Chart analysis with Cerebras (text-only for now, vision not supported)
+            resultText.innerHTML = '⚠️ Chart image analysis is currently unavailable with Cerebras API. Please describe your chart or ask me specific questions about price levels, trends, or trading setups!';
             resultDiv.classList.remove('hidden');
 
         } catch (error) {
             console.error('Chart analysis error:', error);
-            resultText.innerHTML = '❌ Analysis failed. Please ensure you have a valid API key and try again.';
+            resultText.innerHTML = '❌ Analysis failed. Please try again.';
             resultDiv.classList.remove('hidden');
         }
 

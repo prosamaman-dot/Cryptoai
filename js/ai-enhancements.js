@@ -67,20 +67,21 @@ class AIEnhancementEngine {
 Question: "${userMessage}"
 - Intent: ${this.classifyIntent(userMessage)}
 - Coins Mentioned: ${this.extractCoins(userMessage)}
-- Time Horizon: ${this.extractTimeHorizon(userMessage)}
-- Risk Appetite: ${context.userProfile?.riskTolerance || 'moderate'}
+- Time Horizon: SHORT-TERM TRADING (minutes to hours, max 2-3 days)
+- Focus: Quick entry/exit opportunities
+- Risk Appetite: Aggressive short-term trader
 
 ## Step 2: GATHER REAL-TIME DATA
 ${this.formatMarketData(marketData)}
 
-## Step 3: TECHNICAL ANALYSIS
-Apply these indicators in order of priority:
-1. Trend Analysis (EMA 9, 21, 50, 200)
-2. Momentum (RSI, MACD)
-3. Volatility (Bollinger Bands, ATR)
-4. Volume Profile
-5. Support/Resistance Levels
-6. Chart Patterns
+## Step 3: SHORT-TERM TECHNICAL ANALYSIS
+Apply these indicators for INTRADAY/SHORT-TERM trading:
+1. RSI (14) - Critical for scalping setups (overbought/oversold)
+2. Momentum (MACD 5min-15min timeframes)
+3. Volume Spike Detection (immediate opportunities)
+4. Short-term Support/Resistance (15min-1hr charts)
+5. Quick Reversal Patterns (candlesticks on low timeframes)
+6. Breakout momentum (recent breakouts with volume)
 
 ## Step 4: FUNDAMENTAL ANALYSIS
 Consider:
@@ -106,16 +107,17 @@ Calculate:
 - Sentiment Score (0-100)
 - **Overall Confidence: X%** (Be explicit)
 
-## Step 7: FORMULATE RECOMMENDATION
-Based on ALL above factors, provide:
-1. **RECOMMENDATION**: Buy/Hold/Sell
+## Step 7: FORMULATE SHORT-TERM RECOMMENDATION
+Based on ALL above factors, provide QUICK TRADING SETUP:
+1. **RECOMMENDATION**: BUY/SELL/NOW/WAIT (be urgent if opportunity is immediate)
 2. **CONFIDENCE LEVEL**: Low/Medium/High (with percentage)
-3. **REASONING**: Why this recommendation (explain in detail)
-4. **ENTRY POINTS**: Specific price levels with reasoning
-5. **TARGETS**: Take-profit levels with explanations
-6. **STOP LOSS**: Risk management level with justification
-7. **POSITION SIZE**: Based on risk tolerance
-8. **TIME HORIZON**: Short/Medium/Long term with reasoning
+3. **REASONING**: Why this is a SHORT-TERM opportunity (explain urgency)
+4. **ENTRY POINT**: EXACT price and timing (right now, on pullback, etc)
+5. **TARGETS**: Quick profit levels (1-3% = target 1, 2-5% = target 2)
+6. **TIGHT STOP LOSS**: 0.5-1% below entry (NOT 2-3%!)
+7. **POSITION SIZE**: Small for quick trade (1-2% max risk)
+8. **TIME HORIZON**: Hours (30min-4hrs) - specify exact time to exit!
+9. **URGENCY**: How quickly must user act? (NOW, Within 1hr, Wait for setup)
 
 ## Step 8: RISK WARNINGS
 - List specific risks with probabilities
@@ -124,17 +126,20 @@ Based on ALL above factors, provide:
 
 ---
 
-**CRITICAL RULES**:
-- Provide COMPREHENSIVE analysis (don't be brief!)
-- Show your reasoning step-by-step
+**CRITICAL SHORT-TERM TRADING RULES**:
+- Focus on QUICK opportunities (hours, NOT days or weeks!)
+- Provide URGENT, ACTIONABLE signals when setups appear
+- Show your reasoning step-by-step but be CONCISE
 - Use REAL market data (prices, volumes, changes)
-- Give specific numbers, not vague statements
-- Include confidence percentages
-- Explain WHY, not just WHAT
-- Consider user's risk profile: ${context.userProfile?.riskTolerance || 'moderate'}
+- Give SPECIFIC numbers and EXACT entry/exit points
+- ALWAYS specify HOLD TIME (30min-4hrs max for short-term)
+- Emphasize TIGHT stops (0.5-1%, NOT 2-3%!)
+- Stress QUICK profit taking (1-3% targets)
+- Warn against holding too long or overnight
+- Consider liquidity for fast entry/exit
+- User is SHORT-TERM trader, not long-term holder
 - Never guarantee profits, always mention risks
 - If data is insufficient, say so explicitly
-- Be thorough and professional
 
 **OUTPUT FORMAT**:
 Use clear sections with emojis for readability. Be DETAILED and thorough.
@@ -679,10 +684,10 @@ Provide complete analysis that helps users make informed decisions.
 
     extractTimeHorizon(message) {
         const msg = message.toLowerCase();
-        if (msg.includes('short') || msg.includes('day trade') || msg.includes('scalp')) return 'short-term';
+        // Default to short-term for all queries (training focus)
         if (msg.includes('long') || msg.includes('hold') || msg.includes('invest')) return 'long-term';
         if (msg.includes('swing')) return 'medium-term';
-        return 'medium-term';
+        return 'short-term'; // DEFAULT: Always assume short-term unless specified otherwise
     }
 
     formatMarketData(marketData) {

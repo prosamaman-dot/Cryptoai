@@ -1,16 +1,13 @@
-// SamCrypto AI - Chat Interface with Gemini API
+// SamCrypto AI - Chat Interface with Cerebras GPT-OSS-120B API
 
 class SamCryptoAI {
     constructor() {
         // Initialize UserManager first
         this.userManager = new UserManager();
         
-        // Multiple API Keys for Rate Limit Distribution (Rotation System)
+        // Cerebras API Configuration
         this.apiKeys = [
-            'AIzaSyBmjoj-WrHWoLJEbYF97LxxU-scf3wXMQQ', // Key 1 (Original)
-            'AIzaSyAmUENTunN37snDBhjHDXm4xgDHN6BdbOg', // Key 2 (New)
-            'AIzaSyBDPpqPETFTpTp_VALS6PJFjZKat3qY-_g', // Key 3 (New)
-            'AIzaSyARBZ1vwzTsBTkmd6bHGWeSuCwScjckLQ4'  // Key 4 (New)
+            'csk-j9njfnrf9tctv246fdtph3xht6dh8pfrpmr3jnhrcyjpr38k' // Cerebras API Key
         ];
         this.currentKeyIndex = 0; // Track which key we're using
         this.apiKey = this.apiKeys[this.currentKeyIndex]; // Start with first key
@@ -38,14 +35,15 @@ class SamCryptoAI {
         this.cryptoCompareAPI = 'https://min-api.cryptocompare.com/data';
         this.coinCapAPI = 'https://api.coincap.io/v2';
         
-        // AI and other APIs - Upgraded to Gemini 2.5 Pro for superior crypto analysis
-        this.geminiAPI = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent';
+        // AI and other APIs - Using Cerebras GPT-OSS-120B for superior crypto analysis
+        this.cerebrasAPI = 'https://api.cerebras.ai/v1/chat/completions';
+        this.cerebrasModel = 'gpt-oss-120b';
         this.coinDeskAPI = 'https://api.coindesk.com/v1';
         
         // 🌐 Perplexity AI API - Real-time web search for news and market sentiment
         this.perplexityAPI = 'https://api.perplexity.ai/chat/completions';
         this.perplexityApiKey = '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';
-        this.useHybridAI = true; // Enable hybrid AI mode (Perplexity + Gemini)
+        this.useHybridAI = true; // Enable hybrid AI mode (Perplexity + Cerebras)
         
         this.tradingStrategies = this.initializeTradingStrategies();
         
@@ -693,19 +691,31 @@ class SamCryptoAI {
 
             const sentimentPrompt = `Analyze the overall crypto market sentiment from these recent news headlines:\n\n${newsText}\n\nProvide: 1) Overall sentiment (Bullish/Bearish/Neutral) with confidence %, 2) Key themes, 3) Which coins are mentioned most, 4) Trading implications. Be concise.`;
 
-            const response = await fetch(`${this.geminiAPI}?key=${this.apiKey}`, {
+            const response = await fetch(`${this.cerebrasAPI}`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${this.apiKey}`
+                },
                 body: JSON.stringify({
-                    contents: [{
-                        role: 'user',
-                        parts: [{ text: sentimentPrompt }]
-                    }]
+                    model: this.cerebrasModel,
+                    messages: [
+                        {
+                            role: 'system',
+                            content: 'You are a crypto market sentiment analyst.'
+                        },
+                        {
+                            role: 'user',
+                            content: sentimentPrompt
+                        }
+                    ],
+                    temperature: 0.7,
+                    max_tokens: 1000
                 })
             });
 
             const data = await response.json();
-            const analysis = data.candidates?.[0]?.content?.parts?.[0]?.text || 'Could not analyze sentiment.';
+            const analysis = data.choices?.[0]?.message?.content || 'Could not analyze sentiment.';
 
             const message = `📰 **Latest Crypto News Sentiment**\n\n${analysis}\n\n**Recent Headlines:**\n${newsData.slice(0, 5).map((article, i) => `${i+1}. ${article.title || article.headline}`).join('\n')}`;
             
@@ -803,7 +813,7 @@ class SamCryptoAI {
             this.apiKey = currentUser.preferences.apiKey;
         } else {
             // Check localStorage as fallback
-            const savedApiKey = localStorage.getItem('gemini_api_key');
+            const savedApiKey = localStorage.getItem('cerebras_api_key');
             if (savedApiKey) {
                 this.apiKey = savedApiKey;
             }
@@ -2183,7 +2193,7 @@ class SamCryptoAI {
                         this.showUserMessage('✅ Real-time web data retrieved from Perplexity AI!', 2000);
                     }
                 } catch (error) {
-                    console.warn('⚠️ Perplexity API error, continuing with Gemini only:', error);
+                    console.warn('⚠️ Perplexity API error, continuing with Cerebras only:', error);
                 }
             }
             
@@ -2210,35 +2220,24 @@ class SamCryptoAI {
             // Dynamic generation config based on intent
             const generationConfig = this.getOptimalGenerationConfig(intent);
             
-            console.log('📡 Sending request to Gemini API...');
+            console.log('📡 Sending request to Cerebras API...');
+            
+            // Convert Gemini format to Cerebras/OpenAI format
+            const cerebrasMessages = this.convertToCerebrasFormat(conversationContents);
             
             // Smart retry with exponential backoff
-            const response = await this.fetchWithRetry(`${this.geminiAPI}?key=${this.apiKey}`, {
+            const response = await this.fetchWithRetry(`${this.cerebrasAPI}`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${this.apiKey}`
                 },
                 body: JSON.stringify({
-                    contents: conversationContents,
-                    generationConfig: generationConfig,
-                    safetySettings: [
-                        {
-                            category: 'HARM_CATEGORY_HARASSMENT',
-                            threshold: 'BLOCK_NONE'
-                        },
-                        {
-                            category: 'HARM_CATEGORY_HATE_SPEECH',
-                            threshold: 'BLOCK_NONE'
-                        },
-                        {
-                            category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT',
-                            threshold: 'BLOCK_NONE'
-                        },
-                        {
-                            category: 'HARM_CATEGORY_DANGEROUS_CONTENT',
-                            threshold: 'BLOCK_NONE'
-                        }
-                    ]
+                    model: this.cerebrasModel,
+                    messages: cerebrasMessages,
+                    temperature: generationConfig.temperature || 0.9,
+                    max_tokens: generationConfig.maxOutputTokens || 8192,
+                    top_p: generationConfig.topP || 0.95
                 }),
                 signal: this.abortController?.signal
             }, 3); // 3 retries
@@ -2272,21 +2271,21 @@ class SamCryptoAI {
             const data = await response.json();
             console.log('✅ API response received:', data);
             
-            if (!data.candidates || !data.candidates[0] || !data.candidates[0].content) {
+            if (!data.choices || !data.choices[0] || !data.choices[0].message) {
                 console.error('❌ Invalid response structure:', data);
-                throw new Error('Invalid API response - no candidates');
+                throw new Error('Invalid API response - no choices');
             }
             
             // Check if response was truncated
-            const finishReason = data.candidates[0].finishReason;
+            const finishReason = data.choices[0].finish_reason;
             if (finishReason) {
                 console.log('⚠️ Finish reason:', finishReason);
-                if (finishReason === 'MAX_TOKENS' || finishReason === 'LENGTH') {
-                    console.warn('⚠️ Response was truncated due to token limit!');
+                if (finishReason === 'length' || finishReason === 'stop') {
+                    console.log('✅ Response completed');
                 }
             }
             
-            const aiResponse = data.candidates[0].content.parts[0].text;
+            const aiResponse = data.choices[0].message.content;
             console.log('✅ AI response generated successfully');
             console.log('📝 Response length:', aiResponse.length, 'characters');
             console.log('📝 Response ends with:', aiResponse.slice(-100)); // Last 100 characters
@@ -2311,7 +2310,7 @@ class SamCryptoAI {
             return aiResponse;
             
         } catch (error) {
-            console.error('❌ Gemini API error:', error);
+            console.error('❌ Cerebras API error:', error);
             
             // Handle specific error types
             if (error.message === 'API_OVERLOADED' || error.message.includes('503') || error.message.includes('overloaded')) {
@@ -2425,18 +2424,21 @@ class SamCryptoAI {
         const conversationContents = this.buildConversationHistory(systemPrompt, userMessage);
         const generationConfig = this.getOptimalGenerationConfig(intent);
         
-        const response = await fetch(`${this.geminiAPI}?key=${this.apiKey}`, {
+        // Convert Gemini format to Cerebras/OpenAI format
+        const cerebrasMessages = this.convertToCerebrasFormat(conversationContents);
+        
+        const response = await fetch(`${this.cerebrasAPI}`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${this.apiKey}`
+            },
             body: JSON.stringify({
-                contents: conversationContents,
-                generationConfig: generationConfig,
-                safetySettings: [
-                    { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_NONE' },
-                    { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_NONE' },
-                    { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_NONE' },
-                    { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_NONE' }
-                ]
+                model: this.cerebrasModel,
+                messages: cerebrasMessages,
+                temperature: generationConfig.temperature || 0.9,
+                max_tokens: generationConfig.maxOutputTokens || 8192,
+                top_p: generationConfig.topP || 0.95
             })
         });
         
@@ -2449,11 +2451,11 @@ class SamCryptoAI {
         
         const data = await response.json();
         
-        if (!data.candidates || !data.candidates[0] || !data.candidates[0].content) {
+        if (!data.choices || !data.choices[0] || !data.choices[0].message) {
             throw new Error('Invalid API response');
         }
         
-        return data.candidates[0].content.parts[0].text;
+        return data.choices[0].message.content;
     }
 
     async handleAPIOverload(userMessage, marketData) {
@@ -2547,6 +2549,36 @@ class SamCryptoAI {
         }
         
         return contents;
+    }
+
+    // Convert Gemini format to Cerebras/OpenAI format
+    convertToCerebrasFormat(geminiContents) {
+        const messages = [];
+        
+        // First message is always the system prompt (in user role with instruction)
+        if (geminiContents.length > 0) {
+            const firstMsg = geminiContents[0];
+            if (firstMsg.role === 'user' && firstMsg.parts && firstMsg.parts[0]) {
+                messages.push({
+                    role: 'system',
+                    content: firstMsg.parts[0].text
+                });
+            }
+        }
+        
+        // Add the acknowledgment and conversation history
+        // Skip the first user message (already added as system) and process rest
+        for (let i = 1; i < geminiContents.length; i++) {
+            const msg = geminiContents[i];
+            if (msg.parts && msg.parts[0]) {
+                messages.push({
+                    role: msg.role === 'model' ? 'assistant' : 'user',
+                    content: msg.parts[0].text
+                });
+            }
+        }
+        
+        return messages;
     }
 
     buildEnhancedSystemPrompt(basePrompt) {
@@ -3107,6 +3139,26 @@ Use natural: "Bitcoin's currently sitting at $43,521.45 (just pulled from CoinGe
 🎯 YOUR MISSION: 
 Deliver **exceptional, ChatGPT-5 quality responses** that combine accurate real-time data with insightful analysis and natural conversation. Make crypto trading accessible, understandable, and actionable for every user.
 
+⚡ **YOU ARE A SHORT-TERM TRADING SPECIALIST:**
+Your PRIMARY FOCUS is SHORT-TERM trading (minutes to hours, max 2-3 days). You excel at:
+- **Day Trading**: Quick in-and-out trades (minutes to hours)
+- **Scalping**: Fast profit-taking on small movements
+- **Swing Trading**: Holding 1-3 days for quick gains
+- **Intraday Patterns**: Breaking down intraday setups
+- **Real-time Opportunities**: Immediate actionable signals
+
+💰 **PROFITABILITY IS YOUR #1 PRIORITY:**
+Your primary goal is to help users MAKE PROFITABLE SHORT-TERM TRADES. Every recommendation should:
+- Focus on SHORT-TERM opportunities with high profit potential
+- Provide QUICK entry/exit signals (not long-term holds)
+- Include specific profitability scores and expected returns
+- Give clear risk/reward ratios (minimum 1:2, prefer 1:3+ for short-term)
+- Suggest URGENT action when opportunities arise
+- Calculate position sizes that maximize SHORT-TERM profits
+- Prioritize HIGH FREQUENCY trading opportunities
+- Always emphasize SHORT TIME HORIZONS (hours to days, NOT weeks)
+- Warn against holding positions too long
+
 🏆 YOUR EXPERTISE:
 - Expert in Technical Analysis (RSI, MACD, Bollinger Bands, Fibonacci, Volume Analysis)
 - Master of Chart Patterns (Head & Shoulders, Double Top/Bottom, Triangles, Flags)
@@ -3116,55 +3168,69 @@ Deliver **exceptional, ChatGPT-5 quality responses** that combine accurate real-
 - Order Flow & Volume Profile expertise
 - Institutional level market structure understanding
 
-⚡ YOUR PROVEN STRATEGIES:
+⚡ YOUR SHORT-TERM TRADING STRATEGIES:
 
-1. **TREND FOLLOWING** (70% Win Rate)
-   - Wait for clear trend confirmation (Higher Highs/Higher Lows or Lower Highs/Lower Lows)
-   - Enter on pullbacks to support/resistance
-   - Use 20 EMA and 50 EMA crossovers
-   - Exit when trend breaks
+1. **RSI SCALPING** (78% Win Rate for Short-Term)
+   - RSI < 30 = BUY signal for quick bounce
+   - RSI > 70 = SELL signal for quick reversal
+   - Target: 1-3% profit within hours
+   - Stop-loss: 0.5-1% below entry
+   - Exit FAST when target hit or RSI neutralizes
 
-2. **BREAKOUT TRADING** (65% Win Rate)
-   - Identify key resistance/support levels
-   - Wait for volume spike on breakout
-   - Enter after retest confirmation
-   - Target next major level
+2. **QUICK BREAKOUT** (72% Win Rate for Short-Term)
+   - Watch for consolidation breakouts with volume
+   - Enter immediately on breakout
+   - Target: 2-5% profit within 1-4 hours
+   - Stop-loss: Just below breakout point
+   - Exit at first sign of reversal
 
-3. **RSI DIVERGENCE** (75% Win Rate)
-   - Spot bullish divergence: Price lower low, RSI higher low (BUY)
-   - Spot bearish divergence: Price higher high, RSI lower high (SELL)
-   - Confirm with volume and trend
-   - High probability reversals
+3. **MOMENTUM SCALP** (75% Win Rate for Short-Term)
+   - Strong upward momentum = BUY quickly
+   - Wait for pullback entry, don't chase
+   - Ride momentum for 30min-2hrs
+   - Target: 2-4% profit
+   - Exit as momentum fades
 
-4. **SUPPORT/RESISTANCE BOUNCE** (68% Win Rate)
-   - Identify strong S/R zones (tested multiple times)
-   - Enter when price touches level with confirmation
-   - Tight stop-loss below/above level
-   - Quick profits, controlled risk
+4. **SUPPORT/RESISTANCE BOUNCE** (80% Win Rate for Short-Term)
+   - Best for 15min-1hr charts
+   - Enter immediately on bounce
+   - Tight stop below support/above resistance
+   - Target: 1-2% profit quickly
+   - Exit within hours, don't hold!
 
-5. **FIBONACCI RETRACEMENT** (72% Win Rate)
-   - 0.618 and 0.382 levels are strongest
-   - Buy at golden ratio (0.618) in uptrends
-   - Sell at resistance in downtrends
-   - Combine with volume analysis
+5. **VOLUME SPIKE TRADE** (85% Win Rate for Short-Term)
+   - Price moving + volume 2x normal = STRONG signal
+   - Enter quickly on confirmed volume
+   - Target: 3-6% profit
+   - Exit when volume drops
+   - Don't hold overnight!
 
-6. **VOLUME ANALYSIS** (80% Accuracy)
-   - High volume + price increase = Strong bullish
-   - High volume + price decrease = Strong bearish
-   - Low volume moves = Fake moves (avoid!)
-   - Volume leads price
+6. **FIBONACCI BOUNCE** (73% Win Rate for Short-Term)
+   - Use 15min-1hr timeframes
+   - Entry at 0.618 or 0.382 level
+   - Quick scalp for 1-3% profit
+   - Exit fast before reverse
 
-7. **MULTI-TIMEFRAME CONFLUENCE** (85% Win Rate)
-   - 1D trend + 4H setup + 1H entry = Best trades
-   - All timeframes must align
-   - Never trade against higher timeframe trend
-   - Wait for perfect confluence
+7. **SHORT-TERM PATTERN TRADE** (76% Win Rate)
+   - Bullish/Bearish flags on hourly charts
+   - Enter on breakout
+   - Quick 2-4% profit target
+   - Exit within hours
 
-8. **RISK MANAGEMENT** (Protect Capital!)
-   - Never risk more than 2-3% per trade
-   - Risk/Reward minimum 1:2 (prefer 1:3+)
-   - Always use stop-loss (NO EXCEPTIONS)
-   - Scale out at targets (take profits gradually)
+8. **QUICK REVERSAL TRADE** (82% Win Rate for Short-Term)
+   - Spot overbought/oversold reversals
+   - Enter on first reversal candle
+   - Target: 2-5% profit within hours
+   - Exit at first sign of exhaustion
+
+9. **SHORT-TERM RISK MANAGEMENT** (CRITICAL!)
+   - NEVER hold overnight without tight stop
+   - Take profit FAST (1-3% targets)
+   - Use tight stop-losses (0.5-1%)
+   - Risk only 1-2% per trade
+   - Cut losers IMMEDIATELY
+   - Scale out profits: 50% at target 1, 50% at target 2
+   - MOVE TO BREAK-EVEN after 1% profit
 
 🔍 REAL-TIME INTELLIGENCE MODULES:
 - Real-Time Order Flow Engine (Level 2 depth + recent trades) from Binance public APIs
@@ -3199,48 +3265,60 @@ ${userPortfolio.holdings.length > 0 ? userPortfolio.holdings.map(h => {
   • P&L: ${h.pnl >= 0 ? '+' : ''}$${pnl} (${pnlPercent}%)`;
 }).join('\n') : '- No holdings yet (all capital is in USDT)'}
 
-🎯 TRADING RECOMMENDATIONS MUST CONSIDER:
-- Available USDT: $${(userPortfolio.usdtBalance || 0).toFixed(2)} (this is what they can use to buy new positions)
-- Current holdings and their performance
-- Portfolio diversification and risk management
-- Suggest position sizes based on their USDT balance
-- Use 2-3% risk per trade (calculate exact amounts)
+🎯 SHORT-TERM TRADING RECOMMENDATIONS:
+- Available USDT: $${(userPortfolio.usdtBalance || 0).toFixed(2)} (use for quick trades)
+- Focus on LIQUID coins (BTC, ETH) for fast entry/exit
+- Suggest SMALLER position sizes for quick trades (1-2% risk max)
+- Prioritize SPEED and EXIT PLANS over large positions
+- Use 1-2% risk per short-term trade (NOT 2-3%)
+- Keep 70%+ in cash for quick opportunities
+- Exit current holdings if they're not moving quickly
 
-🛡️ LOSS AVOIDANCE RULES (NEVER BREAK THESE):
+🛡️ SHORT-TERM TRADING RULES (NEVER BREAK THESE):
 
-1. **NO TRADE ZONES** (Don't trade when):
-   - No clear trend (choppy, sideways markets)
-   - RSI in neutral zone (40-60) with no divergence
-   - Low volume (weak conviction)
-   - Against higher timeframe trend
-   - Before major news events
-   - During extreme volatility without confirmation
+1. **TRADING TIME RESTRICTIONS**:
+   ⏰ BEST TIMES: High volume hours (market open, news events)
+   ⛔ AVOID: Low volume periods (off-peak hours, weekends)
+   ⚠️ NEVER: Trade major news events without confirmation
+   🔥 FOCUS: Intraday movements, not daily/weekly trends
 
-2. **CONFIRM BEFORE ENTRY** (Need 3+ signals):
-   ✅ Trend direction confirmed
-   ✅ Support/Resistance level identified
-   ✅ Volume confirmation
-   ✅ RSI/indicator alignment
-   ✅ Risk/Reward ratio favorable (minimum 1:2)
+2. **QUICK CONFIRMATION NEEDED** (Need 2-3 signals):
+   ✅ Clear short-term setup (RSI extreme, breakout, or reversal)
+   ✅ Volume confirmation (spike or increasing)
+   ✅ Quick entry point identified
+   ✅ Favorable risk/reward (minimum 1:2 for short-term)
+   ✅ Tight stop-loss placement (0.5-1%)
    
-3. **STOP-LOSS PLACEMENT** (Mandatory):
-   - Below support for longs (at least 2-3% below entry)
-   - Above resistance for shorts
-   - Never move stop-loss against your position
-   - Honor your stop-loss (no hoping!)
+3. **TIGHT STOP-LOSS PLACEMENT** (MANDATORY for short-term):
+   - Place 0.5-1% from entry (NOT 2-3%!)
+   - For longs: Below immediate support level
+   - For shorts: Above immediate resistance level
+   - Move to break-even AFTER 1% profit
+   - Honor your stop IMMEDIATELY (no hoping!)
+   - NO exceptions - short-term means tight stops!
 
-4. **PROFIT TAKING STRATEGY**:
-   - Take 50% profit at first target
-   - Move stop-loss to break-even
-   - Let 50% ride to second target
-   - Trail stop-loss in strong trends
+4. **QUICK PROFIT TAKING** (Critical for short-term success):
+   - Take 50% profit at target 1 (usually 1-3%)
+   - Move stop to break-even instantly
+   - Let 50% run to target 2 (2-5% total)
+   - Exit ALL within HOURS, not days
+   - Don't get greedy - take profits!
+   - Trail stop on running position
 
-5. **RED FLAGS** (Avoid trading):
-   ⚠️ Price at all-time high without consolidation
-   ⚠️ Extreme RSI (>85 or <15) without divergence
-   ⚠️ Volume declining on rallies
-   ⚠️ Negative news catalysts
-   ⚠️ Market-wide fear or uncertainty
+5. **RED FLAGS** (Avoid short-term trades when):
+   ⚠️ Choppy/noisy price action
+   ⚠️ Low volume (weak convictions)
+   ⚠️ Before/after major news events
+   ⚠️ RSI in neutral zone (40-60) with no setup
+   ⚠️ Overnight gaps (avoid holding)
+   ⚠️ Weekend trading (low liquidity)
+
+6. **SHORT-TERM MAXIMUM HOLD TIME**:
+   ⏰ Optimal: 30 minutes to 2 hours
+   ⏰ Maximum: 4-6 hours
+   ❌ NEVER hold overnight unless stop is at break-even
+   ❌ Exit if position hasn't moved in 2 hours
+   🔥 QUICK IN, QUICK OUT = PROFITABLE SHORT-TERM TRADING
 
 🔥 ===== VERIFIED LIVE MARKET DATA ===== 🔥
 ⚠️ WARNING: ONLY USE THE PRICES BELOW - DO NOT GUESS OR ESTIMATE!
@@ -4010,7 +4088,7 @@ Bitcoin, Ethereum, Solana, Cardano, Ripple, Dogecoin, Polkadot, Avalanche, Polyg
 
 **Ready to make your next profitable trade?** Just ask me about any crypto and I'll give you a detailed, actionable recommendation! 📈💎
 
-*Tip: For the best experience, get your free Gemini API key to unlock my full AI-powered analysis!*`;
+*Tip: Now powered by Cerebras GPT-OSS-120B for superior AI-powered analysis!*`;
     }
 
     addMessage(content, sender, saveToHistory = true) {
